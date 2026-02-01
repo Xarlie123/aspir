@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo_banner.png" alt="ASPIR Logo" width="600">
+  <img src="assets/logo_banner.png" alt="ASPIR Logo" width="400">
 </p>
 
 <h1 align="center">ASPIR: A Single-Pixel Imaging Research Platform</h1>
