@@ -1,6 +1,15 @@
-# ASPIR: A Single-Pixel Imaging Research Platform
+<p align="center">
+  <img src="assets/logo_banner.png" alt="ASPIR Logo" width="600">
+</p>
 
-PyQt5 application for **Single Pixel Imaging (SPI)** simulation and analysis. Implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
+<h1 align="center">ASPIR: A Single-Pixel Imaging Research Platform</h1>
+
+<p align="center">
+  PyQt5 application for <strong>Single Pixel Imaging (SPI)</strong> simulation and analysis.<br>
+  Implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
+</p>
+
+---
 
 ## Quick Start
 
