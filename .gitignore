@@ -1,0 +1,124 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE - PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+
+# IDE - VS Code
+.vscode/
+*.code-workspace
+
+# IDE - Other
+.sublime-project
+.sublime-workspace
+
+# Claude Code
+.claude/
+CLAUDE.md
+.claudeignore
+
+# OS files
+.DS_Store
+Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+.#*
+*.log
+temp_log.txt
+
+# Log directory (keep structure but ignore log files)
+log/*
+!log/.keep
+
+# Project-specific: Large data and results
+# Commit the datasets/ folder itself, but ignore downloaded data
+datasets/tmp_downloaded_datasets/
+src/datasets/tmp_downloaded_datasets/
+*.mat
+*.zip
+data/
+exported_experiments/
+# Experiments directory - ignore results but track configs
+experiments/
+!experiments/.keep
+!experiments/**/*.batch_config
+!experiments/**/*.single_test_config
+# Legacy export directories (now superseded by Generated_outputs/)
+exported_batch_configs/
+exported_batch_results/
+exported_settings/
+# Settings folder is committed (contains configuration YAML files)
+
+# Model files (usually large)
+*.pth
+*.pt
+*.onnx
+*.npz
+*.h5
+*.hdf5
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Build outputs
+*.pdf
+*.png
+*.jpg
+!test_img/**
+
+# Keep lib/pmlib but ignore build artifacts within it
+lib/pmlib/**/*.o
+lib/pmlib/**/*.so
+lib/pmlib/client/pm_info
+lib/pmlib/server/build/

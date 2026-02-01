@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>pipeline_control</class>
+ <widget class="QWidget" name="pipeline_control">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1202</width>
+    <height>512</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>498</width>
+    <height>77</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1201</width>
+     <height>511</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <layout class="QVBoxLayout" name="test_list_Layout">
+      <item>
+       <widget class="QListWidget" name="tests_listwidget">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="name_test_layout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="test_name_info_text">
+          <property name="text">
+           <string>Nombre test</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="test_name_lineedit"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="button_test_layout">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="add_test_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>130</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Add test</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QPushButton" name="remove_test_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Elimina test</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="dataset_control_Layout">
+      <item>
+       <widget class="QLabel" name="dataset_info_text">
+        <property name="text">
+         <string>Dataset</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="select_dataset_page_combobox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <item>
+         <property name="text">
+          <string>Una imagen</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Carpeta Imagen</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Perfil IR</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QStackedWidget" name="dataset_stackedWidget">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="dataset_una_imagen_page"/>
+        <widget class="QWidget" name="dataset_ir_beam"/>
+        <widget class="QWidget" name="dataset_carpeta_imagen_page"/>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="mascara_control_layout">
+      <item>
+       <widget class="QLabel" name="mascara_info_text">
+        <property name="text">
+         <string>Mask</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="select_mascara_page">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <item>
+         <property name="text">
+          <string>Barrido</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Scatter</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Hadamard Natural</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Hadamard Scramble</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Hadamard Cake Cutting</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Hadamard Walsh Paley</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Cal Sal Transform</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Fourier</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QStackedWidget" name="mask_stackedWidget">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="barrido_page"/>
+        <widget class="QWidget" name="scatter_page"/>
+        <widget class="QWidget" name="hadamard_natural_page"/>
+        <widget class="QWidget" name="hadamard_scramble_page"/>
+        <widget class="QWidget" name="hadamard_cake_cutting_page"/>
+        <widget class="QWidget" name="hadamard_walsh_paley_page"/>
+        <widget class="QWidget" name="cal_sal_transform_page"/>
+        <widget class="QWidget" name="fourier_page"/>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="postprocessor_control_layout">
+      <item>
+       <widget class="QLabel" name="procesador_info_text_label">
+        <property name="text">
+         <string>Procesador NN</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="postprocessor_control_placeholder" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>300</width>
+          <height>0</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
