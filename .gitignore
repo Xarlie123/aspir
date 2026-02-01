@@ -115,6 +115,7 @@ htmlcov/
 *.pdf
 *.png
 *.jpg
+!assets/**
 !test_img/**
 
 # Keep lib/pmlib but ignore build artifacts within it
