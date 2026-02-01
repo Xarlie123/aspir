@@ -4,7 +4,7 @@ PyQt5 application for **Single Pixel Imaging (SPI)** simulation and analysis. Im
 
 ## Quick Start
 
-### Local Development
+### Linux
 
 ```bash
 # 1. Clone and enter
@@ -13,11 +13,29 @@ cd aspir
 
 # 2. Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
+source .venv/bin/activate
 
 # 3. Install dependencies
-pip install -r requirements_laptop.txt
+pip install -r requirements_linux.txt
+
+# 4. Run (working directory MUST be src/)
+cd src
+python main.py
+```
+
+### Windows
+
+```powershell
+# 1. Clone and enter
+git clone https://github.com/Xarlie123/aspir.git
+cd aspir
+
+# 2. Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements_windows.txt
 
 # 4. Run (working directory MUST be src/)
 cd src
@@ -78,7 +96,8 @@ aspir/
 ├── datasets/                     # Downloaded and generated datasets
 ├── settings/                     # Application settings (log config, etc.)
 ├── docker/                       # Docker configuration
-├── requirements_laptop.txt       # Python dependencies (local dev)
+├── requirements_windows.txt      # Python dependencies (Windows)
+├── requirements_linux.txt        # Python dependencies (Linux)
 └── requirements_docker.txt       # Python dependencies (Docker)
 ```
 
