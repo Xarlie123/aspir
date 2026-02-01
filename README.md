@@ -1,6 +1,6 @@
 # ASPIR: A Single-Pixel Imaging Research Platform
 
-PyQt5 application for **Spectral Photon Imaging (SPIm)** simulation and analysis. Implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
+PyQt5 application for **Single Pixel Imaging (SPI)** simulation and analysis. Implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
 
 ## Quick Start
 
@@ -8,8 +8,8 @@ PyQt5 application for **Spectral Photon Imaging (SPIm)** simulation and analysis
 
 ```bash
 # 1. Clone and enter
-git clone https://github.com/Xarlie123/ir_beam.git
-cd ir_beam
+git clone https://github.com/Xarlie123/aspir.git
+cd aspir
 
 # 2. Create virtual environment
 python -m venv .venv
@@ -61,7 +61,7 @@ docker run --rm -it `
 ## Directory Structure
 
 ```
-ir_beam/
+aspir/
 ├── src/                          # Source code (working directory)
 │   ├── main.py                   # Application entry point
 │   ├── simulation_engine/        # Core simulation pipeline
@@ -79,8 +79,7 @@ ir_beam/
 ├── settings/                     # Application settings (log config, etc.)
 ├── docker/                       # Docker configuration
 ├── requirements_laptop.txt       # Python dependencies (local dev)
-├── requirements_docker.txt       # Python dependencies (Docker)
-└── CLAUDE.md                     # Development guide for AI assistants
+└── requirements_docker.txt       # Python dependencies (Docker)
 ```
 
 ## Requirements
