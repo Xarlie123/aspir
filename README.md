@@ -44,6 +44,10 @@ python main.py
 
 ### Docker
 
+**Prerequisites:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with WSL2 backend (Windows) or Docker Engine (Linux)
+- NVIDIA GPU drivers and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+
 ```bash
 # Build (only needed once, or after changing dependencies)
 docker build -f docker/Dockerfile -t aspir .
@@ -61,7 +65,16 @@ docker run --rm -it \
   aspir
 ```
 
-**Windows (PowerShell + VcXsrv/X410):**
+**Windows (PowerShell):**
+
+1. Install [VcXsrv](https://sourceforge.net/projects/vcxsrv/) (free X server for Windows)
+
+2. Launch VcXsrv (XLaunch) with these settings:
+   - Display settings: **Multiple windows**, Display number: **0**
+   - Client startup: **Start no client**
+   - Extra settings: Check **Disable access control**, uncheck "Native opengl"
+
+3. Run the container:
 ```powershell
 $env:DISPLAY="host.docker.internal:0.0"
 docker run --rm -it `
@@ -74,7 +87,6 @@ docker run --rm -it `
 > **Notes:**
 > - Code changes are reflected immediately without rebuilding (mounted at `/app`)
 > - **Linux only:** RAPL CPU energy profiling requires: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`
-> - **Windows:** Requires Docker Desktop with WSL2 backend and an X server (VcXsrv, X410, etc.)
 
 ## Directory Structure
 
