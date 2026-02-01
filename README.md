@@ -4,7 +4,11 @@ PyQt5 application for **Single Pixel Imaging (SPI)** simulation and analysis. Im
 
 ## Quick Start
 
-### Linux
+### Option 1: Local Development
+
+For development and debugging. Requires manual installation of optional tools (pdflatex, nsys, kaggle).
+
+#### Linux
 
 ```bash
 # 1. Clone and enter
@@ -23,7 +27,7 @@ cd src
 python main.py
 ```
 
-### Windows
+#### Windows
 
 ```powershell
 # 1. Clone and enter
@@ -42,7 +46,9 @@ cd src
 python main.py
 ```
 
-### Docker
+### Option 2: Docker (Recommended)
+
+Pre-configured environment with all dependencies and tools included (pdflatex, NVIDIA Nsight Systems, Kaggle CLI). Code is mounted from host, so changes are reflected immediately without rebuilding.
 
 **Prerequisites:**
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) with WSL2 backend (Windows) or Docker Engine (Linux)
@@ -84,9 +90,7 @@ docker run --rm -it `
   aspir
 ```
 
-> **Notes:**
-> - Code changes are reflected immediately without rebuilding (mounted at `/app`)
-> - **Linux only:** RAPL CPU energy profiling requires: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`
+> **Note (Linux only):** RAPL CPU energy profiling requires: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`
 
 ## Directory Structure
 
@@ -119,12 +123,13 @@ aspir/
 - NVIDIA GPU + CUDA 12.4 (for GPU acceleration)
 - PyQt5, PyTorch, NumPy, SciPy, pylops, pyproximal
 
-## External Applications (Optional)
+## External Applications
 
-Configure via **Settings → External Applications**:
-- **pdflatex**: DNN architecture preview diagrams
-- **nsys**: NVIDIA Nsight Systems profiling
-- **kaggle**: Dataset downloads from Kaggle
+These tools are **pre-installed in the Docker image**. For local development, install them manually and configure via **Settings → External Applications**:
+
+- **pdflatex**: DNN architecture preview diagrams ([TeX Live](https://www.tug.org/texlive/) or [MiKTeX](https://miktex.org/))
+- **nsys**: NVIDIA Nsight Systems profiling ([NVIDIA Developer](https://developer.nvidia.com/nsight-systems))
+- **kaggle**: Dataset downloads from Kaggle (`pip install kaggle`)
 
 ## License
 
