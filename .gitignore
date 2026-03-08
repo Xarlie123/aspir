@@ -111,6 +111,9 @@ exported_settings/
 htmlcov/
 .tox/
 
+# Sphinx documentation build
+docs/_build/
+
 # Build outputs
 *.pdf
 *.png
