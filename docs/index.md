@@ -82,7 +82,7 @@ changelog
 
 ## License
 
-This is a research project developed at [Your Institution].
+This is a research project developed at the Institute of New Imaging Technologies (INIT) and the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain.
 
 ## Indices
 

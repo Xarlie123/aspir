@@ -6,7 +6,7 @@ If you use ASPIR in your research, please cite:
 
 ```bibtex
 @software{aspir2025,
-  author = {Millan, Carles},
+  author = {Chabert Ull, Carlos},
   title = {ASPIR: A Single-Pixel Imaging Research Platform},
   year = {2025},
   url = {https://github.com/Xarlie123/aspir},
@@ -19,8 +19,8 @@ If you use ASPIR in your research, please cite:
 <!-- Add your publications here -->
 
 ```bibtex
-@article{millan2025spi,
-  author = {Millan, Carles and ...},
+@article{chabert2025spi,
+  author = {Chabert Ull, Carlos and ...},
   title = {Title of your paper},
   journal = {Journal Name},
   year = {2025},
@@ -38,7 +38,7 @@ If you use ASPIR in your research, please cite:
 
 ## Acknowledgments
 
-This work was supported by [funding information].
+This work was developed at the Institute of New Imaging Technologies (INIT) and the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain.
 
 ## License
 

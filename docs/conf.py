@@ -3,8 +3,8 @@
 
 # -- Project information -----------------------------------------------------
 project = 'ASPIR'
-copyright = '2025, Carles Millan'
-author = 'Carles Millan'
+copyright = '2025, Carlos Chabert Ull'
+author = 'Carlos Chabert Ull'
 release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
