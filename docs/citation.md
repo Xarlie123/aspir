@@ -14,6 +14,12 @@ If you use ASPIR in your research, please cite:
 }
 ```
 
+## Author
+
+Carlos Chabert Ull — cchabert@uji.es
+
+Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain
+
 ## Related Publications
 
 <!-- Add your publications here -->
@@ -35,10 +41,6 @@ If you use ASPIR in your research, please cite:
 <!-- Add Zenodo DOI badge here after registration -->
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
-
-## Acknowledgments
-
-This work was developed at the Institute of New Imaging Technologies (INIT) and the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain.
 
 ## License
 

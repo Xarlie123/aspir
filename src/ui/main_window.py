@@ -526,22 +526,28 @@ class MainWindow(QMainWindow):
 
         # About text
         about_text = """<h2 style="text-align: center;">ASPIR</h2>
-<p style="text-align: center;"><b>A Single-Pixel Imaging Research platform for energy-efficient benchmarking</b></p>
-<p style="text-align: center;">Version 1.0</p>
+<p style="text-align: center;"><b>A Single-Pixel Imaging Research Platform</b></p>
+<p style="text-align: center;">Version 1.0.0</p>
 <hr>
-<p>A comprehensive platform for simulating and analyzing Single-Pixel Imaging (SPI)
-systems with various mask patterns, reconstruction algorithms, and neural network
-post-processing.</p>
+<p>ASPIR is an open-source platform developed in Python designed to bring the world of
+Single-Pixel Imaging (SPI) and Artificial Intelligence (AI) closer to researchers and
+students, breaking down the programming barrier. The software implements an end-to-end
+pipeline for testing denoising algorithms.</p>
 <p><b>Features:</b></p>
 <ul>
-<li>Multiple mask types: Hadamard, Sweep, Scatter</li>
-<li>Classical reconstruction: Conventional, Pseudoinverse, FISTA, TV-norm</li>
-<li>Deep learning post-processing with 8+ model architectures</li>
-<li>Performance analysis: timing, energy, image quality metrics</li>
+<li>Dataset generation: IR Beam (LightPipes), images, folders, CelebA, SVHN</li>
+<li>Mask patterns: Scatter, Hadamard (4 variants), Sweep, Cal-Sal</li>
+<li>Reconstruction: Ghost Imaging, Pseudoinverse, FISTA, TV-Norm</li>
+<li>Neural network denoising: 9 architectures (U-Net, DnCNN, cGAN, etc.)</li>
+<li>Analysis: quality metrics (PSNR, SSIM, LPIPS), timing, energy profiling</li>
+<li>Batch experiments with comparative reports</li>
 </ul>
 <hr>
-<p><b>Repository:</b> <a href="https://github.com/Xarlie123/ir_beam">github.com/Xarlie123/ir_beam</a></p>
-<p style="text-align: center;">PhD Research Project - Spectral Photon Imaging</p>
+<p><b>Author:</b> Carlos Chabert Ull &mdash; <a href="mailto:cchabert@uji.es">cchabert@uji.es</a></p>
+<p><b>Repository:</b> <a href="https://github.com/Xarlie123/aspir">github.com/Xarlie123/aspir</a></p>
+<p><b>Documentation:</b> <a href="https://aspir.readthedocs.io">aspir.readthedocs.io</a></p>
+<p><b>License:</b> <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
+<p style="text-align: center;">Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain</p>
 """
         text_label = QLabel(about_text)
         text_label.setTextFormat(Qt.RichText)
