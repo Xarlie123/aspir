@@ -757,11 +757,11 @@ class BatchTestRunner(QThread):
         elif config.mask_type == "sweep":
             # Convert sweep angles to parameters list format
             parametros = []
-            for angle in config.sweep_angles:
+            for i, angle in enumerate(config.sweep_angles):
                 parametros.append({
                     "angle": angle,
-                    "bar_width": config.sweep_bar_width,
-                    "stride": config.sweep_stride
+                    "bar_width": config.sweep_bar_widths[i] if i < len(config.sweep_bar_widths) else 2,
+                    "stride": config.sweep_strides[i] if i < len(config.sweep_strides) else 4,
                 })
             return MaskSweep(
                 img_size=img_size,

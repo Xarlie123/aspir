@@ -338,7 +338,10 @@ class BatchTestContainer(QWidget):
     def _on_test_selected(self, index: int):
         """Handle test selection."""
         if 0 <= index < len(self._batch_config.tests):
-            self.test_config.set_config(self._batch_config.tests[index])
+            t = self._batch_config.tests[index]
+            self.logger.debug("[DEBUG] _on_test_selected[%d]: name='%s', mask='%s', scatter_patterns=%s, sweep_bws=%s, epochs=%s",
+                             index, t.name, t.mask_type, t.scatter_num_patterns, t.sweep_bar_widths, t.epochs)
+            self.test_config.set_config(t)
         else:
             self.test_config.set_config(None)
 
@@ -375,8 +378,14 @@ class BatchTestContainer(QWidget):
 
     def _on_duplicate_test(self, index: int):
         """Duplicate a test."""
+        src = self._batch_config.tests[index] if 0 <= index < len(self._batch_config.tests) else None
+        if src:
+            self.logger.debug("[DEBUG] Duplicate source[%d]: name='%s', mask='%s', scatter_patterns=%s, sweep_bws=%s, epochs=%s",
+                             index, src.name, src.mask_type, src.scatter_num_patterns, src.sweep_bar_widths, src.epochs)
         new_config = self._batch_config.duplicate_test(index)
         if new_config:
+            self.logger.debug("[DEBUG] Duplicate result: name='%s', mask='%s', scatter_patterns=%s, sweep_bws=%s, epochs=%s",
+                             new_config.name, new_config.mask_type, new_config.scatter_num_patterns, new_config.sweep_bar_widths, new_config.epochs)
             self.test_list.set_tests(self._batch_config.tests)
             self.test_list.select_test(index + 1)
             self.logger.debug("Duplicated test: %s", new_config.name)

@@ -48,8 +48,8 @@ class TestConfiguration:
     hadamard_max_idx: int = 1024  # Will be clamped to img_size²
 
     # Sweep-specific parameters
-    sweep_bar_width: int = 2
-    sweep_stride: int = 4
+    sweep_bar_widths: List[int] = field(default_factory=lambda: [2, 2, 2, 2])
+    sweep_strides: List[int] = field(default_factory=lambda: [4, 4, 4, 4])
     sweep_angles: List[float] = field(default_factory=lambda: [0.0, 45.0, 90.0, 135.0])
 
     # Reconstruction method
@@ -109,8 +109,8 @@ class TestConfiguration:
             "hadamard_min_idx": self.hadamard_min_idx,
             "hadamard_max_idx": self.hadamard_max_idx,
             # Sweep params
-            "sweep_bar_width": self.sweep_bar_width,
-            "sweep_stride": self.sweep_stride,
+            "sweep_bar_widths": self.sweep_bar_widths.copy(),
+            "sweep_strides": self.sweep_strides.copy(),
             "sweep_angles": self.sweep_angles.copy(),
             # Reconstruction
             "reconstruction_method": self.reconstruction_method,
@@ -153,9 +153,15 @@ class TestConfiguration:
             # Hadamard
             hadamard_min_idx=data.get("hadamard_min_idx", 0),
             hadamard_max_idx=data.get("hadamard_max_idx", 1024),
-            # Sweep
-            sweep_bar_width=data.get("sweep_bar_width", 2),
-            sweep_stride=data.get("sweep_stride", 4),
+            # Sweep - support both new list format and legacy single-value format
+            sweep_bar_widths=data.get("sweep_bar_widths",
+                                      [data["sweep_bar_width"]] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))
+                                      if "sweep_bar_width" in data
+                                      else [2] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))),
+            sweep_strides=data.get("sweep_strides",
+                                   [data["sweep_stride"]] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))
+                                   if "sweep_stride" in data
+                                   else [4] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))),
             sweep_angles=data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]),
             # Reconstruction
             reconstruction_method=data.get("reconstruction_method", "pseudoinverse"),

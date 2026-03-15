@@ -411,6 +411,9 @@ class TestConfigWidget(QWidget):
         """Connect sweep control signals to config updates."""
         # Sweep parameters are in a table, connect cell change signal
         self.sweep_control.sweep_parameters_table.cellChanged.connect(self._on_value_changed)
+        # Add/remove row buttons don't trigger cellChanged, so connect them explicitly
+        self.sweep_control.add_row_button.clicked.connect(self._on_value_changed)
+        self.sweep_control.remove_row_button.clicked.connect(self._on_value_changed)
 
     def _on_scatter_applicator_changed(self, text: str):
         """Update reconstruction parameters visibility when scatter applicator changes."""
@@ -485,18 +488,26 @@ class TestConfigWidget(QWidget):
 
     def set_img_size(self, img_size: int):
         """Set image size for mask controls."""
-        self._img_size = img_size
-        self.scatter_control.set_img_size(img_size)
-        self.hadamard_control.set_img_size(img_size)
-        self.sweep_control.set_img_size(img_size)
+        self._updating = True
+        try:
+            self._img_size = img_size
+            self.scatter_control.set_img_size(img_size)
+            self.hadamard_control.set_img_size(img_size)
+            self.sweep_control.set_img_size(img_size)
 
-        # Update Hadamard slider range
-        max_patterns = img_size * img_size
-        self.hadamard_control.hadamard_slider.set_range(0, max_patterns)
-        self.hadamard_control.number_patterns_max_hadamard_value.setText(str(max_patterns))
+            # Update Hadamard slider range
+            max_patterns = img_size * img_size
+            self.hadamard_control.hadamard_slider.set_range(0, max_patterns)
+            self.hadamard_control.number_patterns_max_hadamard_value.setText(str(max_patterns))
+        finally:
+            self._updating = False
 
     def set_config(self, config: Optional[TestConfiguration]):
         """Set the configuration to display/edit."""
+        if config:
+            self.logger.debug("[DEBUG] set_config: name='%s', mask='%s', scatter_patterns=%s, sweep_angles=%s, bws=%s, strides=%s, epochs=%s",
+                             config.name, config.mask_type, config.scatter_num_patterns,
+                             config.sweep_angles, config.sweep_bar_widths, config.sweep_strides, config.epochs)
         self._config = config
         self._updating = True
 
@@ -522,7 +533,7 @@ class TestConfigWidget(QWidget):
             )
 
             # Sweep params - update table
-            self._update_sweep_table(config.sweep_angles, config.sweep_bar_width, config.sweep_stride)
+            self._update_sweep_table(config.sweep_angles, config.sweep_bar_widths, config.sweep_strides)
 
             # Reconstruction method - set via scatter applicator
             applicator_map = {
@@ -581,19 +592,19 @@ class TestConfigWidget(QWidget):
 
         self._updating = False
 
-    def _update_sweep_table(self, angles: List[float], bar_width: int, stride: int):
-        """Update sweep parameters table."""
+    def _update_sweep_table(self, angles: List[float], bar_widths: List[int], strides: List[int]):
+        """Update sweep parameters table with per-row bar_widths and strides."""
         table = self.sweep_control.sweep_parameters_table
         table.blockSignals(True)
         try:
             table.setRowCount(0)
-            for angle in angles:
+            for i, angle in enumerate(angles):
                 row = table.rowCount()
                 table.insertRow(row)
                 from PyQt5 import QtWidgets
                 table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(angle)))
-                table.setItem(row, 1, QtWidgets.QTableWidgetItem(str(bar_width)))
-                table.setItem(row, 2, QtWidgets.QTableWidgetItem(str(stride)))
+                table.setItem(row, 1, QtWidgets.QTableWidgetItem(str(bar_widths[i] if i < len(bar_widths) else 2)))
+                table.setItem(row, 2, QtWidgets.QTableWidgetItem(str(strides[i] if i < len(strides) else 4)))
         finally:
             table.blockSignals(False)
 
@@ -659,6 +670,12 @@ class TestConfigWidget(QWidget):
         if self._updating or self._config is None or self._read_only:
             return
 
+        import traceback
+        caller = traceback.extract_stack(limit=3)[0]
+        self.logger.debug("[DEBUG] _on_value_changed from %s:%d, config='%s', mask='%s'",
+                         caller.filename.split('/')[-1], caller.lineno, caller.name,
+                         self.mask_type_combo.currentText())
+
         # Update config from UI
         self._config.name = self.name_input.text()
         self._config.mask_type = self.mask_type_combo.currentText()
@@ -669,20 +686,29 @@ class TestConfigWidget(QWidget):
             self._config.scatter_point_density = float(self.scatter_control.point_density_value.value())
             self._config.scatter_num_patterns = self.scatter_control.number_patterns_scatter_value.value()
             self._config.mask_seed = self.scatter_control.random_seed_scatter_value.value()
+            self.logger.debug("[DEBUG]   -> scatter: density=%s, patterns=%s, seed=%s",
+                             self._config.scatter_point_density, self._config.scatter_num_patterns, self._config.mask_seed)
         elif mask_type in ("hadamard_natural", "hadamard_scramble",
                            "hadamard_cake_cutting", "hadamard_walsh_paley"):
             self._config.hadamard_min_idx = self.hadamard_control.hadamard_slider.low_value
             self._config.hadamard_max_idx = self.hadamard_control.hadamard_slider.high_value
+            self.logger.debug("[DEBUG]   -> hadamard: min=%s, max=%s",
+                             self._config.hadamard_min_idx, self._config.hadamard_max_idx)
         elif mask_type == "sweep":
             try:
                 params = self.sweep_control.get_parameters()
                 if params:
                     self._config.sweep_angles = [p['angle'] for p in params]
-                    self._config.sweep_bar_width = params[0]['bar_width']
-                    self._config.sweep_stride = params[0]['stride']
+                    self._config.sweep_bar_widths = [p['bar_width'] for p in params]
+                    self._config.sweep_strides = [p['stride'] for p in params]
+                    self.logger.debug("[DEBUG]   -> sweep: angles=%s, bws=%s, strides=%s",
+                                     self._config.sweep_angles, self._config.sweep_bar_widths, self._config.sweep_strides)
             except (ValueError, IndexError):
                 pass  # Keep existing values if parsing fails
-                pass  # Keep existing values if parsing fails
+
+        self.logger.debug("[DEBUG]   -> config after: name='%s', mask='%s', scatter_patterns=%s, sweep_bws=%s, epochs=%s",
+                         self._config.name, self._config.mask_type, self._config.scatter_num_patterns,
+                         self._config.sweep_bar_widths, self._config.epochs)
 
         # Reconstruction - get method from scatter applicator
         applicator_text = self.scatter_control.select_applicator_scatter_list.currentText()
