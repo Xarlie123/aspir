@@ -1,0 +1,4 @@
+/* Make documentation content use full available width */
+.wy-nav-content {
+    max-width: none;
+}

@@ -46,6 +46,7 @@ html_theme_options = {
     'display_version': True,
     'navigation_depth': 3,
 }
+html_css_files = ['custom.css']
 
 # -- Options for PDF output --------------------------------------------------
 latex_elements = {
