@@ -124,6 +124,7 @@ docs/_build/
 !assets/**
 !test_img/**
 !docs/animations/thumbnails/**
+!docs/dataset_samples/**
 
 # Keep lib/pmlib but ignore build artifacts within it
 lib/pmlib/**/*.o

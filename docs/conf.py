@@ -48,7 +48,7 @@ html_theme_options = {
     'navigation_depth': 3,
 }
 html_css_files = ['custom.css']
-html_extra_path = ['animations']
+html_extra_path = ['animations', 'dataset_samples']
 
 # -- Mermaid configuration ---------------------------------------------------
 mermaid_init_js = """

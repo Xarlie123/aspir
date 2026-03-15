@@ -25,6 +25,34 @@ pre.mermaid > button {
 }
 
 
+/* Grid: align to left, no stretch */
+.sd-row {
+    justify-content: flex-start !important;
+}
+
+.sd-col {
+    flex: 0 0 auto !important;
+    max-width: none !important;
+    width: auto !important;
+}
+
+/* Grid item cards: compact, centered content */
+.sd-card {
+    padding: 10px !important;
+    text-align: center !important;
+    width: 250px !important;
+}
+
+.sd-card img {
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+.sd-card .sd-card-header,
+.sd-card .sd-card-title {
+    text-align: center !important;
+}
+
 /* Align math formulas to the left */
 .MathJax_Display, .MathJax {
     text-align: left !important;

@@ -16,32 +16,6 @@ flowchart LR
     N --> E[Energy Analysis]
 ```
 
-## Application Modes
-
-ASPIR has three main modes:
-
-### Single Test Mode
-
-Interactive experimentation with immediate visual feedback. Use this to:
-- Explore different configurations
-- Visualize intermediate results
-- Debug and understand the pipeline
-
-### Batch Test Mode
-
-Automated parameter sweeps. Use this to:
-- Compare multiple configurations systematically
-- Run experiments overnight
-- Generate reproducible results
-
-### Batch Reports Mode
-
-Analysis and visualization of batch results. Use this to:
-- Compare quality metrics across experiments
-- Generate publication-ready plots
-- Export results to various formats
-
-## Chapters
 
 ```{toctree}
 :maxdepth: 2
