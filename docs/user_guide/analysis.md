@@ -27,7 +27,7 @@ Measures structural similarity between images.
 
 ### LPIPS (Learned Perceptual Image Patch Similarity)
 
-Deep learning-based perceptual similarity.
+Deep learning-based perceptual similarity ([reference](https://github.com/richzhang/PerceptualSimilarity)).
 
 - **Range**: [0, 1]
 - **Interpretation**: Lower is better
@@ -48,7 +48,7 @@ Measures inference performance on CPU and GPU.
 
 ### Configuration
 
-- **Warmup runs**: Iterations before measurement (CUDA initialization)
+- **Warmup runs**: Iterations before measurement (NVIDIA CUDA initialization)
 - **Measurement runs**: Averaged for stable statistics
 
 ### Proper GPU Timing

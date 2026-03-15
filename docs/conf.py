@@ -3,7 +3,7 @@
 
 # -- Project information -----------------------------------------------------
 project = 'ASPIR'
-copyright = '2025, Carlos Chabert Ull'
+copyright = '2026, Universitat Jaume I, Carlos Chabert Ull'
 author = 'Carlos Chabert Ull'
 release = '1.0.0'
 
@@ -17,6 +17,7 @@ extensions = [
     'sphinx_copybutton',        # Copy button for code blocks
     'sphinx_design',            # Cards, tabs, grids
     'sphinxcontrib.mermaid',    # Diagrams
+    'sphinx.ext.mathjax',       # Math rendering
 ]
 
 # Markdown configuration
@@ -26,6 +27,7 @@ myst_enable_extensions = [
     'fieldlist',        # Field lists
     'tasklist',         # Task lists with checkboxes
     'attrs_inline',     # Inline attributes
+    'dollarmath',       # $inline$ and $$block$$ math syntax
 ]
 myst_heading_anchors = 3
 
@@ -43,10 +45,20 @@ html_static_path = ['_static']
 html_logo = '../assets/logo_banner.png'
 html_theme_options = {
     'logo_only': True,
-    'display_version': True,
     'navigation_depth': 3,
 }
 html_css_files = ['custom.css']
+
+# -- Mermaid configuration ---------------------------------------------------
+mermaid_init_js = """
+mermaid.initialize({
+    startOnLoad: true,
+    flowchart: {
+        useMaxWidth: true,
+        padding: 2
+    }
+});
+"""
 
 # -- Options for PDF output --------------------------------------------------
 latex_elements = {

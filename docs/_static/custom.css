@@ -2,3 +2,26 @@
 .wy-nav-content {
     max-width: none;
 }
+
+/* Reduce mermaid diagram vertical margins and limit width */
+.mermaid {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 700px;
+    line-height: 0;
+}
+
+.mermaid svg {
+    height: auto !important;
+    max-height: none !important;
+    pointer-events: none;
+}
+
+
+/* Align math formulas to the left */
+.MathJax_Display, .MathJax {
+    text-align: left !important;
+}
+div.math {
+    text-align: left !important;
+}

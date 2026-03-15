@@ -8,12 +8,6 @@ Mask patterns determine how the scene is sampled in Single Pixel Imaging.
 
 Random point patterns for compressive sensing.
 
-```{image} ../_static/mask_scatter_placeholder.png
-:alt: Scatter mask example
-:width: 200px
-:align: center
-```
-
 - **Parameters**:
   - Number of patterns
   - Points per pattern

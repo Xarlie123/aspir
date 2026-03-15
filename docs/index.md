@@ -68,12 +68,6 @@ quickstart
 :caption: User Guide
 
 user_guide/index
-user_guide/datasets
-user_guide/masks
-user_guide/reconstruction
-user_guide/neural_networks
-user_guide/analysis
-user_guide/batch_experiments
 ```
 
 ```{toctree}

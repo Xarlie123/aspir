@@ -7,34 +7,13 @@ This guide covers all features of ASPIR in detail.
 ASPIR implements a complete Single Pixel Imaging pipeline:
 
 ```{mermaid}
-flowchart TB
-    subgraph Input
-        D[Dataset Generator]
-    end
-
-    subgraph "Mask & Measurement"
-        M[Mask Generator]
-        A[Applicator]
-    end
-
-    subgraph "Reconstruction"
-        R[Classical Algorithm]
-        N[Neural Network]
-    end
-
-    subgraph "Analysis"
-        Q[Quality Metrics]
-        T[Timing Analysis]
-        E[Energy Analysis]
-    end
-
-    D --> M
-    M --> A
-    A --> R
-    R --> N
-    N --> Q
-    N --> T
-    N --> E
+flowchart LR
+    D[Dataset Generator] --> M[Mask Generator]
+    M --> A[Applicator / Reconstruction]
+    A --> N[Neural Network]
+    N --> Q[Quality Metrics]
+    N --> T[Timing Analysis]
+    N --> E[Energy Analysis]
 ```
 
 ## Application Modes

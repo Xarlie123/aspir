@@ -5,7 +5,7 @@ ASPIR can be installed locally or run via Docker. Docker is recommended for most
 ## Requirements
 
 - Python 3.10+
-- NVIDIA GPU with CUDA 12.4 (for GPU acceleration)
+- NVIDIA GPU with NVIDIA CUDA 12.4 (for GPU acceleration)
 - 8GB+ RAM recommended
 
 ## Option 1: Docker (Recommended)
@@ -124,7 +124,7 @@ Try loading a sample image from **Dataset → From Image** to verify everything 
 
 ### GPU not detected
 
-Ensure CUDA is properly installed:
+Ensure NVIDIA CUDA is properly installed:
 
 ```bash
 python -c "import torch; print(torch.cuda.is_available())"
