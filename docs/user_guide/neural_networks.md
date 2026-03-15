@@ -1,72 +1,56 @@
 # Neural Networks
 
-ASPIR includes several neural network architectures for post-processing reconstructed images.
+ASPIR includes several neural network architectures for post-processing (denoising) reconstructed images.
 
 ## Available Models
 
+| Model | Registry Key | Parameters | Training Time | Best For |
+|-------|-------------|------------|---------------|----------|
+| U-Net | `u-net` | ~7M | Medium | General denoising, fine details |
+| U-Net Residual Attention | `u-net-residual-attention` | ~10M | Longer | Complex noise, high quality |
+| DnCNN | `dncnn` | ~0.5M | Fast | Gaussian noise removal |
+| Autoencoder | `autoencoder` | ~2M | Fast | Simple denoising, baselines |
+| Residual CNN | `residual_cnn` | ~1M | Fast | Preserving original structure |
+| MobileNet Denoising | `mobilenet_denoising` | ~0.3M | Very fast | Edge deployment, real-time |
+| Dilated CNN | `dilatedcnn` | ~1M | Fast | Large-scale noise patterns |
+| Noise2Void | `noise2void` | ~0.5M | Medium | No clean references available |
+| cGAN Denoising | `cgan denoising` | ~5M | Longer | Adversarial denoising |
+
 ### U-Net
 
-Encoder-decoder architecture with skip connections.
-
-- **Best for**: General denoising, preserving fine details
-- **Parameters**: ~7M (default configuration)
-- **Training time**: Medium
+Encoder-decoder architecture with skip connections. The skip connections help preserve spatial details that would otherwise be lost during downsampling.
 
 ### U-Net with Residual Attention
 
-Enhanced U-Net with residual blocks and attention mechanisms.
-
-- **Best for**: Complex noise patterns, high-quality reconstruction
-- **Parameters**: ~10M
-- **Training time**: Longer
+Enhanced U-Net with residual blocks and attention mechanisms. The attention gates learn to focus on relevant features, improving denoising in complex scenarios.
 
 ### DnCNN
 
-Deep residual denoising network.
-
-- **Best for**: Gaussian noise removal
-- **Parameters**: ~0.5M
-- **Training time**: Fast
+Deep residual denoising network. Learns to predict the noise component rather than the clean image directly.
 
 ### Autoencoder
 
-Basic encoder-decoder without skip connections.
-
-- **Best for**: Simple denoising, baseline comparisons
-- **Parameters**: ~2M
-- **Training time**: Fast
+Basic encoder-decoder without skip connections. Useful as a baseline for comparing against more advanced architectures.
 
 ### Residual CNN
 
-Pure residual architecture.
-
-- **Best for**: Preserving original structure
-- **Parameters**: ~1M
-- **Training time**: Fast
+Pure residual architecture that learns to add corrections to the input image rather than generating the output from scratch.
 
 ### MobileNet Denoising
 
-Lightweight architecture using depthwise separable convolutions.
-
-- **Best for**: Edge deployment, real-time inference
-- **Parameters**: ~0.3M
-- **Training time**: Very fast
+Lightweight architecture using depthwise separable convolutions. Significantly fewer parameters, suitable for deployment on resource-constrained devices.
 
 ### Dilated CNN
 
-Uses dilated convolutions for larger receptive field.
-
-- **Best for**: Large-scale noise patterns
-- **Parameters**: ~1M
-- **Training time**: Fast
+Uses dilated (atrous) convolutions to achieve a larger receptive field without increasing the number of parameters. Effective for spatially correlated noise.
 
 ### Noise2Void
 
-Self-supervised denoising (no clean targets needed).
+Self-supervised denoising that does not require clean reference images for training. Learns to denoise by masking and predicting individual pixels from their surroundings.
 
-- **Best for**: When clean reference images unavailable
-- **Parameters**: ~0.5M
-- **Training time**: Medium
+### cGAN Denoising
+
+Conditional Generative Adversarial Network for denoising. A generator network produces denoised images while a discriminator network learns to distinguish between real and generated results, pushing the generator towards more realistic outputs.
 
 ## Training Configuration
 
@@ -84,25 +68,26 @@ Self-supervised denoising (no clean targets needed).
 
 - **MSE**: Mean Squared Error (default)
 - **L1**: Mean Absolute Error
-- **SSIM**: Structural Similarity Loss
-- **Perceptual**: VGG-based perceptual loss
+- **SmoothL1**: Smooth L1 loss (Huber-like)
+- **Huber**: Less sensitive to outliers than MSE
 
 ### Optimizers
 
 - **Adam**: Adaptive moment estimation (default)
 - **AdamW**: Adam with decoupled weight decay
 - **SGD**: Stochastic gradient descent
+- **RMSprop**: Root mean square propagation
 
 ## Training Tips
 
-1. **Start simple**: Begin with default parameters
+1. **Start simple**: Begin with default parameters and U-Net
 2. **Monitor validation loss**: Stop if it increases (overfitting)
 3. **Use GPU**: Training is 10-50x faster on GPU
 4. **Adequate data**: At least 100 images recommended
 
 ## Model Export
 
-Trained models can be exported to:
+Trained models can be exported as:
 
 - **PyTorch checkpoint** (`.pth`): For continued training or inference
 - **ONNX** (`.onnx`): For deployment and cross-platform inference

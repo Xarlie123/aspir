@@ -1,126 +1,55 @@
 # Batch Experiments
 
-Run systematic parameter sweeps and compare multiple configurations.
+For a step-by-step walkthrough of how to use Batch Test and Batch Reports, see the {doc}`../quickstart` guide.
 
-## Batch Test Mode
+This section covers file formats, result structure, and best practices for designing experiments.
 
-### Creating Configurations
+## File Formats
 
-1. Switch to **Batch Test** mode
-2. Add test configurations using **Add Test**
-3. Configure each test:
-   - Mask type and parameters
-   - Reconstruction method
-   - Neural network architecture
-   - Training hyperparameters
+### Batch Configuration (`.batch_config`)
 
-### Configuration Parameters
+JSON file that stores the list of test configurations. Created via `File → Save Batch Config` in Batch Test mode.
 
-Each test configuration includes:
+Contains:
+- Experiment name and description
+- Execution options (sequential/parallel, number of threads)
+- List of test configurations, each with mask, reconstruction, model, and training parameters
 
-| Category | Parameters |
-|----------|------------|
-| Mask | Type, patterns, seed |
-| Reconstruction | Method (Ghost/Pseudo/FISTA/TV) |
-| Model | Architecture, epochs, batch size, LR |
-| Dataset split | Train %, Val %, Test % |
-| Reports | Quality, timing, energy |
+### Batch Analysis Report (`.batch_analysis_report`)
 
-### Running Batch Tests
+JSON file generated after running a batch test. Contains all metrics and results for each test in the batch.
 
-1. Set **Export Name** for results identification
-2. Click **Run Batch**
-3. Monitor progress in status panel
+Can be loaded in **Batch Reports** mode for offline analysis and comparison.
 
-Tests run sequentially by default. Enable parallel execution for independent tests.
+## Results Structure
 
-### Saved Results
-
-Results are saved to `experiments/<export_name>/`:
+After running a batch test, results are saved to `experiments/<export_name>/`:
 
 ```
 <export_name>/
-├── .batch_analysis_report    # JSON with all metrics
+├── <export_name>.batch_analysis_report   # JSON with all metrics and configuration
 └── data/
     └── <test_name>/
-        ├── test_images.npz   # Images and reconstructions
-        └── masks.npz         # Mask patterns
+        ├── test_images.npz               # Original, reconstructed, and denoised images
+        └── masks.npz                     # Mask patterns used
 ```
-
-## Batch Reports Mode
-
-Analyze and compare completed batch experiments.
-
-### Loading Results
-
-1. Switch to **Batch Reports** mode
-2. Click **Load Experiment**
-3. Select experiment folder
-
-Multiple experiments can be loaded for comparison.
-
-### Available Views
-
-#### Summary View
-
-Table with all tests and metrics:
-- Quality: PSNR, SSIM, LPIPS
-- Timing: Mean, std, min, max
-- Configuration: Model, masks, reconstruction
-
-Columns are configurable via dropdown menu.
-
-#### Quality View
-
-Charts comparing quality metrics across tests:
-- Bar charts for PSNR/SSIM/LPIPS
-- Before/after neural network comparison
-- Per-image quality preview
-
-#### Timing View
-
-Pipeline latency breakdown:
-- Stacked bars: Acquisition + Reconstruction + Inference
-- CPU vs GPU comparison
-- Per-test timing statistics
-
-#### Training View
-
-Training curves visualization:
-- Loss curves (train/validation)
-- Learning rate schedules
-- Convergence analysis
-
-#### Details View
-
-Per-test detailed information:
-- Full configuration dump
-- Individual metrics
-- Model architecture summary
-
-### Exporting Reports
-
-Export results to various formats:
-- **HTML**: Interactive web report
-- **LaTeX**: Publication-ready tables
-- **PDF**: Complete report document
-- **CSV**: Raw data
 
 ## Best Practices
 
 ### Experimental Design
 
-1. **Baseline first**: Always include a baseline configuration
-2. **One variable**: Change one parameter at a time for clear comparisons
-3. **Seeds**: Use fixed seeds for reproducibility
-4. **Statistics**: Run multiple seeds and report mean ± std
+1. **Baseline first**: Always include a baseline configuration (e.g., Ghost Imaging without NN)
+2. **One variable at a time**: Change one parameter per test for clear comparisons
+3. **Fixed seeds**: Use the same random seed across tests for reproducibility
+4. **Multiple seeds**: For statistical significance, run with different seeds and report mean ± std
 
 ### Naming Conventions
 
-Use descriptive names:
-- `scatter_512_unet` (mask type, patterns, model)
-- `hadamard_fista_50ep` (mask, reconstruction, epochs)
+Use descriptive test names that encode key parameters:
+- `scatter_512_unet` (mask type, number of patterns, model)
+- `hadamard_fista_50ep` (mask, reconstruction method, epochs)
+- `sweep_3bars_dncnn` (mask, configuration, model)
 
 ### Version Control
 
-Save batch configurations (`.batch_config`) to version control for reproducibility.
+Save `.batch_config` files to version control so experiments can be reproduced exactly.

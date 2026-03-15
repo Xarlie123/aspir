@@ -54,7 +54,7 @@ $$
 - Tunable regularization parameter λ
 
 **Parameters**:
-- `lambda`: Regularization strength (default: 0.1)
+- `lambda`: Regularization strength (default: 0.01)
 - `iterations`: Maximum iterations (default: 100)
 
 ### TV-Norm (Total Variation)
@@ -71,8 +71,8 @@ $$
 - Good for natural images
 
 **Parameters**:
-- `lambda`: Regularization strength
-- `iterations`: Maximum iterations
+- `lambda`: Regularization strength (default: 0.1)
+- `iterations`: Maximum iterations (default: 50)
 
 ## Comparison
 

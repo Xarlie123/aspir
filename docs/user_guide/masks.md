@@ -1,6 +1,6 @@
 # Mask Patterns
 
-Mask patterns determine how the scene is sampled in Single Pixel Imaging.
+Mask patterns determine how the scene is sampled in Single Pixel Imaging. Each pattern modulates the scene in a different way, and the resulting measurements are used to reconstruct the image.
 
 ## Mask Types
 
@@ -9,51 +9,51 @@ Mask patterns determine how the scene is sampled in Single Pixel Imaging.
 Random point patterns for compressive sensing.
 
 - **Parameters**:
-  - Number of patterns
-  - Points per pattern
-  - Random seed
+  - **Point density**: Number of active points per pattern
+  - **Number of patterns**: Total mask patterns to generate
+  - **Random seed**: For reproducibility
+  - **Reconstruction method**: Conventional (Ghost Imaging), Pseudoinverse, FISTA, or TV-Norm
 
-- **Pros**: Works with any compression ratio
-- **Cons**: Reconstruction quality depends on algorithm
+- **Pros**: Works with any compression ratio, flexible
+- **Cons**: Reconstruction quality depends on the algorithm chosen
 
 ### Hadamard
 
-Structured orthogonal patterns based on Hadamard matrices.
+Structured orthogonal patterns based on Hadamard matrices. Requires image size to be a power of 2.
 
 - **Variants**:
-  - **Standard**: Natural Hadamard order
-  - **Scrambled**: Randomized pattern order
-  - **Cake-cutting**: Frequency-ordered
-  - **Walsh-Paley**: Sequential order
+  - **Natural**: Standard Hadamard order
+  - **Scrambled**: Randomized pattern order for improved compressive sensing
+  - **Cake-Cutting**: Frequency-ordered patterns, sampling from low to high frequencies
+  - **Walsh-Paley**: Sequential ordering based on Walsh functions
 
 - **Parameters**:
-  - Matrix size (must be power of 2)
-  - Variant type
+  - **Pattern index range** (min, max): Select a subset of the full Hadamard matrix using a dual slider
 
-- **Pros**: Perfect reconstruction with full sampling
-- **Cons**: Requires specific image sizes (power of 2)
+- **Pros**: Perfect reconstruction when using full sampling (all patterns)
+- **Cons**: Image size must be a power of 2 (e.g., 32, 64, 128)
 
 ### Sweep
 
-Linear scanning patterns.
+Linear bar scanning patterns. Each row in the configuration table defines a sweep at a specific angle.
 
-- **Parameters**:
-  - Sweep direction (horizontal/vertical)
-  - Step size
+- **Parameters** (per row):
+  - **Angle**: Sweep direction in degrees (e.g., 0, 45, 90, 135)
+  - **Bar width**: Width of the scanning bar in pixels
+  - **Stride**: Step size between consecutive bar positions
 
-- **Pros**: Simple hardware implementation
+- **Pros**: Simple hardware implementation, intuitive parameterization
 - **Cons**: Limited compression capability
 
-### Fourier
+### Cal-Sal
 
-Frequency-domain sampling patterns.
+Structured patterns based on the Cal-Sal transform, a variant of Hadamard matrices with specific ordering properties.
 
 - **Parameters**:
-  - Sampling strategy
-  - Frequency range
+  - **Pattern index range** (min, max): Select a subset of patterns using a dual slider
 
-- **Pros**: Good for frequency-sparse images
-- **Cons**: Complex reconstruction
+- **Pros**: Deterministic ordering with good frequency coverage
+- **Cons**: Image size must be a power of 2
 
 ## Compression Ratio
 
@@ -63,13 +63,13 @@ $$
 CR = \frac{N_{pixels}}{N_{patterns}}
 $$
 
-For example, a 64×64 image (4096 pixels) with 512 patterns has CR = 8.
+For example, a 64×64 image (4096 pixels) with 512 patterns has CR = 8. Higher compression ratios require fewer measurements but produce noisier reconstructions.
 
 ## Choosing Patterns
 
 | Scenario | Recommended Mask |
 |----------|------------------|
-| High quality, full sampling | Hadamard |
-| Compressive sensing | Scatter + FISTA |
-| Fast acquisition | Sweep |
-| Frequency analysis | Fourier |
+| High quality, full sampling | Hadamard (Natural) |
+| Compressive sensing | Scatter + FISTA/TV-Norm |
+| Simple hardware setup | Sweep |
+| Ordered frequency sampling | Hadamard (Cake-Cutting) or Cal-Sal |

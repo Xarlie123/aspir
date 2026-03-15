@@ -65,7 +65,7 @@ t1 = time.perf_counter()
 
 ## Energy Analysis
 
-Measures power consumption during inference.
+Measures power consumption during inference. The energy backend is auto-detected based on the available hardware.
 
 ### Supported Hardware
 
@@ -74,6 +74,10 @@ Measures power consumption during inference.
 | NVIDIA Desktop GPUs | NVML | GPU power, temperature |
 | NVIDIA Jetson | Sysfs | GPU + CPU power |
 | Intel CPUs | RAPL | Package, core power |
+
+```{note}
+Intel RAPL energy profiling requires read access to the powercap interface: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`
+```
 
 ### Metrics
 
@@ -84,7 +88,7 @@ Measures power consumption during inference.
 
 ## PyTorch Profiler
 
-Deep analysis of neural network operations.
+Deep analysis of neural network operations using the [PyTorch Profiler](https://pytorch.org/docs/stable/profiler.html).
 
 ### Features
 
@@ -93,13 +97,13 @@ Deep analysis of neural network operations.
 - CPU vs GPU time comparison
 - Memory usage
 
-### Nsight Systems Integration
+### NVIDIA Nsight Systems Integration
 
-For detailed memory transfer analysis:
+For detailed GPU memory transfer and kernel analysis:
 
 1. Click "Generate Nsight Profile Script"
 2. Run generated script with `nsys profile`
-3. Open `.nsys-rep` file in Nsight Systems GUI
+3. Open `.nsys-rep` file in NVIDIA Nsight Systems GUI
 
 ## Exporting Results
 
