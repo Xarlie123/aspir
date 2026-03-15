@@ -16,59 +16,73 @@ simulation_engine/
 
 ## Core Classes
 
-### Simulation
-
-Main orchestrator for the SPI pipeline.
+### Simulacion (Pipeline Orchestrator)
 
 ```python
-from simulation_engine.simulation import Simulation
+from simulation_engine.simulation import Simulacion
 
-sim = Simulation(logger)
+sim = Simulacion(logger)
 sim.set_dataset(dataset)
-sim.set_mask(mask, reconstruction_method='fista')
-sim.set_postprocessor(model_name='unet', epochs=50)
+sim.set_mask(mask, applicator_type_scatter='fista')
+sim.set_postprocessor(
+    dataset, mask, applicator,
+    model_name='u-net', batch_size=16, lr=1e-3,
+    use_gpu=True, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1
+)
 sim.set_analyzer()
-
-metrics = sim.analyzer.get_metrics()
 ```
 
 ### Dataset Generators
 
+All datasets inherit from `DatasetABC` and implement `load_data()`.
+
 ```python
-from simulation_engine._1_dataset_gen.dataset_from_image import DatasetFromImage
-from simulation_engine._1_dataset_gen.dataset_from_folder import DatasetFromFolder
+from simulation_engine._1_dataset_gen.DatasetFromImage import DatasetFromImage
+from simulation_engine._1_dataset_gen.DatasetFromFolder import DatasetFromFolder
 
 # Single image
-dataset = DatasetFromImage(path="image.png", size=64)
+dataset = DatasetFromImage(img_size=64, img_path="image.png", data_format="FP32")
+dataset.load_data()
 
-# Multiple images
-dataset = DatasetFromFolder(path="images/", size=64, max_images=100)
+# Multiple images from folder
+dataset = DatasetFromFolder(img_size=64, folder_path="images/", data_format="FP32")
+dataset.load_data()
 ```
 
 ### Mask Generators
 
+All masks inherit from `MaskABC` and implement `generate_masks()`.
+
 ```python
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
+from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
 
 # Random scatter
-mask = MaskScatter(num_patterns=512, dimensions=(64, 64), seed=42)
+mask = MaskScatter(img_size=64, point_density=0.1, num_patterns=512, seed=42)
+mask.generate_masks()
 
-# Hadamard
-mask = MaskHadamard(size=64, variant='scrambled')
+# Hadamard (subset of patterns)
+mask = MaskHadamard(img_size=64, min_idx=0, max_idx=1024)
+mask.generate_masks()
+
+# Sweep (list of angle/bar_width/stride dicts)
+mask = MaskSweep(img_size=64, parametros=[
+    {'angle': 0.0, 'bar_width': 2, 'stride': 4},
+    {'angle': 90.0, 'bar_width': 2, 'stride': 4},
+])
+mask.generate_masks()
 ```
 
 ### Applicators (Reconstruction)
 
+All applicators inherit from `ApplicatorABC` and implement `process_dataset()`.
+
 ```python
 from simulation_engine._3_applicator.applicator_scatter_fista import ApplicatorScatterFISTA
 
-applicator = ApplicatorScatterFISTA(
-    mask=mask,
-    lambda_reg=0.1,
-    max_iterations=100
-)
-reconstructed = applicator.apply(dataset)
+applicator = ApplicatorScatterFISTA(dataset, mask, maxit=500, lam=1e-3)
+results_df = applicator.process_dataset()
 ```
 
 ### Neural Network Models
@@ -77,27 +91,35 @@ reconstructed = applicator.apply(dataset)
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 
 postprocessor = PostprocessorNN(
-    model_name='unet',
-    input_channels=1,
-    device='cuda'
+    model_name='u-net',
+    model_overrides={'features': [8, 16, 32, 64]},
+    dataset=dataset,
+    applicator=applicator,
+    batch_size=16,
+    lr=1e-3,
+    loss_function='mse',
+    optimizer_name='adam',
+    use_gpu=True,
+    train_ratio=0.8, val_ratio=0.1, test_ratio=0.1
 )
-postprocessor.train(train_loader, val_loader, epochs=50)
-denoised = postprocessor.inference(reconstructed)
+postprocessor.train(num_epochs=50)
+test_originals, test_noisy, test_denoised = postprocessor.test_dataset()
 ```
 
 ### Analyzers
 
 ```python
-from simulation_engine._5_analyzer.analyzer_quality import AnalyzerQuality
-from simulation_engine._5_analyzer.analyzer_timing import AnalyzerTiming
+from simulation_engine._5_analyzer.analyzer_noise import NoiseAnalyzer
+from simulation_engine._5_analyzer.analyzer_timing import TimingAnalyzer
 
-# Quality metrics
-quality = AnalyzerQuality(original, denoised)
-psnr, ssim, lpips = quality.compute_metrics()
+# Quality metrics (PSNR, SSIM, LPIPS)
+noise_analyzer = NoiseAnalyzer(originals, noisy, reconstructions)
+noise_analyzer.analyze()
+summary = noise_analyzer.get_metrics_summary()
 
 # Timing analysis
-timing = AnalyzerTiming(model, device='cuda', warmup=5, runs=20)
-results = timing.measure(test_images)
+timing = TimingAnalyzer(model, device='cuda', warmup_runs=5)
+mean_time, std_time = timing.time_inference(input_tensor, n_runs=20)
 ```
 
 ## Data Structures
@@ -105,69 +127,9 @@ results = timing.measure(test_images)
 ### Image Arrays
 
 ```python
-# Dataset: (N, H, W) float32 in [0, 1]
-dataset.images.shape  # (100, 64, 64)
+# Dataset images: (N, H, W) float32 in [0, 1]
+dataset.datos.shape  # (100, 64, 64)
 
-# Masks: (M, H, W) binary
-mask.patterns.shape  # (512, 64, 64)
-
-# Measurements: (N, M) float32
-measurements.shape  # (100, 512)
+# Mask patterns: (M, H, W)
+mask.mascaras.shape  # (512, 64, 64)
 ```
-
-### Configuration Objects
-
-```python
-from dataclasses import dataclass
-
-@dataclass
-class TestConfiguration:
-    mask_type: str
-    num_patterns: int
-    reconstruction_method: str
-    model_name: str
-    epochs: int
-    batch_size: int
-    learning_rate: float
-    # ...
-```
-
-## Extending ASPIR
-
-### Adding a New Mask Type
-
-1. Create class in `_2_mask_gen/`:
-
-```python
-from .mask import Mask
-
-class MaskCustom(Mask):
-    def __init__(self, dimensions, **params):
-        super().__init__(dimensions)
-        self.params = params
-
-    def generate_patterns(self):
-        # Return numpy array (M, H, W)
-        pass
-```
-
-2. Register in `simulation.py`
-
-### Adding a New Model
-
-1. Create model in `_4_postprocessor/models/`:
-
-```python
-import torch.nn as nn
-
-class CustomModel(nn.Module):
-    def __init__(self, in_channels=1):
-        super().__init__()
-        # Define layers
-
-    def forward(self, x):
-        # Forward pass
-        return x
-```
-
-2. Register in `PostprocessorNN.MODEL_REGISTRY`
