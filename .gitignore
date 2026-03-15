@@ -123,6 +123,7 @@ docs/_build/
 *.jpg
 !assets/**
 !test_img/**
+!docs/animations/thumbnails/**
 
 # Keep lib/pmlib but ignore build artifacts within it
 lib/pmlib/**/*.o

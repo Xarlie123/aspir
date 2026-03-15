@@ -12,8 +12,14 @@
 
 Tests run sequentially by default. Parallel execution is available for independent tests.
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../1_batch_test.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Batch test configuration workflow](../animations/thumbnails/1_batch_test.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/batch_step1_configure.html).*
 ```

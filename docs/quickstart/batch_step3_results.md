@@ -11,8 +11,14 @@
 
 Results can be exported to HTML, PDF, LaTeX, or CSV.
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../2_batch_reports.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Explore batch results workflow](../animations/thumbnails/2_batch_reports.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/batch_step3_results.html).*
 ```

@@ -10,8 +10,14 @@
 
 Training progress shows in the status bar. The denoised results appear when complete.
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../4_train_neural_network.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Neural network training workflow](../animations/thumbnails/4_train_neural_network.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/step4_neural_network.html).*
 ```

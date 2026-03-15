@@ -8,8 +8,14 @@
 
 The preview panel shows your loaded images.
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../1_dataset.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Dataset generation workflow](../animations/thumbnails/1_dataset.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/step1_dataset.html).*
 ```

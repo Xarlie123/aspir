@@ -39,8 +39,14 @@ You can also load multiple report files to compare results across different batc
 
 Results can be exported to HTML, PDF, LaTeX, or CSV for use in publications or further analysis.
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../1_batch_reports_from_file.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Batch reports from file workflow](../animations/thumbnails/1_batch_reports_from_file.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/batch_reports.html).*
 ```

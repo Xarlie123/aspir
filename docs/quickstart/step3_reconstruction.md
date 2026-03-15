@@ -10,8 +10,14 @@
 
 The reconstructed images appear in the preview. They will be noisy — this is expected!
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../3_reconstruct.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Reconstruction workflow](../animations/thumbnails/3_reconstruct.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/step3_reconstruction.html).*
 ```

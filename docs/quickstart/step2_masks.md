@@ -9,8 +9,14 @@
 
 The preview shows the generated mask patterns.
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../2_masks.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Mask generation workflow](../animations/thumbnails/2_masks.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/step2_masks.html).*
 ```

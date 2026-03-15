@@ -13,8 +13,14 @@ You'll see metrics comparing:
 | SSIM | Structural Similarity | > 0.8 |
 | LPIPS | Perceptual similarity | < 0.2 |
 
-```{raw} html
+```{only} html
 <video width="80%" controls>
   <source src="../5_reports.mp4" type="video/mp4">
 </video>
+```
+
+```{only} latex
+![Analysis workflow](../animations/thumbnails/5_reports.png)
+
+*Watch the full video in the [online documentation](https://aspir.readthedocs.io/en/latest/quickstart/step5_analysis.html).*
 ```
