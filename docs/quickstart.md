@@ -60,32 +60,12 @@ flowchart LR
 :caption: Batch Test Steps
 
 quickstart/batch_step1_configure
-quickstart/batch_step2_run
 quickstart/batch_step3_results
-```
-
-## Batch Reports
-
-```{note}
-Since training multiple experiments can be time-consuming, Batch Reports mode allows you to explore offline the results of previously executed batch experiments, loading and analyzing data without having to re-run them.
-```
-
-```{raw} html
-<div style="max-width: 350px;">
-```
-
-```{mermaid}
-flowchart LR
-    A[Load Batch Results] --> B[Compare & Export]
-```
-
-```{raw} html
-</div>
 ```
 
 ```{toctree}
 :maxdepth: 1
-:caption: Batch Reports
 
 quickstart/batch_reports
 ```
+

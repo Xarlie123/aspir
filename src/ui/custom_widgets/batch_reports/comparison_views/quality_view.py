@@ -477,9 +477,32 @@ class QualityView(QWidget):
         legend_handles = []
         legend_labels = []
 
+        # First pass: collect all raw values per metric for global min-max normalization
+        raw_values_per_metric = {}
+        for metric_base, metric_label, higher_is_better, color, fmt in metrics_to_show:
+            noisy_key = f"{metric_base}_recons"
+            denoised_key = f"{metric_base}_denoised"
+            values = []
+            for test_name in all_tests:
+                test = next((t for t in self._tests if t.get("name") == test_name), None)
+                if test:
+                    noisy_val = self._get_nested_value(test, noisy_key)
+                    denoised_val = self._get_nested_value(test, denoised_key)
+                    if noisy_val is not None:
+                        values.append(noisy_val)
+                    if denoised_val is not None:
+                        values.append(denoised_val)
+            raw_values_per_metric[metric_base] = values
+
         for metric_idx, (metric_base, metric_label, higher_is_better, color, fmt) in enumerate(metrics_to_show):
             noisy_key = f"{metric_base}_recons"
             denoised_key = f"{metric_base}_denoised"
+
+            # Global min-max for this metric across all tests
+            metric_values = raw_values_per_metric[metric_base]
+            global_min = min(metric_values) if metric_values else 0
+            global_max = max(metric_values) if metric_values else 1
+            value_range = global_max - global_min if global_max != global_min else 1
 
             all_values = []
             all_norm_values = []
@@ -497,13 +520,14 @@ class QualityView(QWidget):
 
                 all_values.extend([noisy_val, denoised_val])
 
-                # Normalize values to 0-1
-                if metric_base == 'psnr':
-                    all_norm_values.extend([noisy_val / 50.0, denoised_val / 50.0])
-                elif metric_base == 'ssim':
-                    all_norm_values.extend([noisy_val, denoised_val])
-                else:  # lpips - invert
-                    all_norm_values.extend([1.0 - noisy_val, 1.0 - denoised_val])
+                # Normalize using global min-max across all tests
+                noisy_norm = (noisy_val - global_min) / value_range
+                denoised_norm = (denoised_val - global_min) / value_range
+                # For LPIPS (lower is better), invert so higher bar = better
+                if not higher_is_better:
+                    noisy_norm = 1.0 - noisy_norm
+                    denoised_norm = 1.0 - denoised_norm
+                all_norm_values.extend([noisy_norm, denoised_norm])
 
             offset = (metric_idx - (n_metrics - 1) / 2) * bar_width
             bars = ax.bar(x + offset, all_norm_values, bar_width * 0.9,
