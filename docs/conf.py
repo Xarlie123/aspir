@@ -48,17 +48,20 @@ html_theme_options = {
     'navigation_depth': 3,
 }
 html_css_files = ['custom.css']
+html_extra_path = ['animations']
 
 # -- Mermaid configuration ---------------------------------------------------
 mermaid_init_js = """
 mermaid.initialize({
     startOnLoad: true,
+    maxTextSize: 90000,
     flowchart: {
-        useMaxWidth: true,
+        useMaxWidth: false,
         padding: 2
     }
 });
 """
+mermaid_fullscreen = False
 
 # -- Options for PDF output --------------------------------------------------
 latex_elements = {

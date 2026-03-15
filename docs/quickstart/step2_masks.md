@@ -8,3 +8,9 @@
 4. Click **Generate Masks**
 
 The preview shows the generated mask patterns.
+
+```{raw} html
+<video width="80%" controls>
+  <source src="../2_masks.mp4" type="video/mp4">
+</video>
+```

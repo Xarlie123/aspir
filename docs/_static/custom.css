@@ -17,6 +17,13 @@
     pointer-events: none;
 }
 
+.mermaid .nodeLabel a,
+.mermaid-graph .zoom,
+div.mermaid > button,
+pre.mermaid > button {
+    display: none !important;
+}
+
 
 /* Align math formulas to the left */
 .MathJax_Display, .MathJax {

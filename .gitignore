@@ -111,6 +111,9 @@ exported_settings/
 htmlcov/
 .tox/
 
+# GIF animations (use mp4 instead)
+*.gif
+
 # Sphinx documentation build
 docs/_build/
 

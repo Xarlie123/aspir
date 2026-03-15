@@ -12,3 +12,9 @@ You'll see metrics comparing:
 | PSNR | Peak Signal-to-Noise Ratio | > 25 dB |
 | SSIM | Structural Similarity | > 0.8 |
 | LPIPS | Perceptual similarity | < 0.2 |
+
+```{raw} html
+<video width="80%" controls>
+  <source src="../5_reports.mp4" type="video/mp4">
+</video>
+```

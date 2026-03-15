@@ -9,33 +9,11 @@ flowchart LR
     C --> D[Compare & Export]
 ```
 
-## Step 1: Create Test Configurations
+```{toctree}
+:maxdepth: 1
+:caption: Batch Test Steps
 
-1. Switch to **Batch Test** mode
-2. Click **Add Test** to create a new configuration
-3. For each test, configure:
-   - **Mask**: Type, number of patterns, seed
-   - **Reconstruction**: Method (Ghost Imaging, Pseudoinverse, FISTA, TV-Norm)
-   - **Model**: Architecture, epochs, batch size, learning rate
-4. Repeat to add as many configurations as needed
-
-## Step 2: Run the Batch
-
-1. Set an **Export Name** to identify your results
-2. Click **Run Batch**
-3. Monitor progress in the status panel
-
-Tests run sequentially by default. Parallel execution is available for independent tests.
-
-## Step 3: Explore Results
-
-1. Switch to **Batch Reports** mode
-2. Click **Load Experiment** and select your experiment folder
-3. Browse the available views:
-   - **Summary**: Table with all tests and their metrics
-   - **Quality**: Bar charts comparing PSNR, SSIM, LPIPS across tests
-   - **Timing**: Pipeline latency breakdown per stage
-   - **Training**: Loss curves and convergence analysis
-   - **Details**: Full configuration and per-test metrics
-
-Results can be exported to HTML, PDF, LaTeX, or CSV.
+batch_step1_configure
+batch_step2_run
+batch_step3_results
+```

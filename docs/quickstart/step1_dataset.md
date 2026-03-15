@@ -7,3 +7,9 @@
 5. Click **Generate Dataset**
 
 The preview panel shows your loaded images.
+
+```{raw} html
+<video width="80%" controls>
+  <source src="../1_dataset.mp4" type="video/mp4">
+</video>
+```

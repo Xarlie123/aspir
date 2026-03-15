@@ -584,14 +584,18 @@ class TestConfigWidget(QWidget):
     def _update_sweep_table(self, angles: List[float], bar_width: int, stride: int):
         """Update sweep parameters table."""
         table = self.sweep_control.sweep_parameters_table
-        table.setRowCount(0)
-        for angle in angles:
-            row = table.rowCount()
-            table.insertRow(row)
-            from PyQt5 import QtWidgets
-            table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(angle)))
-            table.setItem(row, 1, QtWidgets.QTableWidgetItem(str(bar_width)))
-            table.setItem(row, 2, QtWidgets.QTableWidgetItem(str(stride)))
+        table.blockSignals(True)
+        try:
+            table.setRowCount(0)
+            for angle in angles:
+                row = table.rowCount()
+                table.insertRow(row)
+                from PyQt5 import QtWidgets
+                table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(angle)))
+                table.setItem(row, 1, QtWidgets.QTableWidgetItem(str(bar_width)))
+                table.setItem(row, 2, QtWidgets.QTableWidgetItem(str(stride)))
+        finally:
+            table.blockSignals(False)
 
     def get_config(self) -> Optional[TestConfiguration]:
         """Get the current configuration."""
@@ -659,24 +663,26 @@ class TestConfigWidget(QWidget):
         self._config.name = self.name_input.text()
         self._config.mask_type = self.mask_type_combo.currentText()
 
-        # Scatter params
-        self._config.scatter_point_density = float(self.scatter_control.point_density_value.value())
-        self._config.scatter_num_patterns = self.scatter_control.number_patterns_scatter_value.value()
-        self._config.mask_seed = self.scatter_control.random_seed_scatter_value.value()
-
-        # Hadamard params
-        self._config.hadamard_min_idx = self.hadamard_control.hadamard_slider.low_value
-        self._config.hadamard_max_idx = self.hadamard_control.hadamard_slider.high_value
-
-        # Sweep params - read from table
-        try:
-            params = self.sweep_control.get_parameters()
-            if params:
-                self._config.sweep_angles = [p['angle'] for p in params]
-                self._config.sweep_bar_width = params[0]['bar_width']
-                self._config.sweep_stride = params[0]['stride']
-        except (ValueError, IndexError):
-            pass  # Keep existing values if parsing fails
+        # Only update params for the currently selected mask type
+        mask_type = self._config.mask_type
+        if mask_type == "scatter":
+            self._config.scatter_point_density = float(self.scatter_control.point_density_value.value())
+            self._config.scatter_num_patterns = self.scatter_control.number_patterns_scatter_value.value()
+            self._config.mask_seed = self.scatter_control.random_seed_scatter_value.value()
+        elif mask_type in ("hadamard_natural", "hadamard_scramble",
+                           "hadamard_cake_cutting", "hadamard_walsh_paley"):
+            self._config.hadamard_min_idx = self.hadamard_control.hadamard_slider.low_value
+            self._config.hadamard_max_idx = self.hadamard_control.hadamard_slider.high_value
+        elif mask_type == "sweep":
+            try:
+                params = self.sweep_control.get_parameters()
+                if params:
+                    self._config.sweep_angles = [p['angle'] for p in params]
+                    self._config.sweep_bar_width = params[0]['bar_width']
+                    self._config.sweep_stride = params[0]['stride']
+            except (ValueError, IndexError):
+                pass  # Keep existing values if parsing fails
+                pass  # Keep existing values if parsing fails
 
         # Reconstruction - get method from scatter applicator
         applicator_text = self.scatter_control.select_applicator_scatter_list.currentText()

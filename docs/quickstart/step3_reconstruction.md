@@ -9,3 +9,9 @@
 2. Click **Reconstruct**
 
 The reconstructed images appear in the preview. They will be noisy — this is expected!
+
+```{raw} html
+<video width="80%" controls>
+  <source src="../3_reconstruct.mp4" type="video/mp4">
+</video>
+```
