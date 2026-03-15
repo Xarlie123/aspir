@@ -1,4 +1,4 @@
-# File: Simulacion/postprocesador/modelos/residual_cnn.py
+# File: Simulacion/postprocesador/models/residual_cnn.py
 import torch
 import torch.nn as nn
 

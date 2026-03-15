@@ -140,15 +140,15 @@ class LPIPSLoss(nn.Module):
 
 
 from simulation_engine._4_postprocessor.postprocessor import Postprocessor
-from simulation_engine._4_postprocessor.modelos.autoencoder import Autoencoder
-from simulation_engine._4_postprocessor.modelos.dncnn import DnCNN
-from simulation_engine._4_postprocessor.modelos.unet import UNet
-from simulation_engine._4_postprocessor.modelos.unet_res_att import UNetResAttn
-from simulation_engine._4_postprocessor.modelos.residual_cnn import ResidualCNN
-from simulation_engine._4_postprocessor.modelos.noise2void import Noise2Void
-from simulation_engine._4_postprocessor.modelos.mobilenet_denoising import MobileNetDenoising
-from simulation_engine._4_postprocessor.modelos.dilated_cnn import DilatedCNN
-from simulation_engine._4_postprocessor.modelos.cgan import cGAN
+from simulation_engine._4_postprocessor.models.autoencoder import Autoencoder
+from simulation_engine._4_postprocessor.models.dncnn import DnCNN
+from simulation_engine._4_postprocessor.models.unet import UNet
+from simulation_engine._4_postprocessor.models.unet_res_att import UNetResAttn
+from simulation_engine._4_postprocessor.models.residual_cnn import ResidualCNN
+from simulation_engine._4_postprocessor.models.noise2void import Noise2Void
+from simulation_engine._4_postprocessor.models.mobilenet_denoising import MobileNetDenoising
+from simulation_engine._4_postprocessor.models.dilated_cnn import DilatedCNN
+from simulation_engine._4_postprocessor.models.cgan import cGAN
 
 # Data format constants
 DATA_FORMAT_FP32 = "FP32"

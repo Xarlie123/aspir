@@ -1,4 +1,4 @@
-# File: Simulacion/postprocesador/modelos/unet.py
+# File: Simulacion/postprocesador/models/unet.py
 import torch
 import torch.nn as nn
 

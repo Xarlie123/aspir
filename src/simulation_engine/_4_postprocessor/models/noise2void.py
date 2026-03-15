@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from simulation_engine._4_postprocessor.modelos.unet import UNet
+from simulation_engine._4_postprocessor.models.unet import UNet
 
 class Noise2Void(nn.Module):
     """

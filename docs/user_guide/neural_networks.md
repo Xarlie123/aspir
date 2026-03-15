@@ -4,53 +4,89 @@ ASPIR includes several neural network architectures for post-processing (denoisi
 
 ## Available Models
 
-| Model | Registry Key | Parameters | Training Time | Best For |
-|-------|-------------|------------|---------------|----------|
-| U-Net | `u-net` | ~7M | Medium | General denoising, fine details |
-| U-Net Residual Attention | `u-net-residual-attention` | ~10M | Longer | Complex noise, high quality |
-| DnCNN | `dncnn` | ~0.5M | Fast | Gaussian noise removal |
-| Autoencoder | `autoencoder` | ~2M | Fast | Simple denoising, baselines |
-| Residual CNN | `residual_cnn` | ~1M | Fast | Preserving original structure |
-| MobileNet Denoising | `mobilenet_denoising` | ~0.3M | Very fast | Edge deployment, real-time |
-| Dilated CNN | `dilatedcnn` | ~1M | Fast | Large-scale noise patterns |
-| Noise2Void | `noise2void` | ~0.5M | Medium | No clean references available |
-| cGAN Denoising | `cgan denoising` | ~5M | Longer | Adversarial denoising |
+All model architectures are defined as PyTorch `nn.Module` classes in `simulation_engine/_4_postprocessor/models/`. To modify an architecture, edit the corresponding file directly.
 
 ### U-Net
+**Source:** `models/unet.py`
 
 Encoder-decoder architecture with skip connections. The skip connections help preserve spatial details that would otherwise be lost during downsampling.
 
+- **Configurable parameters**:
+  - **Encoder Channels** (default: `[8, 16, 32, 64]`): Channel widths per encoder level
+
 ### U-Net with Residual Attention
+**Source:** `models/unet_res_att.py`
 
 Enhanced U-Net with residual blocks and attention mechanisms. The attention gates learn to focus on relevant features, improving denoising in complex scenarios.
 
+- **Configurable parameters**:
+  - **Encoder Widths** (default: `[32, 64, 128, 256]`): Channel widths per encoder level
+  - **Dropout** (default: 0.1, range: 0.0–0.5): Dropout probability in residual blocks
+  - **SE Blocks** (default: on): Use Squeeze-Excitation (channel attention) blocks
+  - **Attention Gates** (default: on): Use attention gates on skip connections
+
 ### DnCNN
+**Source:** `models/dncnn.py`
 
 Deep residual denoising network. Learns to predict the noise component rather than the clean image directly.
 
+- **Configurable parameters**:
+  - **Feature Channels** (default: 128, range: 16–256): Number of feature channels in hidden layers
+  - **Network Depth** (default: 5, range: 3–30): Total number of convolutional layers
+
 ### Autoencoder
+**Source:** `models/autoencoder.py`
 
 Basic encoder-decoder without skip connections. Useful as a baseline for comparing against more advanced architectures.
 
+- **Configurable parameters**:
+  - **Image Size** (default: 32, range: 8–256): Input image size (image is flattened to size²)
+
 ### Residual CNN
+**Source:** `models/residual_cnn.py`
 
 Pure residual architecture that learns to add corrections to the input image rather than generating the output from scratch.
 
+- **Configurable parameters**:
+  - **Feature Channels** (default: 64, range: 16–256): Feature channels per residual block
+  - **Residual Blocks** (default: 8, range: 1–20): Number of residual blocks
+
 ### MobileNet Denoising
+**Source:** `models/mobilenet_denoising.py`
 
 Lightweight architecture using depthwise separable convolutions. Significantly fewer parameters, suitable for deployment on resource-constrained devices.
 
+- **Configurable parameters**:
+  - **Block Channels** (default: `[16, 32, 64, 128]`): Channel widths for depthwise separable blocks
+
 ### Dilated CNN
+**Source:** `models/dilated_cnn.py`
 
 Uses dilated (atrous) convolutions to achieve a larger receptive field without increasing the number of parameters. Effective for spatially correlated noise.
 
+- **Configurable parameters**:
+  - **Feature Channels** (default: 128, range: 16–256): Number of feature channels
+  - **Dilation Rates** (default: `[1, 2, 4, 8]`): Dilation rates for each layer
+
 ### Noise2Void
+**Source:** `models/noise2void.py`
 
 Self-supervised denoising that does not require clean reference images for training. Learns to denoise by masking and predicting individual pixels from their surroundings.
 
+- **Configurable parameters**:
+  - **Backbone Channels** (default: `[8, 16, 32, 64]`): UNet backbone channel widths per level
+
 ### cGAN Denoising
+**Source:** `models/cgan.py`
 
 Conditional Generative Adversarial Network for denoising. A generator network produces denoised images while a discriminator network learns to distinguish between real and generated results, pushing the generator towards more realistic outputs.
+
+- **Configurable parameters**:
+  - **Stem Channels** (default: 96, range: 32–256): Multi-scale stem output channels
+  - **Denoise Channels** (default: 64, range: 32–256): Feature-domain denoising trunk width
+  - **Denoise Depth** (default: 8, range: 2–16): Number of Conv-BN-ReLU layers in denoiser
+  - **HL Blocks** (default: 4, range: 1–8): Number of cooperative attention + residual block stacks
+  - **Output Activation** (default: sigmoid): Output activation (sigmoid, tanh, or none)
 
 ## Training Configuration
 
