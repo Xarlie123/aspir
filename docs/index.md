@@ -1,17 +1,24 @@
-# ASPIR Documentation
+# ASPIR Introduction
 
 **A Single-Pixel Imaging Research Platform**
 
-ASPIR is a PyQt5 application for Single Pixel Imaging (SPI) simulation and analysis. It implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
+ASPIR is an open-source project developed in Python designed to bring the world of Single-Pixel Imaging (SPI) and Artificial Intelligence (AI) closer to researchers and students, breaking down the programming barrier. The software implements an end-to-end pipeline for testing denoising algorithms from A to Z.
 
-## Features
+ASPIR allows users to import or generate datasets, create mask patterns, select reconstruction algorithms, and apply post-processing models based on neural networks. The application is built on Python and the PyQt5 library for its graphical user interface.
 
-- **Multiple mask patterns**: Scatter, Hadamard, Sweep, Fourier
-- **Classical reconstruction**: Ghost Imaging, Pseudoinverse, FISTA, TV-Norm
-- **Neural network denoising**: U-Net, DnCNN, Autoencoder, and more
-- **Quality metrics**: PSNR, SSIM, LPIPS
-- **Performance analysis**: Timing profiling, energy measurement
-- **Batch experiments**: Automated parameter sweeps and comparison
+## Summary
+
+The ASPIR pipeline covers every stage of a Single-Pixel Imaging experiment. Users can **generate or import datasets** from individual images, folders, infrared beam simulations (LightPipes), or well-known benchmarks such as CelebA and SVHN.
+
+Once a dataset is loaded, ASPIR provides several **mask pattern generators** — Scatter, Hadamard (with variants like Scrambled, Cake-Cutting, and Walsh-Paley), Sweep, and Fourier — that simulate the spatial light modulator encoding used in real SPI setups.
+
+The acquired measurements are then passed through **classical reconstruction algorithms** including Ghost Imaging, Pseudoinverse, FISTA, and TV-Norm, each offering different trade-offs between speed, noise robustness, and compression tolerance.
+
+To further improve image quality, ASPIR integrates a **neural network post-processing** stage with nine architectures ready to use: U-Net, U-Net with Residual Attention, DnCNN, Autoencoder, Residual CNN, MobileNet Denoising, Dilated CNN, cGAN, and Noise2Void. Models can be trained, evaluated, and exported directly from the GUI.
+
+Finally, a comprehensive **analysis module** computes quality metrics (PSNR, SSIM, LPIPS), timing breakdowns per pipeline stage, and energy consumption profiling on NVIDIA GPUs (desktop and Jetson) and Intel CPUs via RAPL.
+
+For large-scale studies, the **batch experiment** mode allows users to define parameter sweeps, run them sequentially or in parallel, and generate comparative reports in HTML, PDF, LaTeX, or CSV.
 
 ## Quick Links
 
@@ -47,8 +54,6 @@ Technical reference for developers
 :::
 
 ::::
-
-## Contents
 
 ```{toctree}
 :maxdepth: 2
