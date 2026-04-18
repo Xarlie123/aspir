@@ -52,6 +52,9 @@ env/
 CLAUDE.md
 .claudeignore
 
+# Local-only helper scripts (not part of the project source tree)
+/check_file_sizes.py
+
 # OS files
 .DS_Store
 Thumbs.db

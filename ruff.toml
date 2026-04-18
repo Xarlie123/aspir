@@ -1,0 +1,51 @@
+line-length = 120
+target-version = "py312"
+src = ["src"]
+
+extend-exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "src/build",
+    "src/dist",
+    "src/ui/ui_main_window.py",  # Qt Designer generated
+    "docs/_build",
+    "experiments",
+    "exported_experiments",
+]
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+    "N",    # pep8-naming
+]
+ignore = [
+    "E501",    # line too long (formatter handles wrapping)
+    "B008",    # do not perform function call in argument defaults (common in Qt)
+    "N802",    # function name should be lowercase (Qt uses camelCase overrides)
+    "N803",    # argument name should be lowercase (Qt signals/slots)
+    "N806",    # variable in function should be lowercase (math notation often uppercase)
+    "N999",    # invalid module name (the _1_, _2_ pipeline prefixes are intentional)
+    "SIM108",  # ternary operator (readability preference)
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]  # re-exports
+"src/**/test_*.py" = ["B", "N"]
+"src/**/*_test.py" = ["B", "N"]
+
+[lint.isort]
+known-first-party = ["simulation_engine", "ui"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

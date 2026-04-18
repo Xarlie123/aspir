@@ -1,0 +1,45 @@
+[importlinter]
+root_packages =
+    ui
+    simulation_engine
+include_external_packages = False
+
+# ---------------------------------------------------------------------------
+# Contract 1: UI may depend on simulation_engine, but never the reverse.
+# ---------------------------------------------------------------------------
+[importlinter:contract:ui-above-engine]
+name = UI depends on simulation_engine (not the reverse)
+type = layers
+layers =
+    ui
+    simulation_engine
+
+# ---------------------------------------------------------------------------
+# Contract 2: The pipeline stages _1 ... _5 are peer siblings.
+# None of them should import each other. They communicate through the
+# orchestrators (simulation_engine.simulation and _6_pipeline).
+# ---------------------------------------------------------------------------
+[importlinter:contract:pipeline-stages-independent]
+name = Pipeline stages (_1 ... _5) do not import each other
+type = independence
+modules =
+    simulation_engine._1_dataset_gen
+    simulation_engine._2_mask_gen
+    simulation_engine._3_applicator
+    simulation_engine._4_postprocessor
+    simulation_engine._5_analyzer
+
+# ---------------------------------------------------------------------------
+# Contract 3: Lower pipeline stages must not reach up into the orchestrator.
+# ---------------------------------------------------------------------------
+[importlinter:contract:stages-do-not-import-pipeline]
+name = Pipeline stages must not import the orchestrator _6_pipeline
+type = forbidden
+source_modules =
+    simulation_engine._1_dataset_gen
+    simulation_engine._2_mask_gen
+    simulation_engine._3_applicator
+    simulation_engine._4_postprocessor
+    simulation_engine._5_analyzer
+forbidden_modules =
+    simulation_engine._6_pipeline
