@@ -3,28 +3,42 @@ Popup dialog for previewing neural network architecture visualization.
 
 Uses PlotNeuralNet (TikZ/LaTeX) for publication-quality output.
 """
+from __future__ import annotations
+
 import logging
 import os
 import shutil
-from typing import Optional, Dict, Any, List, Tuple
+from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QFileDialog, QScrollArea, QWidget,
-    QSizePolicy, QGroupBox, QGridLayout, QFrame, QMessageBox,
-    QProgressBar, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
-    QCheckBox, QSpinBox, QComboBox, QApplication
-)
-from pathlib import Path
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QPixmap, QImage, QWheelEvent, QPainter
-
 import torch.nn as nn
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QLabel,
+    QMessageBox,
+    QWidget,
+)
 
-from .network_visualizer import NetworkVisualizer, SemanticBlock
-from .plotneuralnet_generator import PlotNeuralNetGenerator, PDFLATEX_AVAILABLE
-from .latex_worker import LaTeXCompilationWorker
+from ui.custom_widgets.postprocessor_control.architecture_config.architecture_preview_popup._ui_builder import (
+    build_ui,
+    populate_model_info_panel,
+)
+from ui.custom_widgets.postprocessor_control.architecture_config.latex_worker import (
+    LaTeXCompilationWorker,
+)
+from ui.custom_widgets.postprocessor_control.architecture_config.network_visualizer import (
+    NetworkVisualizer,
+    SemanticBlock,
+)
+from ui.custom_widgets.postprocessor_control.architecture_config.plotneuralnet_generator import (
+    PDFLATEX_AVAILABLE,
+    PlotNeuralNetGenerator,
+)
 
 # Import MODEL_REGISTRY for batch test mode
 try:
@@ -45,158 +59,6 @@ except ImportError as e:
 # Log availability at module load time
 _logger = logging.getLogger(__name__)
 _logger.debug(f"PlotNeuralNet dependencies: PDFLATEX={PDFLATEX_AVAILABLE}, PDF2IMAGE={PDF2IMAGE_AVAILABLE}")
-
-
-class ZoomableImageView(QGraphicsView):
-    """
-    A QGraphicsView that supports mouse wheel zoom and pan.
-
-    Features:
-    - Initial fit to window
-    - Zoom in/out with mouse wheel
-    - Pan by dragging with mouse
-    - Emits zoom level changes
-    """
-
-    zoom_changed = pyqtSignal(float)  # Emits zoom percentage (100 = 100%)
-
-    MIN_ZOOM = 0.1   # 10%
-    MAX_ZOOM = 10.0  # 1000%
-    ZOOM_STEP = 1.15  # 15% per wheel step
-
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-
-        # Setup scene
-        self._scene = QGraphicsScene(self)
-        self.setScene(self._scene)
-
-        # Setup view properties
-        self.setRenderHint(QPainter.Antialiasing)
-        self.setRenderHint(QPainter.SmoothPixmapTransform)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setBackgroundBrush(Qt.white)
-        self.setFrameShape(QFrame.NoFrame)
-
-        # State
-        self._pixmap_item: Optional[QGraphicsPixmapItem] = None
-        self._zoom_level = 1.0
-        self._fit_zoom = 1.0  # Zoom level that fits the image to view
-
-    def set_pixmap(self, pixmap: QPixmap):
-        """Set the image to display and fit it to the view."""
-        # Clear previous content
-        self._scene.clear()
-
-        # Add new pixmap
-        self._pixmap_item = QGraphicsPixmapItem(pixmap)
-        self._pixmap_item.setTransformationMode(Qt.SmoothTransformation)
-        self._scene.addItem(self._pixmap_item)
-
-        # Set scene rect to image size
-        self._scene.setSceneRect(self._pixmap_item.boundingRect())
-
-        # Fit to view
-        self.fit_to_view()
-
-    def fit_to_view(self):
-        """Fit the image to the current view size."""
-        if self._pixmap_item is None:
-            return
-
-        # Reset any existing transform
-        self.resetTransform()
-
-        # Calculate scale to fit
-        view_rect = self.viewport().rect()
-        scene_rect = self._scene.sceneRect()
-
-        if scene_rect.width() <= 0 or scene_rect.height() <= 0:
-            return
-
-        x_ratio = view_rect.width() / scene_rect.width()
-        y_ratio = view_rect.height() / scene_rect.height()
-
-        # Use the smaller ratio to ensure entire image fits
-        self._fit_zoom = min(x_ratio, y_ratio) * 0.95  # 95% to leave small margin
-        self._zoom_level = self._fit_zoom
-
-        self.scale(self._fit_zoom, self._fit_zoom)
-        self.centerOn(self._pixmap_item)
-
-        self.zoom_changed.emit(self._zoom_level * 100)
-
-    def wheelEvent(self, event: QWheelEvent):
-        """Handle mouse wheel for zooming."""
-        if self._pixmap_item is None:
-            return
-
-        # Get zoom direction
-        if event.angleDelta().y() > 0:
-            # Zoom in
-            factor = self.ZOOM_STEP
-        else:
-            # Zoom out
-            factor = 1.0 / self.ZOOM_STEP
-
-        # Calculate new zoom level
-        new_zoom = self._zoom_level * factor
-
-        # Clamp to min/max
-        if new_zoom < self.MIN_ZOOM:
-            factor = self.MIN_ZOOM / self._zoom_level
-            new_zoom = self.MIN_ZOOM
-        elif new_zoom > self.MAX_ZOOM:
-            factor = self.MAX_ZOOM / self._zoom_level
-            new_zoom = self.MAX_ZOOM
-
-        # Apply zoom
-        self._zoom_level = new_zoom
-        self.scale(factor, factor)
-
-        self.zoom_changed.emit(self._zoom_level * 100)
-
-    def reset_zoom(self):
-        """Reset zoom to fit the image in view."""
-        self.fit_to_view()
-
-    def zoom_in(self):
-        """Zoom in by one step."""
-        if self._pixmap_item is None:
-            return
-
-        factor = self.ZOOM_STEP
-        new_zoom = self._zoom_level * factor
-
-        if new_zoom <= self.MAX_ZOOM:
-            self._zoom_level = new_zoom
-            self.scale(factor, factor)
-            self.zoom_changed.emit(self._zoom_level * 100)
-
-    def zoom_out(self):
-        """Zoom out by one step."""
-        if self._pixmap_item is None:
-            return
-
-        factor = 1.0 / self.ZOOM_STEP
-        new_zoom = self._zoom_level * factor
-
-        if new_zoom >= self.MIN_ZOOM:
-            self._zoom_level = new_zoom
-            self.scale(factor, factor)
-            self.zoom_changed.emit(self._zoom_level * 100)
-
-    def resizeEvent(self, event):
-        """Handle resize to maintain fit if at fit zoom level."""
-        super().resizeEvent(event)
-
-        # If we're close to the fit zoom, re-fit on resize
-        if self._pixmap_item is not None and abs(self._zoom_level - self._fit_zoom) < 0.01:
-            self.fit_to_view()
 
 
 class ArchitecturePreviewPopup(QDialog):
@@ -225,14 +87,14 @@ class ArchitecturePreviewPopup(QDialog):
     COLORMAP_PLASMA = "Plasma"
 
     def __init__(self, model: nn.Module, model_name: str,
-                 input_size: int = 32, config: Optional[Dict[str, Any]] = None,
+                 input_size: int = 32, config: Optional[dict[str, Any]] = None,
                  ground_truth_images: Optional[np.ndarray] = None,
                  noisy_images: Optional[np.ndarray] = None,
                  denoised_images: Optional[np.ndarray] = None,
                  parent: Optional[QWidget] = None,
                  logger: Optional[logging.Logger] = None,
                  # Batch test mode parameters
-                 tests: Optional[List[Dict[str, Any]]] = None,
+                 tests: Optional[list[dict[str, Any]]] = None,
                  test_name: Optional[str] = None):
         """
         Initialize the architecture preview popup.
@@ -300,11 +162,11 @@ class ArchitecturePreviewPopup(QDialog):
 
         # Extract blocks for visualization
         self._visualizer = NetworkVisualizer(figsize=(18, 9), dpi=100, logger=self.logger)
-        self._blocks: List[SemanticBlock] = []
-        self._skip_connections: List[Tuple[int, int]] = []
+        self._blocks: list[SemanticBlock] = []
+        self._skip_connections: list[tuple[int, int]] = []
         self._extract_blocks()
 
-        self._setup_ui()
+        build_ui(self)
 
         # Start PlotNeuralNet rendering
         self._start_tikz_compilation()
@@ -327,70 +189,6 @@ class ArchitecturePreviewPopup(QDialog):
             self.logger.error(f"Failed to extract blocks: {e}", exc_info=True)
             self._blocks = []
             self._skip_connections = []
-
-    def _setup_model_info_panel(self):
-        """Setup or update the model information panel."""
-        # Clear existing labels
-        for label in self._info_value_labels.values():
-            label.deleteLater()
-        self._info_value_labels.clear()
-
-        # Remove all items from layout
-        while self._info_layout.count():
-            item = self._info_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-        # Calculate parameters
-        total_params = sum(p.numel() for p in self.model.parameters())
-        trainable_params = sum(p.numel() for p in self.model.parameters()
-                              if p.requires_grad)
-        non_trainable = total_params - trainable_params
-
-        # Format parameter counts
-        def format_params(n: int) -> str:
-            if n >= 1_000_000:
-                return f"{n:,} ({n / 1_000_000:.2f}M)"
-            elif n >= 1_000:
-                return f"{n:,} ({n / 1_000:.1f}K)"
-            return f"{n:,}"
-
-        # Create info labels
-        font_bold = QFont()
-        font_bold.setBold(True)
-
-        info_items = [
-            ("Total Parameters:", format_params(total_params)),
-            ("Trainable:", format_params(trainable_params)),
-            ("Non-trainable:", format_params(non_trainable)),
-            ("Input Size:", f"{self.input_size} x {self.input_size} x 1"),
-            ("Model Class:", type(self.model).__name__),
-        ]
-
-        for i, (label_text, value_text) in enumerate(info_items):
-            row = i // 3
-            col = (i % 3) * 2
-
-            label = QLabel(label_text)
-            label.setFont(font_bold)
-            value = QLabel(value_text)
-            self._info_value_labels[label_text] = value
-
-            self._info_layout.addWidget(label, row, col)
-            self._info_layout.addWidget(value, row, col + 1)
-
-        # Add configuration info if available
-        if self.config:
-            config_str = ", ".join(f"{k}={v}" for k, v in self.config.items())
-            config_label = QLabel("Configuration:")
-            config_label.setFont(font_bold)
-            config_value = QLabel(config_str)
-            config_value.setWordWrap(True)
-            self._info_value_labels["Configuration:"] = config_value
-
-            row = len(info_items) // 3 + 1
-            self._info_layout.addWidget(config_label, row, 0)
-            self._info_layout.addWidget(config_value, row, 1, 1, 5)
 
     def _on_test_changed(self, index: int):
         """Handle test selection change in Batch Reports mode."""
@@ -487,7 +285,7 @@ class ArchitecturePreviewPopup(QDialog):
         self.title_label.setText(f"<h2>{test_name} - {model_name} Architecture</h2>")
 
         # Update model info panel
-        self._setup_model_info_panel()
+        populate_model_info_panel(self)
 
         # Re-extract blocks
         self._extract_blocks()
@@ -524,281 +322,6 @@ class ArchitecturePreviewPopup(QDialog):
                     self._max_image_idx = max(0, self._num_images - 1)
                     if hasattr(self, 'image_total_label') and self.image_total_label:
                         self.image_total_label.setText(f"/ {self._max_image_idx}")
-
-    def _setup_ui(self):
-        """Setup the dialog UI layout."""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(12)
-
-        # Test selector (only in Batch Reports mode)
-        if self._tests and len(self._tests) > 1:
-            test_selector_layout = QHBoxLayout()
-            test_selector_layout.setSpacing(10)
-
-            test_label = QLabel("Test:")
-            test_label.setStyleSheet("font-weight: bold; font-size: 12px;")
-            test_selector_layout.addWidget(test_label)
-
-            self.test_combo = QComboBox()
-            self.test_combo.setMinimumWidth(300)
-            self.test_combo.setStyleSheet("""
-                QComboBox {
-                    padding: 5px 10px;
-                    font-size: 12px;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                }
-            """)
-            for test in self._tests:
-                t_name = test.get("name", "Unknown")
-                m_name = test.get("model_name", test.get("config", {}).get("model_name", "Unknown"))
-                self.test_combo.addItem(f"{t_name} ({m_name})")
-            self.test_combo.currentIndexChanged.connect(self._on_test_changed)
-            test_selector_layout.addWidget(self.test_combo)
-
-            test_selector_layout.addStretch()
-            main_layout.addLayout(test_selector_layout)
-        else:
-            self.test_combo = None
-
-        # Title
-        if self._test_name:
-            self.title_label = QLabel(f"<h2>{self._test_name} - {self.model_name} Architecture</h2>")
-        else:
-            self.title_label = QLabel(f"<h2>{self.model_name} Architecture</h2>")
-        self.title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(self.title_label)
-
-        # Model information panel
-        info_group = QGroupBox("Model Information")
-        self._info_layout = QGridLayout(info_group)
-        self._info_layout.setSpacing(15)
-
-        # Store references to value labels for dynamic updates
-        self._info_value_labels = {}
-        self._setup_model_info_panel()
-
-        main_layout.addWidget(info_group)
-
-        # Status bar with progress and zoom info
-        status_layout = QHBoxLayout()
-
-        self.progress_label = QLabel("Generating visualization...")
-        self.progress_label.setStyleSheet("color: #666;")
-        status_layout.addWidget(self.progress_label)
-
-        status_layout.addStretch()
-
-        # Image visualization controls (only if post-processing results available)
-        if self._has_postprocessing:
-            # Checkbox to enable/disable image display
-            self.show_images_checkbox = QCheckBox("Show I/O images")
-            self.show_images_checkbox.setToolTip("Display input and output images in the visualization")
-            self.show_images_checkbox.stateChanged.connect(self._on_show_images_changed)
-            status_layout.addWidget(self.show_images_checkbox)
-
-            # Calculate number of images (use minimum across all available sets)
-            self._num_images = min(
-                len(self.ground_truth_images) if self.ground_truth_images is not None else 0,
-                len(self.noisy_images) if self.noisy_images is not None else 0,
-                len(self.denoised_images) if self.denoised_images is not None else 0
-            )
-
-            # Image index selector with total count
-            self.image_idx_label = QLabel("Image:")
-            self.image_idx_label.setStyleSheet("margin-left: 8px;")
-            self.image_idx_label.setEnabled(False)
-            status_layout.addWidget(self.image_idx_label)
-
-            self.image_idx_spinbox = QSpinBox()
-            self.image_idx_spinbox.setRange(0, max(0, self._num_images - 1))
-            self.image_idx_spinbox.setValue(0)
-            self.image_idx_spinbox.setMaximumWidth(70)
-            self.image_idx_spinbox.setEnabled(False)
-            self.image_idx_spinbox.valueChanged.connect(self._on_image_idx_changed)
-            status_layout.addWidget(self.image_idx_spinbox)
-
-            # Max index label (show maximum selectable index, matching spinbox range)
-            self._max_image_idx = max(0, self._num_images - 1)
-            self.image_total_label = QLabel(f"/ {self._max_image_idx}")
-            self.image_total_label.setStyleSheet("color: #666;")
-            self.image_total_label.setEnabled(False)
-            status_layout.addWidget(self.image_total_label)
-
-            # Colormap selector
-            self.colormap_label = QLabel("Colormap:")
-            self.colormap_label.setStyleSheet("margin-left: 8px;")
-            self.colormap_label.setEnabled(False)
-            status_layout.addWidget(self.colormap_label)
-
-            self.colormap_combo = QComboBox()
-            self.colormap_combo.addItems([
-                self.COLORMAP_GRAY,
-                self.COLORMAP_VIRIDIS,
-                self.COLORMAP_JET,
-                self.COLORMAP_HOT,
-                self.COLORMAP_INFERNO,
-                self.COLORMAP_PLASMA
-            ])
-            self.colormap_combo.setCurrentText(self.COLORMAP_HOT)
-            self.colormap_combo.setMaximumWidth(85)
-            self.colormap_combo.setEnabled(False)
-            self.colormap_combo.currentTextChanged.connect(self._on_colormap_changed)
-            status_layout.addWidget(self.colormap_combo)
-
-            # Input image type selector
-            self.input_type_label = QLabel("Input:")
-            self.input_type_label.setStyleSheet("margin-left: 8px;")
-            self.input_type_label.setEnabled(False)
-            status_layout.addWidget(self.input_type_label)
-
-            self.input_type_combo = QComboBox()
-            self.input_type_combo.addItems([
-                self.IMAGE_TYPE_GROUND_TRUTH,
-                self.IMAGE_TYPE_NOISY,
-                self.IMAGE_TYPE_DENOISED
-            ])
-            self.input_type_combo.setCurrentText(self.IMAGE_TYPE_NOISY)
-            self.input_type_combo.setMaximumWidth(100)
-            self.input_type_combo.setEnabled(False)
-            self.input_type_combo.currentTextChanged.connect(self._on_input_type_changed)
-            status_layout.addWidget(self.input_type_combo)
-
-            # Output image type selector
-            self.output_type_label = QLabel("Output:")
-            self.output_type_label.setStyleSheet("margin-left: 8px;")
-            self.output_type_label.setEnabled(False)
-            status_layout.addWidget(self.output_type_label)
-
-            self.output_type_combo = QComboBox()
-            self.output_type_combo.addItems([
-                self.IMAGE_TYPE_GROUND_TRUTH,
-                self.IMAGE_TYPE_NOISY,
-                self.IMAGE_TYPE_DENOISED
-            ])
-            self.output_type_combo.setCurrentText(self.IMAGE_TYPE_DENOISED)
-            self.output_type_combo.setMaximumWidth(100)
-            self.output_type_combo.setEnabled(False)
-            self.output_type_combo.currentTextChanged.connect(self._on_output_type_changed)
-            status_layout.addWidget(self.output_type_combo)
-
-            status_layout.addSpacing(10)
-        else:
-            # No post-processing results - show info note
-            self.show_images_checkbox = None
-            self.image_idx_spinbox = None
-            self.image_idx_label = None
-            self.image_total_label = None
-            self.colormap_combo = None
-            self.colormap_label = None
-            self.input_type_combo = None
-            self.input_type_label = None
-            self.output_type_combo = None
-            self.output_type_label = None
-            self._num_images = 0
-
-            # Info label
-            info_label = QLabel("ℹ️ Train model and apply post-processing to enable I/O image preview")
-            info_label.setStyleSheet("color: #888; font-style: italic; margin-left: 10px;")
-            info_label.setToolTip(
-                "To visualize input/output images:\n"
-                "1. Load a dataset\n"
-                "2. Generate masks and apply reconstruction\n"
-                "3. Train the neural network\n"
-                "4. Apply post-processing to generate denoised images"
-            )
-            status_layout.addWidget(info_label)
-
-        status_layout.addStretch()
-
-        # Zoom controls
-        self.zoom_label = QLabel("Zoom: --")
-        self.zoom_label.setStyleSheet("color: #666; margin-right: 10px;")
-        status_layout.addWidget(self.zoom_label)
-
-        self.fit_btn = QPushButton("Fit")
-        self.fit_btn.setMaximumWidth(50)
-        self.fit_btn.setToolTip("Fit image to window (also double-click)")
-        self.fit_btn.clicked.connect(self._on_fit_clicked)
-        self.fit_btn.setEnabled(False)
-        status_layout.addWidget(self.fit_btn)
-
-        self.zoom_in_btn = QPushButton("+")
-        self.zoom_in_btn.setMaximumWidth(30)
-        self.zoom_in_btn.setToolTip("Zoom in")
-        self.zoom_in_btn.clicked.connect(self._on_zoom_in)
-        self.zoom_in_btn.setEnabled(False)
-        status_layout.addWidget(self.zoom_in_btn)
-
-        self.zoom_out_btn = QPushButton("-")
-        self.zoom_out_btn.setMaximumWidth(30)
-        self.zoom_out_btn.setToolTip("Zoom out")
-        self.zoom_out_btn.clicked.connect(self._on_zoom_out)
-        self.zoom_out_btn.setEnabled(False)
-        status_layout.addWidget(self.zoom_out_btn)
-
-        status_layout.addSpacing(20)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximumWidth(200)
-        self.progress_bar.setRange(0, 0)  # Indeterminate
-        status_layout.addWidget(self.progress_bar)
-
-        main_layout.addLayout(status_layout)
-
-        # Visualization area with zoomable view
-        viz_group = QGroupBox("Architecture Diagram (PlotNeuralNet) - Scroll to zoom, drag to pan")
-        viz_layout = QVBoxLayout(viz_group)
-
-        # Zoomable image view
-        self.image_view = ZoomableImageView()
-        self.image_view.zoom_changed.connect(self._on_zoom_changed)
-        self.image_view.setMinimumHeight(400)
-
-        # Loading widget (shown initially)
-        self.loading_widget = QWidget()
-        loading_layout = QVBoxLayout(self.loading_widget)
-        loading_label = QLabel("Compiling LaTeX... This may take a few seconds.")
-        loading_label.setAlignment(Qt.AlignCenter)
-        loading_label.setStyleSheet("color: #666; font-size: 14px;")
-        loading_layout.addWidget(loading_label)
-
-        # Stack loading widget on top initially
-        viz_layout.addWidget(self.loading_widget)
-        viz_layout.addWidget(self.image_view)
-        self.image_view.hide()
-
-        main_layout.addWidget(viz_group, 1)  # Stretch factor 1
-
-        # Buttons
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-
-        # Save buttons
-        self.save_png_btn = QPushButton("Save as PNG")
-        self.save_png_btn.clicked.connect(lambda: self._on_save("png"))
-        self.save_png_btn.setEnabled(False)
-        buttons_layout.addWidget(self.save_png_btn)
-
-        self.save_pdf_btn = QPushButton("Save as PDF")
-        self.save_pdf_btn.clicked.connect(lambda: self._on_save("pdf"))
-        self.save_pdf_btn.setEnabled(False)
-        buttons_layout.addWidget(self.save_pdf_btn)
-
-        self.save_tex_btn = QPushButton("Save as TEX")
-        self.save_tex_btn.clicked.connect(lambda: self._on_save("tex"))
-        self.save_tex_btn.setToolTip("Save LaTeX/TikZ source code for manual editing")
-        self.save_tex_btn.setEnabled(False)
-        buttons_layout.addWidget(self.save_tex_btn)
-
-        buttons_layout.addSpacing(20)
-
-        self.close_button = QPushButton("Close")
-        self.close_button.clicked.connect(self.close)
-        buttons_layout.addWidget(self.close_button)
-
-        main_layout.addLayout(buttons_layout)
 
     def _on_zoom_changed(self, zoom_percent: float):
         """Update zoom label when zoom changes."""

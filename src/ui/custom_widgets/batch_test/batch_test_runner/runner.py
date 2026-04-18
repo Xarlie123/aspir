@@ -3,49 +3,37 @@ Batch Test Runner - Executes batch test configurations.
 Supports both sequential and parallel execution with progress updates and cancellation.
 Timing and energy measurements always run sequentially for accuracy.
 """
-import os
-import json
+from __future__ import annotations
+
 import logging
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from pathlib import Path
 from threading import Lock
-from typing import Dict, Any, Optional, List
+from typing import Any
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from ui.custom_widgets.batch_test.test_config_model import (
-    TestConfiguration, BatchTestConfig, TestStatus, ExportLevel
-)
-from ui.utils.file_formats import (
-    FileExtensions, BatchAnalysisReport, BATCH_TESTS_DIR, MODELS_DIR
-)
-
-# Import simulation components
-from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
-from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
-from simulation_engine._2_mask_gen.mask_hadamard_scramble import MaskHadamardScramble
-from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
-from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
-from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
-from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
-from simulation_engine._3_applicator.applicator_scatter import ApplicatorScatter
-from simulation_engine._3_applicator.applicator_scatter_pseudoinverse import ApplicatorScatterPseudoinverse
-from simulation_engine._3_applicator.applicator_scatter_fista import ApplicatorScatterFISTA
-from simulation_engine._3_applicator.applicator_scatter_tv_norm import ApplicatorScatterTV
-from simulation_engine._3_applicator.applicator_sweep import ApplicatorSweep
-from simulation_engine._3_applicator.applicator_hadamard import ApplicatorHadamard
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer import Analyzer
-from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
-
-# PyTorch profiler imports
-try:
-    from torch.profiler import profile, record_function, ProfilerActivity
-    PROFILER_AVAILABLE = True
-except ImportError:
-    PROFILER_AVAILABLE = False
+from ui.custom_widgets.batch_test.batch_test_runner._energy import measure_energy
+from ui.custom_widgets.batch_test.batch_test_runner._export import (
+    export_datasets,
+    export_models,
+    export_results_json,
+    get_unique_output_dir,
+)
+from ui.custom_widgets.batch_test.batch_test_runner._pipeline import (
+    create_applicator,
+    create_mask,
+)
+from ui.custom_widgets.batch_test.batch_test_runner._profiling import profile_model
+from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
+from ui.custom_widgets.batch_test.test_config_model import (
+    BatchTestConfig,
+    ExportLevel,
+    TestConfiguration,
+    TestStatus,
+)
 
 
 class BatchTestRunner(QThread):
@@ -111,9 +99,9 @@ class BatchTestRunner(QThread):
         self.batch_name = batch_name
         self._cancel_requested = False
         self._cancel_test_indices = set()  # Tests to cancel
-        self._all_results: List[Dict[str, Any]] = []
-        self._trained_models: Dict[int, Any] = {}  # Store models for export
-        self._test_data: Dict[int, Dict] = {}  # Store test data for export
+        self._all_results: list[dict[str, Any]] = []
+        self._trained_models: dict[int, Any] = {}  # Store models for export
+        self._test_data: dict[int, dict] = {}  # Store test data for export
         self._results_lock = Lock()  # Thread safety for results
 
     def run(self):
@@ -213,7 +201,7 @@ class BatchTestRunner(QThread):
 
                 self._run_analysis_phase(i, test_config)
 
-    def _execute_parallel_training(self, tests: List[tuple], num_threads: int):
+    def _execute_parallel_training(self, tests: list[tuple], num_threads: int):
         """Execute training phase in parallel for all tests."""
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             # Submit all training tasks
@@ -288,7 +276,7 @@ class BatchTestRunner(QThread):
         self.phase_started.emit(index, self.PHASE_MASKS)
         self.status_update.emit(f"Generating masks: {config.name}")
         self.phase_progress.emit(index, self.PHASE_MASKS, 0)
-        mask = self._create_mask(config)
+        mask = create_mask(config, self.dataset, self.logger)
         self.phase_progress.emit(index, self.PHASE_MASKS, 100)
         self.phase_completed.emit(index, self.PHASE_MASKS)
         self.test_progress.emit(index, 10)
@@ -300,7 +288,7 @@ class BatchTestRunner(QThread):
         self.phase_started.emit(index, self.PHASE_RECONSTRUCTION)
         self.status_update.emit(f"Creating applicator: {config.name}")
         self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 0)
-        applicator = self._create_applicator(config, mask)
+        applicator = create_applicator(config, mask, self.dataset)
 
         # Update reconstruction method from applicator (more accurate than config)
         if hasattr(applicator, 'RECONSTRUCTION_METHOD'):
@@ -455,8 +443,8 @@ class BatchTestRunner(QThread):
         if "timing" in config.reports:
             try:
                 self.status_update.emit(f"Measuring timing: {config.name}")
-                timing_results = self._measure_timing(
-                    postprocessor, config,
+                timing_results = measure_timing(
+                    postprocessor, config, self.dataset, self.logger,
                     applicator=applicator,
                     warmup_runs=config.timing_warmup_runs,
                     measurement_runs=config.timing_measurement_runs,
@@ -467,8 +455,8 @@ class BatchTestRunner(QThread):
 
                 # Run PyTorch profiler and store results
                 self.status_update.emit(f"Running profiler: {config.name}")
-                profiler_results = self._profile_model(
-                    postprocessor, config,
+                profiler_results = profile_model(
+                    postprocessor, config, self.logger,
                     num_images=10,
                     warmup_runs=3
                 )
@@ -485,8 +473,8 @@ class BatchTestRunner(QThread):
         if "energy" in config.reports:
             try:
                 self.status_update.emit(f"Measuring energy: {config.name}")
-                energy_results = self._measure_energy(
-                    postprocessor, config,
+                energy_results = measure_energy(
+                    postprocessor, config, self.logger,
                     warmup_runs=config.timing_warmup_runs,
                     measurement_runs=config.timing_measurement_runs
                 )
@@ -527,7 +515,7 @@ class BatchTestRunner(QThread):
         self.test_completed.emit(index, results)
         self.logger.info("Test %d analysis complete: %s", index, config.name)
 
-    def _execute_parallel_tests(self, tests: List[tuple], num_threads: int):
+    def _execute_parallel_tests(self, tests: list[tuple], num_threads: int):
         """Execute tests in parallel using ThreadPoolExecutor (legacy method)."""
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             # Submit all tests
@@ -604,7 +592,7 @@ class BatchTestRunner(QThread):
             self.phase_started.emit(index, self.PHASE_MASKS)
             self.status_update.emit(f"Generating masks: {config.name}")
             self.phase_progress.emit(index, self.PHASE_MASKS, 0)
-            mask = self._create_mask(config)
+            mask = create_mask(config, self.dataset, self.logger)
             self.phase_progress.emit(index, self.PHASE_MASKS, 100)
             self.phase_completed.emit(index, self.PHASE_MASKS)
             self.test_progress.emit(index, 10)
@@ -616,7 +604,7 @@ class BatchTestRunner(QThread):
             self.phase_started.emit(index, self.PHASE_RECONSTRUCTION)
             self.status_update.emit(f"Creating applicator: {config.name}")
             self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 0)
-            applicator = self._create_applicator(config, mask)
+            applicator = create_applicator(config, mask, self.dataset)
 
             # Update reconstruction method from applicator (more accurate than config)
             if hasattr(applicator, 'RECONSTRUCTION_METHOD'):
@@ -709,108 +697,6 @@ class BatchTestRunner(QThread):
             with self._results_lock:
                 self._all_results.append(results)
             self.test_failed.emit(index, str(e))
-
-    def _create_mask(self, config: TestConfiguration):
-        """Create mask based on configuration."""
-        img_size = self.dataset.img_size
-
-        if config.mask_type == "scatter":
-            return MaskScatter(
-                img_size=img_size,
-                point_density=config.scatter_point_density,
-                num_patterns=config.scatter_num_patterns,
-                seed=config.mask_seed,
-                logger=self.logger
-            )
-        elif config.mask_type == "hadamard_natural":
-            max_idx = min(config.hadamard_max_idx, img_size * img_size)
-            return MaskHadamard(
-                img_size=img_size,
-                min_idx=config.hadamard_min_idx,
-                max_idx=max_idx,
-                logger=self.logger
-            )
-        elif config.mask_type == "hadamard_scramble":
-            max_idx = min(config.hadamard_max_idx, img_size * img_size)
-            return MaskHadamardScramble(
-                img_size=img_size,
-                min_idx=config.hadamard_min_idx,
-                max_idx=max_idx,
-                logger=self.logger
-            )
-        elif config.mask_type == "hadamard_cake_cutting":
-            max_idx = min(config.hadamard_max_idx, img_size * img_size)
-            return MaskHadamardCakeCutting(
-                img_size=img_size,
-                min_idx=config.hadamard_min_idx,
-                max_idx=max_idx,
-                logger=self.logger
-            )
-        elif config.mask_type == "hadamard_walsh_paley":
-            max_idx = min(config.hadamard_max_idx, img_size * img_size)
-            return MaskHadamardWalshPaley(
-                img_size=img_size,
-                min_idx=config.hadamard_min_idx,
-                max_idx=max_idx,
-                logger=self.logger
-            )
-        elif config.mask_type == "sweep":
-            # Convert sweep angles to parameters list format
-            parametros = []
-            for i, angle in enumerate(config.sweep_angles):
-                parametros.append({
-                    "angle": angle,
-                    "bar_width": config.sweep_bar_widths[i] if i < len(config.sweep_bar_widths) else 2,
-                    "stride": config.sweep_strides[i] if i < len(config.sweep_strides) else 4,
-                })
-            return MaskSweep(
-                img_size=img_size,
-                parametros=parametros,
-                logger=self.logger
-            )
-        elif config.mask_type == "cal_sal":
-            return MaskCalSal(
-                img_size=img_size,
-                logger=self.logger
-            )
-        else:
-            raise ValueError(f"Unknown mask type: {config.mask_type}")
-
-    def _create_applicator(self, config: TestConfiguration, mask):
-        """Create applicator based on mask type and reconstruction method."""
-        # Generate mask patterns
-        mask.generate_masks()
-
-        if isinstance(mask, MaskScatter):
-            method = config.reconstruction_method
-            if method == "conventional":
-                # Direct scatter reconstruction (simple sampling)
-                return ApplicatorScatter(self.dataset, mask)
-            elif method == "pseudoinverse":
-                return ApplicatorScatterPseudoinverse(self.dataset, mask)
-            elif method == "fista":
-                applicator = ApplicatorScatterFISTA(self.dataset, mask)
-                applicator.lambda_val = config.fista_lambda
-                applicator.max_iter = config.fista_iterations
-                return applicator
-            elif method == "tv_norm":
-                applicator = ApplicatorScatterTV(self.dataset, mask)
-                applicator.lambda_val = config.tv_lambda
-                applicator.max_iter = config.tv_iterations
-                return applicator
-            else:
-                # Fallback to conventional
-                return ApplicatorScatter(self.dataset, mask)
-
-        elif isinstance(mask, MaskSweep):
-            return ApplicatorSweep(self.dataset, mask)
-
-        elif isinstance(mask, (MaskHadamard, MaskHadamardScramble, MaskHadamardCakeCutting,
-                               MaskHadamardWalshPaley, MaskCalSal)):
-            return ApplicatorHadamard(self.dataset, mask)
-
-        else:
-            raise ValueError(f"Unsupported mask type for applicator: {type(mask)}")
 
     def _create_and_train_postprocessor(
         self, config: TestConfiguration, mask, applicator, test_index: int,
@@ -914,7 +800,7 @@ class BatchTestRunner(QThread):
         return postprocessor
 
     def _analyze_results(self, config: TestConfiguration, postprocessor: PostprocessorNN,
-                         applicator=None) -> Dict[str, Any]:
+                         applicator=None) -> dict[str, Any]:
         """Analyze test results based on configured reports."""
         results = {}
 
@@ -963,8 +849,8 @@ class BatchTestRunner(QThread):
         if "timing" in config.reports:
             # Note: Timing analysis runs sequentially for accuracy
             try:
-                timing_results = self._measure_timing(
-                    postprocessor, config,
+                timing_results = measure_timing(
+                    postprocessor, config, self.dataset, self.logger,
                     applicator=applicator,
                     warmup_runs=config.timing_warmup_runs,
                     measurement_runs=config.timing_measurement_runs,
@@ -973,8 +859,8 @@ class BatchTestRunner(QThread):
                 results.update(timing_results)
 
                 # Run PyTorch profiler and store results
-                profiler_results = self._profile_model(
-                    postprocessor, config,
+                profiler_results = profile_model(
+                    postprocessor, config, self.logger,
                     num_images=10,
                     warmup_runs=3
                 )
@@ -988,8 +874,8 @@ class BatchTestRunner(QThread):
             # Note: Energy analysis runs sequentially for accuracy
             try:
                 self.status_update.emit(f"Measuring energy: {config.name}")
-                energy_results = self._measure_energy(
-                    postprocessor, config,
+                energy_results = measure_energy(
+                    postprocessor, config, self.logger,
                     warmup_runs=config.timing_warmup_runs,
                     measurement_runs=config.timing_measurement_runs
                 )
@@ -999,490 +885,6 @@ class BatchTestRunner(QThread):
                 results["energy_error"] = str(e)
 
         return results
-
-    def _measure_timing(
-        self, postprocessor: PostprocessorNN, config: TestConfiguration,
-        applicator=None, warmup_runs: int = 5, measurement_runs: int = 20,
-        sampling_rate_khz: float = 10.752
-    ) -> Dict[str, Any]:
-        """
-        Measure inference timing with configurable parameters.
-
-        Always measures CPU timing. If use_gpu is enabled and CUDA is available,
-        also measures GPU timing (like Single Test behavior).
-        Also measures reconstruction time if applicator is provided.
-        """
-        import torch
-        import numpy as np
-
-        model = postprocessor.model
-        img_size = postprocessor.img_size
-        is_conv = postprocessor.is_conv
-
-        model.eval()
-
-        # Calculate acquisition time based on sampling rate and number of patterns
-        num_patterns = 1  # Default
-        mask = None
-
-        # Try to get mask from applicator
-        if applicator is not None and hasattr(applicator, 'mask'):
-            mask = applicator.mask
-        elif hasattr(postprocessor, 'applicator') and postprocessor.applicator is not None:
-            if hasattr(postprocessor.applicator, 'mask'):
-                mask = postprocessor.applicator.mask
-
-        if mask is not None:
-            if hasattr(mask, 'num_patterns'):
-                num_patterns = mask.num_patterns
-            elif hasattr(mask, 'patterns') and mask.patterns is not None:
-                num_patterns = len(mask.patterns)
-
-        t_acquisition_ms = num_patterns / sampling_rate_khz if sampling_rate_khz > 0 else 0
-
-        # Measure reconstruction time if applicator is available
-        # Match Single Test behavior: measure all test images, with warmup
-        t_reconstruction_ms = 0.0
-        if applicator is not None:
-            self.logger.debug("Measuring reconstruction timing...")
-            try:
-                dataset_size = len(getattr(self.dataset, 'data', []))
-                # Use same number of samples as test set (from config split)
-                test_ratio = config.test_split / 100.0
-                n_recon_samples = max(1, min(dataset_size, int(dataset_size * test_ratio)))
-
-                # Warmup runs to ensure fair comparison (like inference warmup)
-                warmup_recon = min(2, n_recon_samples)
-                for idx in range(warmup_recon):
-                    _ = applicator.process_image(idx)
-
-                # Measure reconstruction time for test images
-                recon_times = []
-                for idx in range(n_recon_samples):
-                    t0 = time.perf_counter()
-                    _ = applicator.process_image(idx)
-                    t1 = time.perf_counter()
-                    recon_times.append((t1 - t0) * 1000.0)  # ms
-
-                if recon_times:
-                    t_reconstruction_ms = float(np.mean(recon_times))
-                    self.logger.debug("Reconstruction time: %.2f ms (mean of %d samples, after %d warmup)",
-                                     t_reconstruction_ms, len(recon_times), warmup_recon)
-            except Exception as e:
-                self.logger.warning("Reconstruction timing failed: %s", e)
-
-        # Helper function to measure timing on a specific device
-        def measure_on_device(device: torch.device) -> List[float]:
-            model.to(device)
-            if is_conv:
-                sample = torch.randn(1, 1, img_size, img_size, device=device)
-            else:
-                sample = torch.randn(1, img_size * img_size, device=device)
-
-            # Warmup
-            with torch.no_grad():
-                for _ in range(warmup_runs):
-                    _ = model(sample)
-                    if device.type == "cuda":
-                        torch.cuda.synchronize()
-
-            # Measure
-            times = []
-            with torch.no_grad():
-                for _ in range(measurement_runs):
-                    if device.type == "cuda":
-                        torch.cuda.synchronize()
-                    start = time.perf_counter()
-                    _ = model(sample)
-                    if device.type == "cuda":
-                        torch.cuda.synchronize()
-                    end = time.perf_counter()
-                    times.append((end - start) * 1000)  # Convert to ms
-
-            return times
-
-        # Always measure CPU timing
-        self.logger.debug("Measuring CPU inference timing...")
-        cpu_device = torch.device('cpu')
-        cpu_times = measure_on_device(cpu_device)
-        cpu_times_np = np.array(cpu_times)
-
-        results = {
-            "timing_cpu_mean_ms": float(cpu_times_np.mean()),
-            "timing_cpu_std_ms": float(cpu_times_np.std()),
-            "timing_cpu_min_ms": float(cpu_times_np.min()),
-            "timing_cpu_max_ms": float(cpu_times_np.max()),
-            "timing_warmup_runs": warmup_runs,
-            "timing_measurement_runs": measurement_runs,
-            "timing_sampling_rate_khz": sampling_rate_khz,
-            "timing_acquisition_ms": float(t_acquisition_ms),
-            "timing_reconstruction_ms": float(t_reconstruction_ms),
-            "timing_num_patterns": num_patterns,
-            "use_gpu": config.use_gpu,
-        }
-
-        # Also measure GPU timing if requested and available
-        if config.use_gpu and torch.cuda.is_available():
-            self.logger.debug("Measuring GPU inference timing...")
-            try:
-                gpu_device = torch.device('cuda')
-                gpu_times = measure_on_device(gpu_device)
-                gpu_times_np = np.array(gpu_times)
-
-                results["timing_gpu_mean_ms"] = float(gpu_times_np.mean())
-                results["timing_gpu_std_ms"] = float(gpu_times_np.std())
-                results["timing_gpu_min_ms"] = float(gpu_times_np.min())
-                results["timing_gpu_max_ms"] = float(gpu_times_np.max())
-
-                # Move model back to original device
-                model.to(postprocessor.device)
-            except Exception as e:
-                self.logger.warning("GPU timing measurement failed: %s", e)
-        else:
-            # Ensure model is on CPU if GPU was not used
-            model.to(cpu_device)
-
-        # For backwards compatibility, also set timing_mean_ms to the primary device
-        if config.use_gpu and "timing_gpu_mean_ms" in results:
-            results["timing_mean_ms"] = results["timing_gpu_mean_ms"]
-        else:
-            results["timing_mean_ms"] = results["timing_cpu_mean_ms"]
-
-        return results
-
-    def _profile_model(
-        self, postprocessor: PostprocessorNN, config: TestConfiguration,
-        num_images: int = 10, warmup_runs: int = 3
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Profile model with PyTorch profiler and return serializable results.
-
-        When GPU is enabled, profiles both CPU and GPU separately.
-        When only CPU is used, profiles CPU only.
-
-        Args:
-            postprocessor: The trained postprocessor
-            config: Test configuration
-            num_images: Number of images to profile
-            warmup_runs: Warmup iterations before profiling
-
-        Returns:
-            Dictionary with profiler results for JSON serialization:
-            - If GPU enabled: {"cpu": cpu_results, "gpu": gpu_results}
-            - If CPU only: {"cpu": cpu_results}
-            Returns None if profiler unavailable.
-        """
-        if not PROFILER_AVAILABLE:
-            self.logger.warning("PyTorch profiler not available")
-            return None
-
-        import torch
-        import numpy as np
-
-        model = postprocessor.model
-        device = postprocessor.device
-        img_size = postprocessor.img_size
-        is_conv = postprocessor.is_conv
-        has_gpu = device.type == "cuda"
-
-        model.eval()
-
-        # Create sample inputs on target device
-        if is_conv:
-            sample = torch.randn(num_images, 1, img_size, img_size, device=device)
-        else:
-            sample = torch.randn(num_images, img_size * img_size, device=device)
-
-        # Warmup
-        self.logger.debug("Profiler: Running %d warmup iterations", warmup_runs)
-        with torch.no_grad():
-            for _ in range(warmup_runs):
-                _ = model(sample[:1])
-                if has_gpu:
-                    torch.cuda.synchronize()
-
-        results = {}
-
-        # Profile CPU (always)
-        self.logger.info("Running PyTorch profiler (CPU)...")
-        try:
-            cpu_results = self._run_profiler_pass(
-                model, sample, num_images, [ProfilerActivity.CPU], "cpu", has_gpu
-            )
-            if cpu_results:
-                results["cpu"] = cpu_results
-        except Exception as e:
-            self.logger.error("CPU profiling failed: %s", e)
-
-        # Profile GPU (if available)
-        if has_gpu:
-            self.logger.info("Running PyTorch profiler (GPU)...")
-            try:
-                gpu_results = self._run_profiler_pass(
-                    model, sample, num_images,
-                    [ProfilerActivity.CPU, ProfilerActivity.CUDA], "cuda", has_gpu
-                )
-                if gpu_results:
-                    results["gpu"] = gpu_results
-            except Exception as e:
-                self.logger.error("GPU profiling failed: %s", e)
-
-        if results:
-            self.logger.info("Profiling complete (CPU: %s, GPU: %s)",
-                           "yes" if "cpu" in results else "no",
-                           "yes" if "gpu" in results else "no")
-            return results
-        return None
-
-    def _run_profiler_pass(
-        self, model, sample, num_images: int,
-        activities: list, device_str: str, sync_cuda: bool
-    ) -> Optional[Dict[str, Any]]:
-        """Run a single profiler pass with specified activities."""
-        import torch
-
-        try:
-            with profile(
-                activities=activities,
-                record_shapes=True,
-                profile_memory=True,
-                with_stack=False,
-                with_flops=True
-            ) as prof:
-                with torch.no_grad():
-                    for i in range(num_images):
-                        with record_function(f"inference_image_{i}"):
-                            _ = model(sample[i:i+1])
-                            if sync_cuda:
-                                torch.cuda.synchronize()
-
-            # Extract results (JSON-serializable)
-            return self._extract_profiler_results(prof, device_str, num_images)
-
-        except Exception as e:
-            self.logger.error("Profiler pass failed for %s: %s", device_str, e)
-            return None
-
-    def _extract_profiler_results(
-        self, prof, device: str, num_images: int
-    ) -> Dict[str, Any]:
-        """Extract JSON-serializable profiler results."""
-        import numpy as np
-
-        is_cuda = "cuda" in device
-
-        # Get key averages
-        if is_cuda:
-            top_ops = prof.key_averages()
-            top_ops = sorted(top_ops, key=lambda x: x.device_time_total, reverse=True)[:20]
-        else:
-            top_ops = prof.key_averages()
-            top_ops = sorted(top_ops, key=lambda x: x.cpu_time_total, reverse=True)[:20]
-
-        # Extract top operations (bottlenecks)
-        bottlenecks = []
-        for op in top_ops:
-            device_time = op.device_time_total if is_cuda else 0
-            bottlenecks.append({
-                'name': op.key,
-                'cpu_time_ms': float(op.cpu_time_total / 1000),
-                'cuda_time_ms': float(device_time / 1000),
-                'calls': int(op.count),
-                'cpu_time_per_call_ms': float(op.cpu_time_total / op.count / 1000) if op.count > 0 else 0,
-                'cuda_time_per_call_ms': float(device_time / op.count / 1000) if op.count > 0 and is_cuda else 0,
-            })
-
-        # Calculate totals
-        total_cpu_time = sum(op.cpu_time_total for op in prof.key_averages()) / 1000
-        total_device_time = sum(op.device_time_total for op in prof.key_averages()) / 1000 if is_cuda else 0
-
-        # Group by layer type for pie chart
-        layer_breakdown = self._categorize_profiler_ops(prof, is_cuda)
-
-        # Generate summary text
-        summary_lines = [
-            f"Device: {'CUDA' if is_cuda else 'CPU'}",
-            f"Images profiled: {num_images}",
-            f"Total CPU time: {total_cpu_time:.2f} ms",
-        ]
-        if is_cuda:
-            summary_lines.append(f"Total CUDA time: {total_device_time:.2f} ms")
-        summary_lines.append(f"Avg time per image: {(total_device_time if is_cuda else total_cpu_time) / num_images:.2f} ms")
-
-        return {
-            'device': 'cuda' if is_cuda else 'cpu',
-            'num_images': num_images,
-            'total_cpu_time_ms': float(total_cpu_time),
-            'total_cuda_time_ms': float(total_device_time),
-            'avg_time_per_image_ms': float((total_device_time if is_cuda else total_cpu_time) / num_images),
-            'bottlenecks': bottlenecks,
-            'layer_breakdown': layer_breakdown,
-            'summary': '\n'.join(summary_lines),
-        }
-
-    def _categorize_profiler_ops(self, prof, is_cuda: bool) -> List[Dict[str, Any]]:
-        """Categorize profiler operations by type for pie chart."""
-        layer_types = {}
-
-        for op in prof.key_averages():
-            name = op.key
-            name_lower = name.lower()
-
-            # Skip profiler markers
-            if (name_lower.startswith('inference_image_') or
-                name_lower.startswith('profiler') or
-                name_lower.startswith('cudalaunch') or
-                name_lower.startswith('enumerate')):
-                continue
-
-            # Categorize
-            category = self._categorize_operation(name_lower)
-
-            if category not in layer_types:
-                layer_types[category] = {'category': category, 'total_time_ms': 0.0}
-
-            # Use self time to avoid double-counting
-            if is_cuda:
-                time_ms = op.self_device_time_total / 1000
-            else:
-                time_ms = op.self_cpu_time_total / 1000
-
-            layer_types[category]['total_time_ms'] += time_ms
-
-        # Convert to list and sort
-        result = [{'category': k, 'total_time_ms': float(v['total_time_ms'])}
-                  for k, v in layer_types.items() if v['total_time_ms'] > 0]
-        return sorted(result, key=lambda x: x['total_time_ms'], reverse=True)
-
-    def _categorize_operation(self, name_lower: str) -> str:
-        """Categorize a PyTorch operation by its name."""
-        # Convolution
-        if any(p in name_lower for p in ['conv', 'winograd', 'scudnn', 'cudnn_conv', 'implicit_convolve']):
-            return 'Convolution'
-
-        # BatchNorm
-        if any(p in name_lower for p in ['batch_norm', 'batchnorm', '_bn', 'cudnn_batch_norm']):
-            return 'BatchNorm'
-
-        # Activations
-        if any(p in name_lower for p in ['relu', 'leaky_relu', 'prelu', 'elu', 'sigmoid', 'tanh', 'softmax', 'gelu', 'silu']):
-            return 'Activation'
-
-        # Pooling
-        if 'pool' in name_lower:
-            return 'Pooling'
-
-        # Linear/Dense layers
-        if any(p in name_lower for p in ['linear', 'matmul', 'gemm', 'addmm', 'cublas', 'mm']):
-            return 'Linear'
-
-        # Skip connections
-        if 'add_' in name_lower or name_lower.endswith('::add') or 'aten::add' in name_lower:
-            return 'Add (Skip)'
-
-        # Concatenation
-        if 'cat' in name_lower or 'concat' in name_lower:
-            return 'Concatenation'
-
-        # Upsampling
-        if any(p in name_lower for p in ['upsample', 'interpolate', 'nearest', 'bilinear']):
-            return 'Upsample'
-
-        # Memory operations
-        if any(p in name_lower for p in ['copy', 'contiguous', 'clone', 'memcpy', 'memset', 'to']):
-            return 'Memory'
-
-        # Reshape operations
-        if any(p in name_lower for p in ['view', 'reshape', 'flatten', 'squeeze', 'permute', 'transpose']):
-            return 'Reshape'
-
-        return 'Other'
-
-    def _measure_energy(
-        self, postprocessor: PostprocessorNN, config: TestConfiguration,
-        warmup_runs: int = 5, measurement_runs: int = 10
-    ) -> Dict[str, Any]:
-        """Measure inference energy with configurable parameters."""
-        import torch
-
-        model = postprocessor.model
-        device = postprocessor.device
-        img_size = postprocessor.img_size
-        is_conv = postprocessor.is_conv
-
-        model.eval()
-
-        # Create sample input tensor for measurement
-        if is_conv:
-            sample = torch.randn(1, 1, img_size, img_size, device=device)
-        else:
-            sample = torch.randn(1, img_size * img_size, device=device)
-
-        # Create energy analyzer
-        analyzer = EnergyAnalyzer(
-            model=model,
-            device=str(device),
-            warmup_runs=warmup_runs,
-            measurement_runs=measurement_runs,
-            enable_gpu_energy=config.use_gpu,
-            enable_cpu_energy=True,
-            logger=self.logger
-        )
-
-        try:
-            if not analyzer.initialize():
-                self.logger.warning("Energy analyzer could not be initialized - no backends available")
-                return {
-                    "energy_error": "No energy measurement backends available"
-                }
-
-            self.logger.info("Measuring energy with backends: %s", analyzer.available_backends)
-
-            # Run energy analysis on the sample tensor
-            result = analyzer.analyze_inference(
-                [sample],
-                n_runs=measurement_runs,
-                warmup_runs=warmup_runs
-            )
-
-            # Build per-backend energy data
-            energy_data = {
-                # Total/combined values (for backward compatibility)
-                "energy_mean_mj": result.mean_energy_mj,
-                "energy_std_mj": result.std_energy_joules * 1000,
-                "energy_mean_watts": result.mean_power_watts,
-                "energy_std_watts": result.std_power_watts,
-                "energy_device_name": result.device_name,
-                "energy_warmup_runs": warmup_runs,
-                "energy_measurement_runs": measurement_runs,
-                "efficiency_images_per_joule": result.efficiency_images_per_joule,
-                # Per-backend breakdown
-                "energy_backends": analyzer.available_backends,
-            }
-
-            # Add GPU-specific data if available
-            if result.gpu_energy_joules is not None and result.gpu_energy_joules > 0:
-                energy_data["energy_gpu_mj"] = result.gpu_energy_joules * 1000
-                # Estimate GPU power from energy and time
-                if result.mean_time_ms > 0:
-                    energy_data["energy_gpu_watts"] = (result.gpu_energy_joules * 1000) / result.mean_time_ms
-
-            # Add CPU-specific data if available
-            if result.cpu_energy_joules is not None and result.cpu_energy_joules > 0:
-                energy_data["energy_cpu_mj"] = result.cpu_energy_joules * 1000
-                # Estimate CPU power from energy and time
-                if result.mean_time_ms > 0:
-                    energy_data["energy_cpu_watts"] = (result.cpu_energy_joules * 1000) / result.mean_time_ms
-
-            return energy_data
-
-        except Exception as e:
-            self.logger.error("Energy measurement failed: %s", e)
-            return {
-                "energy_error": str(e)
-            }
-        finally:
-            analyzer.shutdown()
 
     def _should_cancel(self, index: int) -> bool:
         """Check if this test or the batch should be cancelled."""
@@ -1510,33 +912,8 @@ class BatchTestRunner(QThread):
                     "status": "cancelled",
                 })
 
-    def _get_unique_output_dir(self, base_name: str) -> Path:
-        """
-        Get a unique output directory name, appending _1, _2, etc. if needed.
-
-        Args:
-            base_name: The desired folder name
-
-        Returns:
-            Path to a unique directory that doesn't exist yet
-        """
-        base_dir = BATCH_TESTS_DIR / base_name
-
-        if not base_dir.exists():
-            return base_dir
-
-        # Directory exists, find a unique suffix
-        counter = 1
-        while True:
-            new_dir = BATCH_TESTS_DIR / f"{base_name}_{counter}"
-            if not new_dir.exists():
-                return new_dir
-            counter += 1
-
     def _export_all_results(self) -> str:
         """Export all results based on export level."""
-        import numpy as np
-
         # Start export phase (use -1 to indicate batch-level operation)
         self.phase_started.emit(-1, self.PHASE_EXPORT)
         self.status_update.emit("Exporting results...")
@@ -1548,25 +925,28 @@ class BatchTestRunner(QThread):
         else:
             base_name = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        results_dir = self._get_unique_output_dir(base_name)
+        results_dir = get_unique_output_dir(base_name)
         results_dir.mkdir(parents=True, exist_ok=True)
 
         self.logger.info("Output directory: %s", results_dir)
         self.phase_progress.emit(-1, self.PHASE_EXPORT, 20)
 
         # Always export JSON report with .batch_analysis_report extension
-        report_path = self._export_results_json(results_dir)
+        report_path = export_results_json(
+            self._all_results, self.dataset, self.batch_name,
+            self.batch_config, self.export_level, self.logger, results_dir
+        )
         self.logger.info("Exported analysis report: %s", report_path)
         self.phase_progress.emit(-1, self.PHASE_EXPORT, 40)
 
         # Export models if requested
         if self.export_level in (ExportLevel.REPORTS_AND_MODELS, ExportLevel.ALL_DATA):
-            self._export_models(str(results_dir))
+            export_models(self._trained_models, self.logger, str(results_dir))
             self.phase_progress.emit(-1, self.PHASE_EXPORT, 70)
 
         # Export all data if requested
         if self.export_level == ExportLevel.ALL_DATA:
-            self._export_datasets(str(results_dir))
+            export_datasets(self._test_data, self.logger, str(results_dir))
             self.phase_progress.emit(-1, self.PHASE_EXPORT, 90)
 
         self.phase_progress.emit(-1, self.PHASE_EXPORT, 100)
@@ -1574,158 +954,6 @@ class BatchTestRunner(QThread):
 
         # Return the report file path (not directory) for "Load Executed Batch Test" feature
         return report_path if report_path else str(results_dir)
-
-    def _export_results_json(self, output_dir: Path) -> str:
-        """Export all results to JSON file with .batch_analysis_report extension."""
-        filename = f"results{FileExtensions.BATCH_ANALYSIS_REPORT}"
-        filepath = output_dir / filename
-
-        if not self._all_results:
-            self.logger.warning("No results to export")
-            return ""
-
-        # Build metadata
-        metadata = {
-            "created_at": datetime.now().isoformat(),
-            "version": "2.0",
-            "batch_name": self.batch_name or self.batch_config.name,  # Use export name from UI
-            "batch_description": self.batch_config.description,
-            "export_level": self.export_level.name,
-            "dataset_info": {
-                "name": getattr(self.dataset, 'name', 'unknown'),
-                "img_size": getattr(self.dataset, 'img_size', 0),
-                "num_images": len(self.dataset.data) if hasattr(self.dataset, 'data') else 0,
-            },
-        }
-
-        # Use the BatchAnalysisReport handler
-        BatchAnalysisReport.save(
-            results=self._all_results,
-            metadata=metadata,
-            path=filepath
-        )
-
-        self.logger.info("Exported %d results to: %s", len(self._all_results), filepath)
-        return str(filepath)
-
-    def _export_models(self, output_dir: str):
-        """Export trained models (.pt and ONNX)."""
-        import torch
-
-        models_dir = os.path.join(output_dir, "models")
-        os.makedirs(models_dir, exist_ok=True)
-
-        for idx, model_data in self._trained_models.items():
-            postprocessor = model_data["postprocessor"]
-            config = model_data["config"]
-
-            # Safe name for files
-            safe_name = config.name.replace(" ", "_").replace("/", "-")
-
-            # Export PyTorch model
-            pt_path = os.path.join(models_dir, f"{safe_name}.pt")
-            try:
-                torch.save(postprocessor.model.state_dict(), pt_path)
-                self.logger.info("Exported model: %s", pt_path)
-            except Exception as e:
-                self.logger.error("Failed to export model %s: %s", safe_name, e)
-
-            # Export ONNX model
-            onnx_path = os.path.join(models_dir, f"{safe_name}.onnx")
-            try:
-                self._export_onnx(postprocessor, onnx_path)
-                self.logger.info("Exported ONNX: %s", onnx_path)
-            except Exception as e:
-                self.logger.warning("Failed to export ONNX %s: %s", safe_name, e)
-
-    def _export_onnx(self, postprocessor, onnx_path: str):
-        """Export model to ONNX format."""
-        import torch
-
-        model = postprocessor.model
-        device = postprocessor.device
-        img_size = postprocessor.img_size
-        is_conv = postprocessor.is_conv
-
-        model.eval()
-
-        # Create sample input
-        if is_conv:
-            sample = torch.randn(1, 1, img_size, img_size, device=device)
-        else:
-            sample = torch.randn(1, img_size * img_size, device=device)
-
-        # Export to ONNX
-        torch.onnx.export(
-            model,
-            sample,
-            onnx_path,
-            export_params=True,
-            opset_version=17,
-            do_constant_folding=True,
-            input_names=['input'],
-            output_names=['output'],
-            dynamic_axes={
-                'input': {0: 'batch_size'},
-                'output': {0: 'batch_size'}
-            }
-        )
-
-    def _export_datasets(self, output_dir: str):
-        """Export all test data including masks and inference results (test images).
-
-        Note: We don't export the original training dataset as it's not needed for reports.
-        We only export the test images (ground truth, noisy/reconstructed, denoised) per test.
-        """
-        import numpy as np
-
-        data_dir = os.path.join(output_dir, "data")
-        os.makedirs(data_dir, exist_ok=True)
-
-        # Export per-test data
-        for idx, test_data in self._test_data.items():
-            config = test_data["config"]
-            safe_name = config.name.replace(" ", "_").replace("/", "-")
-            test_dir = os.path.join(data_dir, safe_name)
-            os.makedirs(test_dir, exist_ok=True)
-
-            try:
-                # Export mask patterns
-                mask = test_data["mask"]
-                if hasattr(mask, "mascaras") and mask.mascaras is not None:
-                    np.savez_compressed(
-                        os.path.join(test_dir, "masks.npz"),
-                        masks=mask.mascaras
-                    )
-                    self.logger.debug("Exported masks for %s", safe_name)
-
-                # Export test images: originals, reconstructions (after mask), denoised (after DNN)
-                np.savez_compressed(
-                    os.path.join(test_dir, "test_images.npz"),
-                    originals=test_data["originals"],
-                    reconstructions=test_data["reconstructions"],
-                    denoised=test_data["denoised"]
-                )
-                self.logger.debug("Exported test images for %s", safe_name)
-
-                # Export test configuration as JSON for reference
-                config_path = os.path.join(test_dir, "test_config.json")
-                config_dict = {
-                    "name": config.name,
-                    "mask_type": config.mask_type,
-                    "reconstruction_method": config.reconstruction_method,
-                    "model_name": config.model_name,
-                    "epochs": config.epochs,
-                    "batch_size": config.batch_size,
-                    "learning_rate": config.learning_rate,
-                }
-                with open(config_path, 'w') as f:
-                    json.dump(config_dict, f, indent=2)
-
-                self.logger.info("Exported data for test: %s", safe_name)
-
-            except Exception as e:
-                self.logger.error("Failed to export data for %s: %s", safe_name, e)
 
     # Public methods for cancellation control
 
