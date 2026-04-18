@@ -66,7 +66,7 @@ ARCHITECTURE_SCHEMA: Dict[str, List[ParamSpec]] = {
         ),
     ],
 
-    "dilatedcnn": [
+    "dilated-cnn": [
         ParamSpec(
             name="features",
             param_type="int",
@@ -86,7 +86,7 @@ ARCHITECTURE_SCHEMA: Dict[str, List[ParamSpec]] = {
         ),
     ],
 
-    "residual_cnn": [
+    "residual-cnn": [
         ParamSpec(
             name="features",
             param_type="int",
@@ -165,7 +165,7 @@ ARCHITECTURE_SCHEMA: Dict[str, List[ParamSpec]] = {
         ),
     ],
 
-    "mobilenet_denoising": [
+    "mobilenet-denoising": [
         ParamSpec(
             name="features",
             param_type="list_int",
@@ -175,7 +175,7 @@ ARCHITECTURE_SCHEMA: Dict[str, List[ParamSpec]] = {
         ),
     ],
 
-    "cgan denoising": [
+    "cgan-denoising": [
         ParamSpec(
             name="stem_channels",
             param_type="int",
@@ -233,12 +233,17 @@ def get_schema_for_model(model_name: str) -> List[ParamSpec]:
     Get the parameter schema for a given model.
 
     Args:
-        model_name: Model name (case-insensitive, matches MODEL_REGISTRY keys)
+        model_name: Model name (case-insensitive, matches MODEL_REGISTRY keys).
+                    Legacy names (e.g. ``residual_cnn``, ``cgan denoising``) are
+                    resolved to their canonical kebab-case equivalents.
 
     Returns:
         List of ParamSpec for the model, or empty list if not found
     """
-    return ARCHITECTURE_SCHEMA.get(model_name.lower(), [])
+    # Resolve legacy aliases so old saved configs still find their schema.
+    from simulation_engine._4_postprocessor.postprocessor_nn import resolve_model_name
+    key = resolve_model_name(model_name.lower())
+    return ARCHITECTURE_SCHEMA.get(key, [])
 
 
 def get_default_config(model_name: str) -> Dict[str, Any]:

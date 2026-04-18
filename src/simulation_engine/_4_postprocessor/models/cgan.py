@@ -182,7 +182,13 @@ class cGAN(nn.Module):
                  denoise_channels: int = 64,
                  denoise_depth: int = 8,
                  hl_blocks: int = 4,
-                 final_act: str = "sigmoid"):
+                 final_act: str = "sigmoid",
+                 # Adversarial-training hyperparameters (WGAN-GP)
+                 d_lr: float = 1e-4,
+                 d_betas: tuple = (0.5, 0.9),
+                 lambda_gp: float = 10.0,
+                 lambda_sup: float = 100.0,
+                 d_steps_per_g: int = 1):
         super().__init__()
 
         # 1) Multi-scale feature extraction
@@ -205,12 +211,21 @@ class cGAN(nn.Module):
         self.final_act = final_act
         self.apply(_kaiming_init)
 
-        # Optional: discriminator for adversarial setups (not used in forward)
+        # Discriminator — used in the adversarial training_step (WGAN-GP)
         self.discriminator = _RcaDiscriminator(in_channels=out_channels)
 
         # Learnable global skip to preserve low-frequency content
         self.skip_proj = (nn.Identity() if in_channels == out_channels
                           else nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False))
+
+        # Adversarial-training configuration
+        self._d_lr = d_lr
+        self._d_betas = d_betas
+        self._lambda_gp = lambda_gp
+        self._lambda_sup = lambda_sup
+        self._d_steps_per_g = max(1, int(d_steps_per_g))
+        self._d_optimizer = None  # lazily built on first training_step (after .to(device))
+        self._step_counter = 0
 
     # Always comment Python code in English
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -234,7 +249,75 @@ class cGAN(nn.Module):
             y = torch.tanh(y)
         return y
 
-    # ----------- Helpers for adversarial training (opcionales, no usados por PostprocessorNN) -----------
+    # ------------------------------------------------- Adversarial training
+
+    def generator_parameters(self):
+        """
+        Parameters that belong to the generator only (excludes the discriminator).
+
+        Used by PostprocessorNN to build the "main" optimizer so that its
+        ``step()`` never updates the discriminator — the discriminator has
+        its own Adam optimizer managed internally by :meth:`training_step`.
+        """
+        disc_ids = {id(p) for p in self.discriminator.parameters()}
+        return [p for p in self.parameters() if id(p) not in disc_ids]
+
+    def _build_d_optimizer_if_needed(self):
+        if self._d_optimizer is None:
+            self._d_optimizer = torch.optim.Adam(
+                self.discriminator.parameters(),
+                lr=self._d_lr,
+                betas=self._d_betas,
+            )
+
+    def training_step(
+        self,
+        noisy: torch.Tensor,
+        clean: torch.Tensor,
+        criterion: nn.Module,
+        optimizer: torch.optim.Optimizer,
+    ) -> torch.Tensor:
+        """
+        One WGAN-GP + supervised training step.
+
+          D step:  maximize E[D(clean)] - E[D(G(noisy))] with gradient penalty.
+          G step:  minimize λ_sup·supervised(G(noisy), clean) - E[D(G(noisy))].
+
+        The ``optimizer`` passed in is the generator optimizer (owned by
+        PostprocessorNN); the discriminator optimizer is owned by the module
+        and built lazily.
+
+        Returns the generator loss (for logging).
+        """
+        self._build_d_optimizer_if_needed()
+        self._step_counter += 1
+
+        # ---------- Discriminator step(s) ----------
+        for _ in range(self._d_steps_per_g):
+            with torch.no_grad():
+                fake_det = self(noisy)
+            d_real = self.discriminator(clean)
+            d_fake = self.discriminator(fake_det)
+            gp = self.wgan_gp_gradient_penalty(self.discriminator, clean, fake_det)
+            d_loss = self.wgan_gp_critic_loss(d_real, d_fake, gp, lambda_gp=self._lambda_gp)
+
+            self._d_optimizer.zero_grad()
+            d_loss.backward()
+            self._d_optimizer.step()
+
+        # ---------- Generator step ----------
+        fake = self(noisy)
+        d_fake_for_g = self.discriminator(fake)
+        g_adv = -d_fake_for_g.mean()
+        g_sup = criterion(fake, clean)
+        g_loss = self._lambda_sup * g_sup + g_adv
+
+        optimizer.zero_grad()
+        g_loss.backward()
+        optimizer.step()
+        return g_loss
+
+    # ----------- WGAN-GP loss helpers (used by training_step, also re-usable) ----
 
     @staticmethod
     def wgan_gp_critic_loss(d_real: torch.Tensor, d_fake: torch.Tensor, gp: torch.Tensor, lambda_gp: float = 10.0):

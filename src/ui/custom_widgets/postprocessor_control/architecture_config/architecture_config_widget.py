@@ -326,13 +326,13 @@ class ArchitectureConfigWidget(QWidget):
             # First layer: 1*features*9, middle: (depth-2)*features*features*9, last: features*1*9
             return 1 * features * 9 + (depth - 2) * features * features * 9 + features * 1 * 9
 
-        elif model == "residual_cnn":
+        elif model == "residual-cnn":
             features = config.get("features", 64)
             num_blocks = config.get("num_blocks", 8)
             # Head + blocks + tail
             return 1 * features * 9 + num_blocks * 2 * features * features * 9 + features * 1 * 9
 
-        elif model == "dilatedcnn":
+        elif model == "dilated-cnn":
             features = config.get("features", 64)
             dilation_rates = config.get("dilation_rates", [1, 2, 4, 8])
             return 1 * features * 9 + len(dilation_rates) * features * features * 9 + features * 1 * 9
@@ -358,7 +358,7 @@ class ArchitectureConfigWidget(QWidget):
                     prev = w
                 return total * 4  # More complex architecture
 
-        elif model == "mobilenet_denoising":
+        elif model == "mobilenet-denoising":
             features = config.get("features", [32, 64, 128])
             if isinstance(features, list) and len(features) > 0:
                 # Depthwise separable is more efficient
@@ -369,7 +369,7 @@ class ArchitectureConfigWidget(QWidget):
                     prev = f
                 return total
 
-        elif model == "cgan denoising":
+        elif model == "cgan-denoising":
             stem = config.get("stem_channels", 96)
             denoise_ch = config.get("denoise_channels", 64)
             denoise_depth = config.get("denoise_depth", 8)

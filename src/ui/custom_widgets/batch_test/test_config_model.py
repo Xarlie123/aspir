@@ -221,8 +221,8 @@ class BatchTestConfig:
         "cal_sal"
     ]
     RECONSTRUCTION_METHODS = ["conventional", "pseudoinverse", "fista", "tv_norm"]
-    MODEL_NAMES = ["autoencoder", "dncnn", "u-net", "u-net-residual-attention", "residual_cnn",
-                   "noise2void", "mobilenet_denoising", "dilatedcnn", "cgan denoising"]
+    MODEL_NAMES = ["autoencoder", "dncnn", "u-net", "u-net-residual-attention", "residual-cnn",
+                   "noise2void", "mobilenet-denoising", "dilated-cnn", "cgan-denoising"]
     LOSS_FUNCTIONS = ["MSE", "L1", "SmoothL1", "Huber"]
     OPTIMIZERS = ["Adam", "AdamW", "SGD", "RMSprop"]
     REPORT_TYPES = ["training_curves", "quality", "timing", "energy"]

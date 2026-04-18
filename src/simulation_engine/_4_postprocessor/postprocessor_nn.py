@@ -165,7 +165,7 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         "defaults": {"img_size": None},
         "conv": False
     },
-    "cgan denoising": {
+    "cgan-denoising": {
         "cls": cGAN,
         # Defaults mirror your other conv models; img_size is accepted and ignored internally
         "defaults": {"in_channels": 1, "out_channels": 1, "stem_channels": 96,
@@ -175,6 +175,9 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
     "dncnn": {
         "cls": DnCNN,
+        # depth=5 is a deliberately shallow default for edge-device deployment;
+        # the original paper (Zhang et al. 2017) uses depth=17, features=64. The
+        # GUI exposes 'depth' up to 30 so users can reproduce the paper setup.
         "defaults": {"in_channels": 1, "out_channels": 1, "features": 128, "depth": 5},
         "conv": True
     },
@@ -188,7 +191,7 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         "defaults": {"in_channels": 1, "out_channels": 1, "features": [8, 16, 32, 64]},
         "conv": True
     },
-    "residual_cnn": {
+    "residual-cnn": {
         "cls": ResidualCNN,
         "defaults": {"in_channels": 1, "out_channels": 1, "features": 64, "num_blocks": 8},
         "conv": True
@@ -198,17 +201,34 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
         "defaults": {"in_channels": 1, "out_channels": 1, "features": [8, 16, 32, 64]},
         "conv": True
     },
-    "mobilenet_denoising": {
+    "mobilenet-denoising": {
         "cls": MobileNetDenoising,
         "defaults": {"in_channels": 1, "out_channels": 1, "features": [16, 32, 64, 128]},
         "conv": True
     },
-    "dilatedcnn": {
+    "dilated-cnn": {
         "cls": DilatedCNN,
         "defaults": {"in_channels": 1, "out_channels": 1, "features": 128, "dilation_rates": [1, 2, 4, 8]},
         "conv": True
     },
 }
+
+
+# Legacy key aliases — keep old experiment configs loadable after the
+# kebab-case unification. New code should use the canonical keys above.
+_LEGACY_MODEL_ALIASES: Dict[str, str] = {
+    "cgan denoising":       "cgan-denoising",
+    "residual_cnn":         "residual-cnn",
+    "mobilenet_denoising":  "mobilenet-denoising",
+    "dilatedcnn":           "dilated-cnn",
+}
+
+
+def resolve_model_name(model_name: str) -> str:
+    """Map a legacy model name to its canonical key (pass-through if unknown)."""
+    if model_name in MODEL_REGISTRY:
+        return model_name
+    return _LEGACY_MODEL_ALIASES.get(model_name, model_name)
 
 class PostprocessorNN(Postprocessor):
     """
@@ -287,12 +307,16 @@ class PostprocessorNN(Postprocessor):
             clean_np.shape, clean_np.dtype, noisy_np.shape, noisy_np.dtype, min_val, max_val
         )
 
-        # 2) Select model configuration
-        entry = MODEL_REGISTRY.get(model_name)
+        # 2) Select model configuration (accept legacy names for old experiments)
+        canonical_name = resolve_model_name(model_name)
+        if canonical_name != model_name:
+            self.logger.info("Resolved legacy model name %r -> %r", model_name, canonical_name)
+        entry = MODEL_REGISTRY.get(canonical_name)
         if entry is None:
             msg = f"Unknown model: {model_name}. Options: {list(MODEL_REGISTRY.keys())}"
             self.logger.error(msg)
             raise ValueError(msg)
+        model_name = canonical_name
         model_cls = entry["cls"]
         self.is_conv = entry.get("conv", False)
         self.logger.info(
@@ -401,8 +425,18 @@ class PostprocessorNN(Postprocessor):
             return nn.MSELoss()
 
     def _create_optimizer(self, opt_name: str, lr: float, weight_decay: float) -> optim.Optimizer:
-        """Create optimizer based on name."""
-        params = self.model.parameters()
+        """Create optimizer based on name.
+
+        If the model exposes ``generator_parameters()`` (e.g. cGAN with an
+        internal discriminator), only those parameters are optimized here —
+        the model is then responsible for updating the rest inside its own
+        ``training_step``.
+        """
+        if hasattr(self.model, 'generator_parameters'):
+            params = self.model.generator_parameters()
+            self.logger.debug("Using model.generator_parameters() for main optimizer")
+        else:
+            params = self.model.parameters()
         if opt_name == 'adam':
             return optim.Adam(params, lr=lr, weight_decay=weight_decay)
         elif opt_name == 'adamw':
@@ -478,6 +512,29 @@ class PostprocessorNN(Postprocessor):
         }
         return dtype_map.get(self.data_format, torch.float32)
 
+    def _run_training_batch(self, noisy: torch.Tensor, clean: torch.Tensor) -> torch.Tensor:
+        """
+        One optimizer step on a batch.
+
+        If the model defines ``training_step(noisy, clean, criterion, optimizer)``
+        (e.g. Noise2Void for blind-spot self-supervision, or cGAN for WGAN-GP
+        alternating updates), that method fully owns the forward / backward /
+        step logic and returns the loss it minimized on this batch.
+
+        Otherwise, the default supervised path is used: forward -> criterion ->
+        backward -> step.
+        """
+        custom_step = getattr(self.model, "training_step", None)
+        if callable(custom_step):
+            return custom_step(noisy, clean, self.criterion, self.optimizer)
+
+        self.optimizer.zero_grad()
+        outputs = self.model(noisy)
+        loss = self.criterion(outputs, clean)
+        loss.backward()
+        self.optimizer.step()
+        return loss
+
     def train_with_metrics(self, num_epochs: int, progress_callback=None, metrics_callback=None):
         """
         Train and collect validation & test losses plus PSNR/SSIM/LPIPS, then call metrics_callback.
@@ -493,11 +550,7 @@ class PostprocessorNN(Postprocessor):
             self.model.train()
             for noisy, clean in self.loaders["train"]:
                 noisy, clean = noisy.to(self.device), clean.to(self.device)
-                self.optimizer.zero_grad()
-                outputs = self.model(noisy)
-                loss = self.criterion(outputs, clean)
-                loss.backward()
-                self.optimizer.step()
+                self._run_training_batch(noisy, clean)
 
             if progress_callback:
                 progress_callback(epoch, num_epochs)
@@ -526,11 +579,7 @@ class PostprocessorNN(Postprocessor):
             self.model.train()
             for noisy, clean in self.loaders["train"]:
                 noisy, clean = noisy.to(self.device), clean.to(self.device)
-                self.optimizer.zero_grad()
-                outputs = self.model(noisy)
-                loss = self.criterion(outputs, clean)
-                loss.backward()
-                self.optimizer.step()
+                self._run_training_batch(noisy, clean)
             if progress_callback:
                 progress_callback(epoch, num_epochs)
             self.logger.debug("Completed epoch %d/%d", epoch, num_epochs)
