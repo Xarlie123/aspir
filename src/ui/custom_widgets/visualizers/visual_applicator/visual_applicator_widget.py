@@ -22,11 +22,15 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
     # Mapping of applicator classes to user-friendly names
     APPLICATOR_NAMES = {
         'ApplicatorScatter': 'Conventional',
+        'ApplicatorPseudoinverse': 'Pseudoinverse',
+        'ApplicatorFISTA': 'FISTA',
+        'ApplicatorTV': 'TV-norm',
+        'ApplicatorSweep': 'Sweep',
+        'ApplicatorHadamard': 'Hadamard',
+        # Legacy names kept so old saved experiments still render.
         'ApplicatorScatterPseudoinverse': 'Pseudoinverse',
         'ApplicatorScatterFISTA': 'FISTA',
         'ApplicatorScatterTV': 'TV-norm',
-        'ApplicatorSweep': 'Sweep',
-        'ApplicatorHadamard': 'Hadamard',
     }
 
     def __init__(self, simulation, parent=None, logger=None, status_manager=None):

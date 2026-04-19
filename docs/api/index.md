@@ -79,9 +79,9 @@ mask.generate_masks()
 All applicators inherit from `ApplicatorABC` and implement `process_dataset()`.
 
 ```python
-from simulation_engine._3_applicator.applicator_scatter_fista import ApplicatorScatterFISTA
+from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
 
-applicator = ApplicatorScatterFISTA(dataset, mask, maxit=500, lam=1e-3)
+applicator = ApplicatorFISTA(dataset, mask, maxit=500, lam=1e-3)
 results_df = applicator.process_dataset()
 ```
 

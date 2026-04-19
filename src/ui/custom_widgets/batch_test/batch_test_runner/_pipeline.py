@@ -9,9 +9,9 @@ from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
 from simulation_engine._3_applicator.applicator_hadamard import ApplicatorHadamard
 from simulation_engine._3_applicator.applicator_scatter import ApplicatorScatter
-from simulation_engine._3_applicator.applicator_scatter_fista import ApplicatorScatterFISTA
-from simulation_engine._3_applicator.applicator_scatter_pseudoinverse import ApplicatorScatterPseudoinverse
-from simulation_engine._3_applicator.applicator_scatter_tv_norm import ApplicatorScatterTV
+from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
+from simulation_engine._3_applicator.applicator_pseudoinverse import ApplicatorPseudoinverse
+from simulation_engine._3_applicator.applicator_tv_norm import ApplicatorTV
 from simulation_engine._3_applicator.applicator_sweep import ApplicatorSweep
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
 
@@ -86,14 +86,14 @@ def create_applicator(config: TestConfiguration, mask, dataset):
             # Direct scatter reconstruction (simple sampling)
             return ApplicatorScatter(dataset, mask)
         elif method == "pseudoinverse":
-            return ApplicatorScatterPseudoinverse(dataset, mask)
+            return ApplicatorPseudoinverse(dataset, mask)
         elif method == "fista":
-            applicator = ApplicatorScatterFISTA(dataset, mask)
+            applicator = ApplicatorFISTA(dataset, mask)
             applicator.lambda_val = config.fista_lambda
             applicator.max_iter = config.fista_iterations
             return applicator
         elif method == "tv_norm":
-            applicator = ApplicatorScatterTV(dataset, mask)
+            applicator = ApplicatorTV(dataset, mask)
             applicator.lambda_val = config.tv_lambda
             applicator.max_iter = config.tv_iterations
             return applicator

@@ -10,9 +10,9 @@ from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
 
 # Import applicators
 from simulation_engine._3_applicator.applicator_scatter import ApplicatorScatter
-from simulation_engine._3_applicator.applicator_scatter_pseudoinverse import ApplicatorScatterPseudoinverse
-from simulation_engine._3_applicator.applicator_scatter_fista import ApplicatorScatterFISTA
-from simulation_engine._3_applicator.applicator_scatter_tv_norm import ApplicatorScatterTV
+from simulation_engine._3_applicator.applicator_pseudoinverse import ApplicatorPseudoinverse
+from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
+from simulation_engine._3_applicator.applicator_tv_norm import ApplicatorTV
 from simulation_engine._3_applicator.applicator_sweep import ApplicatorSweep
 from simulation_engine._3_applicator.applicator_hadamard import ApplicatorHadamard
 
@@ -63,11 +63,11 @@ class Simulation:
 
         if isinstance(self.mask, MaskScatter):
             if applicator_type_scatter == 'Pseudoinverse':
-                self.applicator = ApplicatorScatterPseudoinverse(self.dataset, self.mask)
+                self.applicator = ApplicatorPseudoinverse(self.dataset, self.mask)
             elif applicator_type_scatter == 'FISTA':
-                self.applicator = ApplicatorScatterFISTA(self.dataset, self.mask)
+                self.applicator = ApplicatorFISTA(self.dataset, self.mask)
             elif applicator_type_scatter == 'TV-norm':
-                self.applicator = ApplicatorScatterTV(self.dataset, self.mask)
+                self.applicator = ApplicatorTV(self.dataset, self.mask)
             else:
                 self.applicator = ApplicatorScatter(self.dataset, self.mask)
 
