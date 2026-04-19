@@ -284,6 +284,8 @@ class GridColumnConfigDialog(QDialog):
 class GridColumnListWidget(QWidget):
     """Widget containing draggable column cards for grid."""
 
+    MAX_COLUMNS = 32
+
     columns_changed = pyqtSignal()
 
     def __init__(self, tests: list[dict], parent=None):
@@ -352,14 +354,14 @@ class GridColumnListWidget(QWidget):
             self._add_column_with_config(config)
 
     def _add_ground_truth(self):
-        if len(self.columns) >= 8:
+        if len(self.columns) >= self.MAX_COLUMNS:
             return
         config = GridColumnConfig(GridColumnConfig.TYPE_GROUND_TRUTH)
         self._add_column_with_config(config)
         self.columns_changed.emit()
 
     def _add_test(self):
-        if len(self.columns) >= 8 or not self.tests:
+        if len(self.columns) >= self.MAX_COLUMNS or not self.tests:
             return
         # Add first unused test, or first test if all used
         used_indices = {c.test_idx for c in self.columns if c.col_type == GridColumnConfig.TYPE_TEST}
@@ -375,7 +377,7 @@ class GridColumnListWidget(QWidget):
         self.columns_changed.emit()
 
     def _add_denoised(self):
-        if len(self.columns) >= 8 or not self.tests:
+        if len(self.columns) >= self.MAX_COLUMNS or not self.tests:
             return
         used = {c.test_idx for c in self.columns
                 if c.col_type == GridColumnConfig.TYPE_TEST_DENOISED}
