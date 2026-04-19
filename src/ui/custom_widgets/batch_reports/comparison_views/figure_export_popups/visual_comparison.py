@@ -533,6 +533,10 @@ class VisualComparisonPopup(BaseFigureExportPopup):
             computed_metrics = cached.get('pinv_metrics', {}).get(image_idx)
         elif config.col_type == ColumnConfig.TYPE_ITERATIVE_CS:
             computed_metrics = cached.get('fista_metrics', {}).get(image_idx)
+        elif config.col_type == ColumnConfig.TYPE_LINEAR_RECON_DNN:
+            # Use the on-demand Linear Recon time so "Linear Recon + U-Net"
+            # stays consistent with the "Linear Recon" column on the same row.
+            computed_metrics = cached.get('pinv_metrics', {}).get(image_idx)
 
         # Add time if checkbox is checked
         if config.show_time:
@@ -597,8 +601,13 @@ class VisualComparisonPopup(BaseFigureExportPopup):
             if recon_time is not None:
                 return f"Time: {recon_time:.1f} ms (CPU)"
         elif config.col_type == ColumnConfig.TYPE_LINEAR_RECON_DNN:
-            # For DNN: reconstruction time (CPU) + inference time (GPU)
-            recon_time = test.get("timing_reconstruction_ms", 0) or 0
+            # Reconstruction (CPU) + U-Net inference (GPU). Prefer the on-demand
+            # pseudoinverse time measured in the Linear Recon column so both
+            # cards agree; fall back to the batch-run timing otherwise.
+            if computed_metrics and 'time_ms' in computed_metrics:
+                recon_time = computed_metrics['time_ms']
+            else:
+                recon_time = test.get("timing_reconstruction_ms", 0) or 0
             gpu_time = test.get("timing_gpu_mean_ms", 0) or 0
             total = recon_time + gpu_time
             return f"Time: {total:.1f} ms (CPU+GPU)"
