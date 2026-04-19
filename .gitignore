@@ -134,3 +134,4 @@ lib/pmlib/**/*.o
 lib/pmlib/**/*.so
 lib/pmlib/client/pm_info
 lib/pmlib/server/build/
+src/ASPIR.spec

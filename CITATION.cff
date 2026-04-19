@@ -1,0 +1,99 @@
+cff-version: 1.2.0
+message: "If you use ASPIR in published work, please cite both the software (this file) and the accompanying article when available."
+
+title: "ASPIR: A Single-Pixel Imaging Research Platform"
+abstract: >-
+  ASPIR is an open-source desktop application that unifies the complete
+  single-pixel imaging computational pipeline behind a graphical user
+  interface. It covers dataset generation, mask-pattern design, reconstruction
+  with classical and iterative algorithms, post-processing with nine neural
+  network architectures, and analysis of reconstruction quality, inference
+  latency, and energy consumption. Built-in hardware-backend auto-detection
+  enables cross-platform benchmarking across desktop NVIDIA GPUs, Intel CPUs
+  (RAPL), and NVIDIA Jetson embedded devices. ASPIR is designed to
+  democratise single-pixel imaging experimentation for non-programming
+  researchers and to serve as a pedagogical tool for computational imaging,
+  compressive sensing, and energy-aware deep learning.
+
+type: software
+
+authors:
+  - family-names: "Chabert-Ull"
+    given-names: "Carlos"
+    email: "cchabert@uji.es"
+    affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+
+  - family-names: "Tobón-Maya"
+    given-names: "Heberley"
+    affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+
+  - family-names: "Zapata-Valencia"
+    given-names: "Samuel I."
+    affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+
+  - family-names: "Tajahuerce"
+    given-names: "Enrique"
+    affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+
+  - family-names: "León"
+    given-names: "Germán"
+    affiliation: "Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain"
+    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+
+# -----------------------------------------------------------------------------
+# Release metadata — update these three fields each time a new release is
+# tagged on GitHub, so Zenodo archives them correctly into the CITATION.cff
+# of the version snapshot.
+# -----------------------------------------------------------------------------
+version: "1.0.0"              # TODO: bump per release (1.0.0, 1.1.0, ...)
+date-released: "2026-05-01"   # TODO: use the actual release date (YYYY-MM-DD)
+# doi: "10.5281/zenodo.XXXXXXX"  # TODO: uncomment and fill in with the
+#                                 # Zenodo Version DOI once the first release
+#                                 # has been archived (the concept DOI stays
+#                                 # constant across versions).
+
+license: CC-BY-4.0
+repository-code: "https://github.com/Xarlie123/aspir"
+url: "https://github.com/Xarlie123/aspir"
+
+keywords:
+  - "single-pixel imaging"
+  - "computational imaging"
+  - "compressive sensing"
+  - "deep learning"
+  - "image reconstruction"
+  - "denoising"
+  - "energy-aware computing"
+  - "edge AI"
+  - "graphical user interface"
+  - "open-source software"
+  - "infrared beam profiling"
+  - "Hadamard patterns"
+  - "laser beam characterisation"
+
+# -----------------------------------------------------------------------------
+# Preferred citation — once the Intelligent Computing article is published,
+# uncomment this block and fill in the reference so that "Cite this
+# repository" on GitHub points to the paper in addition to the software.
+# -----------------------------------------------------------------------------
+# preferred-citation:
+#   type: article
+#   title: "ASPIR: A Single-Pixel Imaging Research platform for energy-efficient benchmarking"
+#   authors:
+#     - family-names: "Chabert-Ull"
+#       given-names: "Carlos"
+#     - family-names: "Tobón-Maya"
+#       given-names: "Heberley"
+#     - family-names: "Zapata-Valencia"
+#       given-names: "Samuel I."
+#     - family-names: "Tajahuerce"
+#       given-names: "Enrique"
+#     - family-names: "León"
+#       given-names: "Germán"
+#   journal: "Intelligent Computing"
+#   year: 20XX
+#   doi: "10.XXXX/YYYYYYYY"
