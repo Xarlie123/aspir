@@ -8,10 +8,10 @@ from ui.custom_widgets.common.button_styles import (
 )
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
 
-# Shared dropdown options for the "Reconstruction method" selector.
-# The first label maps to the mask-specific native algorithm; the rest go
+# Dropdown options for the Sweep "Reconstruction method" selector.
+# The first label names the mask-specific native algorithm; the rest go
 # through the iterative applicators (see Simulation.set_applicator).
-RECON_METHOD_CHOICES = ("Native", "Pseudoinverse", "FISTA", "TV-norm")
+RECON_METHOD_CHOICES = ("Sweep Linear", "Pseudoinverse", "FISTA", "TV-norm")
 
 class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
     """
@@ -96,7 +96,7 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
         self.reconstruction_method_combo = QComboBox()
         self.reconstruction_method_combo.addItems(RECON_METHOD_CHOICES)
         self.reconstruction_method_combo.setToolTip(
-            "Native = Sweep Linear (ghost-imaging correlation).\n"
+            "Sweep Linear = correlation reconstruction with sweep patterns.\n"
             "Other options use the generic iterative solvers."
         )
         row.addWidget(self.reconstruction_method_combo)

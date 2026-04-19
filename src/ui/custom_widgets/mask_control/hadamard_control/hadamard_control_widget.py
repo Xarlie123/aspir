@@ -3,8 +3,9 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QHBoxLayout, QLabel, QDoubleSpinBox, QComboBox
 
-# Kept in sync with the Sweep widget so both families offer the same choices.
-RECON_METHOD_CHOICES = ("Native", "Pseudoinverse", "FISTA", "TV-norm")
+# First label names the Hadamard-specific linear algorithm; the rest match
+# the generic iterative solvers exposed by every other mask widget.
+RECON_METHOD_CHOICES = ("Hadamard Linear", "Pseudoinverse", "FISTA", "TV-norm")
 from ui.custom_widgets.mask_control.hadamard_control.ui_hadamard_control import Ui_Hadamard_Control
 from ui.custom_widgets.mask_control.hadamard_control.qrange_slider import QRangeSlider
 from ui.custom_widgets.common.button_styles import BUTTON_STYLE_GREEN, apply_button_style
@@ -119,7 +120,7 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         self.reconstruction_method_combo = QComboBox()
         self.reconstruction_method_combo.addItems(RECON_METHOD_CHOICES)
         self.reconstruction_method_combo.setToolTip(
-            "Native = Hadamard Linear (dot product with orthogonal patterns).\n"
+            "Hadamard Linear = dot product with the orthogonal patterns.\n"
             "Other options use the generic iterative solvers."
         )
         row.addWidget(self.reconstruction_method_combo)

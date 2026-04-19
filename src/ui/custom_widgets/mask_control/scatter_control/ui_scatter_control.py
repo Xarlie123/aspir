@@ -81,7 +81,7 @@ class Ui_Scatter_Control(object):
         self.random_seed_scatter_text.setText(_translate("Scatter_Control", "Random seed:"))
         self.number_patterns_scatter_info_text.setText(_translate("Scatter_Control", "Number of patterns:"))
         self.select_applicator_scatter_info_text.setText(_translate("Scatter_Control", "Reconstruction method:"))
-        self.select_applicator_scatter_list.setItemText(0, _translate("Scatter_Control", "Conventional"))
+        self.select_applicator_scatter_list.setItemText(0, _translate("Scatter_Control", "Ghost Imaging"))
         self.select_applicator_scatter_list.setItemText(1, _translate("Scatter_Control", "Pseudoinverse"))
         self.select_applicator_scatter_list.setItemText(2, _translate("Scatter_Control", "FISTA"))
         self.select_applicator_scatter_list.setItemText(3, _translate("Scatter_Control", "TV-norm"))

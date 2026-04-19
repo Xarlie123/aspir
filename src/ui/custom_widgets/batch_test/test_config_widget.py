@@ -434,16 +434,25 @@ class TestConfigWidget(QWidget):
             )
 
     # Display labels used by all three mask widgets ↔ canonical method key.
+    # Each mask family uses its own "native" label (matches Table 1 in the
+    # paper): Ghost Imaging for Scatter, Sweep Linear for Sweep, Hadamard
+    # Linear for the Hadamard family. Legacy labels are kept so old
+    # ``.batch_config`` files still round-trip.
     _RECON_DISPLAY_TO_KEY = {
+        "Ghost Imaging": "conventional",
+        "Sweep Linear": "conventional",
+        "Hadamard Linear": "conventional",
         "Conventional": "conventional",
         "Native": "conventional",
         "Pseudoinverse": "pseudoinverse",
         "FISTA": "fista",
         "TV-norm": "tv_norm",
     }
+    # Key → mask-agnostic default label; callers that need the specific
+    # "native" display name query the active combo directly.
     _RECON_KEY_TO_DISPLAY = {
-        "conventional": "Conventional",
-        "native": "Conventional",
+        "conventional": "Native",
+        "native": "Native",
         "pseudoinverse": "Pseudoinverse",
         "fista": "FISTA",
         "tv_norm": "TV-norm",
@@ -602,28 +611,30 @@ class TestConfigWidget(QWidget):
             self._update_sweep_table(config.sweep_angles, config.sweep_bar_widths, config.sweep_strides)
 
             # Reconstruction method - set via scatter applicator
-            # Mirror the saved reconstruction method onto the active widget's
-            # combo. Scatter uses "Conventional"; Sweep / Hadamard use "Native".
-            # For the legacy scatter combo we must use the old label.
-            scatter_label = {
-                "conventional": "Conventional",
+            # Mirror the saved reconstruction method onto each widget's combo.
+            # Each family has its own native label: the first item of every
+            # combo is that family's native algorithm, so we always target
+            # index 0 for "conventional"/"native" and look up the rest by
+            # name (which is identical across widgets).
+            iterative_label = {
                 "pseudoinverse": "Pseudoinverse",
                 "fista": "FISTA",
                 "tv_norm": "TV-norm",
-            }.get(config.reconstruction_method, "Conventional")
-            self.scatter_control.select_applicator_scatter_list.setCurrentText(scatter_label)
-            generic_label = self._RECON_KEY_TO_DISPLAY.get(
-                config.reconstruction_method, "Native"
-            )
-            # Remap "Conventional" → "Native" for widgets that use "Native".
-            if generic_label == "Conventional":
-                generic_label = "Native"
-            for widget in (self.sweep_control, self.hadamard_control):
-                combo = getattr(widget, "reconstruction_method_combo", None)
-                if combo is not None:
-                    idx = combo.findText(generic_label)
+            }.get(config.reconstruction_method)
+
+            def _apply(combo):
+                if combo is None:
+                    return
+                if iterative_label is None:
+                    combo.setCurrentIndex(0)
+                else:
+                    idx = combo.findText(iterative_label)
                     if idx >= 0:
                         combo.setCurrentIndex(idx)
+
+            _apply(self.scatter_control.select_applicator_scatter_list)
+            _apply(getattr(self.sweep_control, "reconstruction_method_combo", None))
+            _apply(getattr(self.hadamard_control, "reconstruction_method_combo", None))
 
             # FISTA/TV parameters
             if config.reconstruction_method == "fista":

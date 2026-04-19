@@ -120,7 +120,7 @@
       <widget class="QComboBox" name="select_applicator_scatter_list">
        <item>
         <property name="text">
-         <string>Conventional</string>
+         <string>Ghost Imaging</string>
         </property>
        </item>
        <item>
