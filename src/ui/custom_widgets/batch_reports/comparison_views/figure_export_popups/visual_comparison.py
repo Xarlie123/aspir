@@ -186,22 +186,36 @@ class VisualComparisonPopup(BaseFigureExportPopup):
     def _compute_pseudoinverse_reconstruction(self, original: np.ndarray, masks: np.ndarray) -> np.ndarray:
         """Compute pseudoinverse (linear) reconstruction from ground truth and masks."""
         H, W = original.shape[:2]
-        n_masks = masks.shape[0]
 
-        # Compute measurements from ground truth
-        measurements = np.array([np.sum(original * masks[i]) for i in range(n_masks)])
+        # Cast to float64 and rescale masks to [0, 1] so the sensing matrix is
+        # numerically well-conditioned regardless of whether masks are uint8
+        # 0/255 or already floats. Without this, uint8 masks make the pinv-based
+        # reconstruction come back in a very compressed dynamic range.
+        original_f = original.astype(np.float64)
+        masks_f = masks.astype(np.float64)
+        mmax = masks_f.max()
+        if mmax > 1.5:
+            masks_f = masks_f / mmax
 
-        # Flatten masks to sensing matrix S: (n_masks, H*W)
-        S = masks.reshape(n_masks, -1)
+        n_masks = masks_f.shape[0]
+        measurements = (masks_f.reshape(n_masks, -1) @ original_f.reshape(-1))
 
-        # Compute pseudoinverse reconstruction
+        S = masks_f.reshape(n_masks, -1)
+
         try:
             S_pinv = np.linalg.pinv(S)
-            reconstructed = S_pinv @ measurements
-            reconstructed = reconstructed.reshape(H, W)
+            reconstructed = (S_pinv @ measurements).reshape(H, W)
 
-            # Normalize to [0, 1]
-            reconstructed = np.clip(reconstructed, 0, 1)
+            # With an underdetermined sensing matrix (typical for sweep), the
+            # minimum-norm solution lands in a smaller range than the ground
+            # truth. Rescale to [0, 1] so the image fills the colormap instead
+            # of appearing washed out after the popup's vmin/vmax=1 imshow.
+            rmin = float(reconstructed.min())
+            rmax = float(reconstructed.max())
+            if rmax > rmin:
+                reconstructed = (reconstructed - rmin) / (rmax - rmin)
+            else:
+                reconstructed = np.zeros_like(reconstructed)
             return reconstructed
         except Exception as e:
             self.logger.error("Pseudoinverse failed: %s", e)
@@ -449,9 +463,18 @@ class VisualComparisonPopup(BaseFigureExportPopup):
                     finally:
                         QApplication.restoreOverrideCursor()
                 elif reconstructions is not None and image_idx < len(reconstructions):
-                    # Fallback to stored reconstructions
+                    # Fallback to stored reconstructions. Applicators (e.g.
+                    # sweep ghost imaging) often leave a non-zero DC baseline,
+                    # which with imshow(vmin=0, vmax=1) would render a washed
+                    # grey image. Rescale to [0, 1] so the full dynamic range
+                    # is visible.
                     self.logger.info("LINEAR_RECON: Using stored reconstructions (fallback)")
-                    return reconstructions[image_idx]
+                    recon = np.asarray(reconstructions[image_idx], dtype=np.float32)
+                    rmin = float(recon.min())
+                    rmax = float(recon.max())
+                    if rmax > rmin:
+                        recon = (recon - rmin) / (rmax - rmin)
+                    return recon
 
         elif config.col_type == ColumnConfig.TYPE_ITERATIVE_CS:
             # Compute TV-norm reconstruction on-the-fly
