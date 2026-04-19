@@ -155,7 +155,8 @@ class ModeSlider(QWidget):
     def get_value(self) -> int:
         return self.slider.value()
 
-    def set_value(self, value: int):
+    def set_value(self, value):
+        value = int(round(float(value)))
         self.slider.blockSignals(True)
         self.spinbox.blockSignals(True)
         self.slider.setValue(value)
