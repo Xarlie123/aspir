@@ -424,6 +424,18 @@ class SamplesGridPopup(BaseFigureExportPopup):
             self.test_color_btn.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #666;")
             self._update_preview()
 
+    def _compute_row_label_margin(self, font_size: int, row_labels: list[str]) -> int:
+        """Estimate the pixel width needed for the row labels on the left so
+        long labels (e.g. "Hermite-Gauss") are not clipped. Approximates each
+        character as 0.8 * font_size (roomy to cover wide glyphs in bold),
+        plus the 12 pt axes gap and some breathing room at the figure edge."""
+        if not row_labels:
+            return 10
+        longest = max((len(lbl) for lbl in row_labels), default=0)
+        text_px = int(longest * font_size * 0.8)
+        axes_gap_px = int(12 * 1.333)  # 12 pt offset used in ax.annotate
+        return max(int(font_size * 12), text_px + axes_gap_px + 15)
+
     def _on_show_beta_changed(self, state: int):
         """Auto-nudge the Sampling-ratio header up when β adds a second title
         line, so the line stops overlapping the titles. The user can still
@@ -538,7 +550,10 @@ class SamplesGridPopup(BaseFigureExportPopup):
 
         # Calculate margins in pixels (scale with font size for row labels)
         # "Sample #1" is about 10 characters, each char ~0.7 * font_size wide
-        left_margin_px = int(font_size * 12) if show_row_labels else 10
+        left_margin_px = (
+            self._compute_row_label_margin(font_size, row_labels)
+            if show_row_labels else 10
+        )
         right_margin_px = 10
         top_margin_px = int(font_size * 5) if show_labels else 20
         if self.show_beta_cb.isChecked() and show_labels:
@@ -651,8 +666,14 @@ class SamplesGridPopup(BaseFigureExportPopup):
             for row_idx in range(n_rows):
                 ax = axes[row_idx][0]
                 label = row_labels[row_idx] if row_idx < len(row_labels) else f"Sample #{row_idx+1}"
-                ax.annotate(label, xy=(-0.15, 0.5), xycoords='axes fraction',
-                           fontsize=font_size, fontweight='bold', ha='right', va='center')
+                # Anchor on the axes left edge with a fixed pixel offset to
+                # the left. This keeps the label's right edge at a predictable
+                # distance from the axes regardless of image_size_px, so the
+                # left margin can be sized tightly without clipping the text.
+                ax.annotate(label, xy=(0, 0.5), xycoords='axes fraction',
+                           xytext=(-12, 0), textcoords='offset points',
+                           fontsize=font_size, fontweight='bold',
+                           ha='right', va='center')
 
         # Convert border padding to figure fractions
         border_padding_x = border_padding_px / fig_width_px
@@ -783,7 +804,10 @@ class SamplesGridPopup(BaseFigureExportPopup):
         show_ratio_header = self.show_ratio_header_cb.isChecked()
         font_size = self.font_size_spin.value()
 
-        left_margin = int(font_size * 12) if show_row_labels else 10
+        left_margin = (
+            self._compute_row_label_margin(font_size, self._get_row_labels())
+            if show_row_labels else 10
+        )
         right_margin = 10
         top_margin = int(font_size * 5) if show_labels else 20
         if self.show_beta_cb.isChecked() and show_labels:
