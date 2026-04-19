@@ -22,27 +22,27 @@ authors:
     given-names: "Carlos"
     email: "cchabert@uji.es"
     affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+    orcid: "https://orcid.org/0000-0001-5352-8587"
 
   - family-names: "Tobón-Maya"
     given-names: "Heberley"
     affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+    orcid: "https://orcid.org/0000-0002-3258-1861"
 
   - family-names: "Zapata-Valencia"
     given-names: "Samuel I."
     affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+    orcid: "https://orcid.org/0000-0002-0924-3776"
 
   - family-names: "Tajahuerce"
     given-names: "Enrique"
     affiliation: "Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+    orcid: "https://orcid.org/0000-0003-1655-4393"
 
   - family-names: "León"
     given-names: "Germán"
     affiliation: "Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain"
-    # orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"  # TODO: fill in before release
+    orcid: "https://orcid.org/0000-0002-7687-2126"
 
 # -----------------------------------------------------------------------------
 # Release metadata — update these three fields each time a new release is
