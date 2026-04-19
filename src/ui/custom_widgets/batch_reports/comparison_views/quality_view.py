@@ -14,8 +14,10 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QCheckBox, QFileDialog, QMessageBox, QComboBox, QMenu,
     QSplitter, QListWidget, QListWidgetItem, QGroupBox, QPushButton,
-    QDialog
+    QDialog, QStackedWidget, QTableWidget, QTableWidgetItem, QHeaderView,
+    QAbstractItemView
 )
+from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
@@ -45,6 +47,7 @@ class QualityView(QWidget):
     CHART_COMPARISON = 0
     CHART_PER_IMAGE = 1
     CHART_HISTOGRAM = 2
+    CHART_TABLE = 3
 
     def __init__(self, logger=None, parent=None):
         super().__init__(parent)
@@ -119,6 +122,7 @@ class QualityView(QWidget):
         self.chart_list.addItem("Quality Metrics Comparison")
         self.chart_list.addItem("Metrics per Image")
         self.chart_list.addItem("Metrics Histogram")
+        self.chart_list.addItem("Quality Metrics Table")
         self.chart_list.setCurrentRow(0)
         self.chart_list.currentRowChanged.connect(self._on_chart_type_changed)
         self.chart_list.setStyleSheet("""
@@ -225,7 +229,39 @@ class QualityView(QWidget):
         )
 
         right_layout.addWidget(self.toolbar)
-        right_layout.addWidget(self.canvas, 1)
+
+        # Table mode header: experiment filter + hint about right-click export.
+        self.table_header = QWidget()
+        table_header_layout = QHBoxLayout(self.table_header)
+        table_header_layout.setContentsMargins(0, 0, 0, 4)
+        table_header_layout.addWidget(QLabel("Experiment:"))
+        self.experiment_combo = QComboBox()
+        self.experiment_combo.setMinimumWidth(260)
+        self.experiment_combo.currentIndexChanged.connect(self._on_experiment_filter_changed)
+        table_header_layout.addWidget(self.experiment_combo)
+        table_header_layout.addStretch()
+        table_header_layout.addWidget(QLabel(
+            "<span style='color:#888'>Right-click to export as CSV / LaTeX</span>"
+        ))
+        self.table_header.setVisible(False)
+        right_layout.addWidget(self.table_header)
+
+        # Stack: [0] chart canvas, [1] metrics table
+        self.view_stack = QStackedWidget()
+        self.view_stack.addWidget(self.canvas)
+        self.metrics_table = QTableWidget()
+        self.metrics_table.setAlternatingRowColors(True)
+        self.metrics_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.metrics_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.metrics_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.metrics_table.customContextMenuRequested.connect(
+            self._show_table_context_menu
+        )
+        self.metrics_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeToContents
+        )
+        self.view_stack.addWidget(self.metrics_table)
+        right_layout.addWidget(self.view_stack, 1)
 
         # Info label
         self.info_label = QLabel("Load experiments to see quality comparison charts")
@@ -371,6 +407,26 @@ class QualityView(QWidget):
 
     def _refresh_chart(self):
         """Refresh the chart based on current settings."""
+        chart_type = self.chart_list.currentRow()
+
+        # Table mode uses its own widget, not the matplotlib canvas.
+        if chart_type == self.CHART_TABLE:
+            self.view_stack.setCurrentIndex(1)
+            self.toolbar.setVisible(False)
+            self.table_header.setVisible(True)
+            self._refresh_experiment_combo()
+            self._populate_metrics_table()
+            experiment_count = len(set(t.get("_experiment_name", "") for t in self._tests))
+            self.info_label.setText(
+                f"Table: {len(self._tests)} tests from {experiment_count} experiment(s)"
+            )
+            return
+
+        # Chart modes → show the canvas.
+        self.view_stack.setCurrentIndex(0)
+        self.toolbar.setVisible(True)
+        self.table_header.setVisible(False)
+
         self.figure.clear()
 
         if not self._tests:
@@ -398,8 +454,6 @@ class QualityView(QWidget):
             self.canvas.draw()
             return
 
-        chart_type = self.chart_list.currentRow()
-
         if chart_type == self.CHART_COMPARISON:
             self._draw_comparison_chart(show_psnr, show_ssim, show_lpips)
         elif chart_type == self.CHART_PER_IMAGE:
@@ -423,6 +477,252 @@ class QualityView(QWidget):
         self.info_label.setText(
             f"Showing {len(self._tests)} tests from {experiment_count} experiment(s)"
         )
+
+    # ------------------------------------------------------------------
+    # Quality Metrics Table
+    # ------------------------------------------------------------------
+
+    TABLE_HEADERS = [
+        "M/N (%)",
+        "M",
+        "PSNR Recon (dB)",
+        "SSIM Recon",
+        "PSNR Denoised (dB)",
+        "SSIM Denoised",
+        "LPIPS Denoised",
+        "ΔPSNR (dB)",
+    ]
+
+    def _refresh_experiment_combo(self):
+        """Rebuild the 'Experiment' filter dropdown from loaded tests."""
+        combo = self.experiment_combo
+        prev = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("All experiments", None)
+        seen = []
+        for t in self._tests:
+            name = t.get("_experiment_name", "")
+            if name and name not in seen:
+                seen.append(name)
+        for name in seen:
+            combo.addItem(name, name)
+        # Restore previous selection if still present.
+        if prev is not None:
+            idx = combo.findData(prev)
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+        combo.blockSignals(False)
+
+    def _on_experiment_filter_changed(self, _index: int):
+        if self.chart_list.currentRow() == self.CHART_TABLE:
+            self._populate_metrics_table()
+
+    def _filtered_tests(self) -> List[Dict[str, Any]]:
+        """Apply the experiment filter to self._tests."""
+        exp = self.experiment_combo.currentData()
+        if not exp:
+            return list(self._tests)
+        return [t for t in self._tests if t.get("_experiment_name") == exp]
+
+    def _n_pixels_for_test(self, test: Dict[str, Any]) -> Optional[int]:
+        """Resolve n_pixels for a test (used for M/N and M)."""
+        meta = test.get("_experiment_metadata") or {}
+        img_size = None
+        if isinstance(meta, dict):
+            ds = meta.get("dataset_info", {}) or {}
+            if "img_size" in ds:
+                img_size = int(ds["img_size"])
+        if img_size is None:
+            # Fall back to any stored image shape
+            qpi = test.get("quality_per_image", {}) or {}
+            if qpi.get("psnr_denoised"):
+                pass  # No image shape here, skip
+        if img_size:
+            return img_size * img_size
+        return None
+
+    def _n_patterns_for_test(self, test: Dict[str, Any]) -> Optional[int]:
+        n = test.get("timing_num_patterns")
+        if n is not None:
+            return int(n)
+        mask_type = (test.get("mask_type") or "").lower()
+        if mask_type == "scatter":
+            return test.get("scatter_num_patterns")
+        if mask_type.startswith("hadamard") or mask_type == "cal_sal":
+            lo = test.get("hadamard_min_idx")
+            hi = test.get("hadamard_max_idx")
+            if lo is not None and hi is not None:
+                return max(0, int(hi) - int(lo))
+        return None
+
+    def _table_rows(self) -> List[Dict[str, Any]]:
+        """Build one dict per filtered test with all table column values.
+
+        Values are the batch-averaged per-test metrics already stored in the
+        report. Rows are sorted by β ascending so the table reads from lowest
+        to highest sampling ratio.
+        """
+        rows = []
+        for test in self._filtered_tests():
+            n_patterns = self._n_patterns_for_test(test)
+            n_pixels = self._n_pixels_for_test(test)
+            beta = (100.0 * n_patterns / n_pixels
+                    if n_patterns and n_pixels else None)
+            psnr_r = test.get("psnr_recons")
+            psnr_d = test.get("psnr_denoised")
+            rows.append({
+                "name": test.get("name", ""),
+                "beta": beta,
+                "M": n_patterns,
+                "psnr_recon": psnr_r,
+                "ssim_recon": test.get("ssim_recons"),
+                "psnr_denoised": psnr_d,
+                "ssim_denoised": test.get("ssim_denoised"),
+                "lpips_denoised": test.get("lpips_denoised"),
+                "delta_psnr": (psnr_d - psnr_r)
+                    if (psnr_d is not None and psnr_r is not None) else None,
+            })
+        # Sort descending by β so the highest sampling ratio (most
+        # measurements) appears first — matches the conventional layout in
+        # compressive-imaging papers.
+        rows.sort(key=lambda r: (r["beta"] if r["beta"] is not None else -1),
+                  reverse=True)
+        return rows
+
+    def _populate_metrics_table(self):
+        """Fill the QTableWidget with the filtered rows."""
+        rows = self._table_rows()
+        self.metrics_table.clear()
+        self.metrics_table.setColumnCount(len(self.TABLE_HEADERS))
+        self.metrics_table.setHorizontalHeaderLabels(self.TABLE_HEADERS)
+        self.metrics_table.setRowCount(len(rows))
+
+        def fmt(value, spec):
+            if value is None:
+                return "—"
+            return spec.format(value)
+
+        for r, row in enumerate(rows):
+            cells = [
+                fmt(row["beta"], "{:.1f}"),
+                fmt(row["M"], "{}"),
+                fmt(row["psnr_recon"], "{:.2f}"),
+                fmt(row["ssim_recon"], "{:.4f}"),
+                fmt(row["psnr_denoised"], "{:.2f}"),
+                fmt(row["ssim_denoised"], "{:.4f}"),
+                fmt(row["lpips_denoised"], "{:.4f}"),
+                fmt(row["delta_psnr"],
+                    "{:+.2f}" if row["delta_psnr"] is not None else "{}"),
+            ]
+            for c, text in enumerate(cells):
+                item = QTableWidgetItem(text)
+                item.setTextAlignment(Qt.AlignCenter)
+                self.metrics_table.setItem(r, c, item)
+
+        # Tooltip with test name on each row's first cell — handy when tests
+        # are renamed and β alone doesn't identify the row uniquely.
+        for r, row in enumerate(rows):
+            it = self.metrics_table.item(r, 0)
+            if it is not None:
+                it.setToolTip(row["name"])
+
+        self.metrics_table.resizeColumnsToContents()
+
+    def _show_table_context_menu(self, pos):
+        menu = QMenu(self.metrics_table)
+        menu.addAction("Save as CSV…", self._export_table_csv)
+        menu.addAction("Save as LaTeX…", self._export_table_latex)
+        menu.exec_(self.metrics_table.viewport().mapToGlobal(pos))
+
+    def _export_table_csv(self):
+        rows = self._table_rows()
+        if not rows:
+            QMessageBox.information(self, "Nothing to export", "The table is empty.")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save table as CSV",
+            "quality_metrics.csv",
+            "CSV Files (*.csv);;All Files (*.*)",
+        )
+        if not path:
+            return
+        try:
+            import csv
+            with open(path, "w", newline="", encoding="utf-8") as fh:
+                w = csv.writer(fh)
+                w.writerow(["Test"] + self.TABLE_HEADERS)
+                for row in rows:
+                    w.writerow([
+                        row["name"],
+                        f"{row['beta']:.2f}" if row["beta"] is not None else "",
+                        row["M"] if row["M"] is not None else "",
+                        f"{row['psnr_recon']:.4f}" if row["psnr_recon"] is not None else "",
+                        f"{row['ssim_recon']:.6f}" if row["ssim_recon"] is not None else "",
+                        f"{row['psnr_denoised']:.4f}" if row["psnr_denoised"] is not None else "",
+                        f"{row['ssim_denoised']:.6f}" if row["ssim_denoised"] is not None else "",
+                        f"{row['lpips_denoised']:.6f}" if row["lpips_denoised"] is not None else "",
+                        f"{row['delta_psnr']:.4f}" if row["delta_psnr"] is not None else "",
+                    ])
+            QMessageBox.information(self, "Saved", f"CSV saved to:\n{path}")
+        except Exception as e:
+            self.logger.error("CSV export failed: %s", e, exc_info=True)
+            QMessageBox.warning(self, "Export error", f"CSV export failed:\n{e}")
+
+    def _export_table_latex(self):
+        rows = self._table_rows()
+        if not rows:
+            QMessageBox.information(self, "Nothing to export", "The table is empty.")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save table as LaTeX",
+            "quality_metrics.tex",
+            "LaTeX Files (*.tex);;All Files (*.*)",
+        )
+        if not path:
+            return
+
+        def cell(value, spec, empty="--"):
+            if value is None:
+                return empty
+            return spec.format(value)
+
+        try:
+            lines = []
+            lines.append("% Generated by ASPIR — Quality Metrics Table")
+            lines.append(r"\begin{tabular}{rr rr rrr r}")
+            lines.append(r"\toprule")
+            lines.append(
+                r" & & \multicolumn{2}{c}{Reconstructed} "
+                r"& \multicolumn{3}{c}{Denoised (DNN)} & \\"
+            )
+            lines.append(r"\cmidrule(lr){3-4} \cmidrule(lr){5-7}")
+            lines.append(
+                r"$M/N$ (\%) & $M$ & PSNR (dB) & SSIM "
+                r"& PSNR (dB) & SSIM & LPIPS & $\Delta$PSNR (dB) \\"
+            )
+            lines.append(r"\midrule")
+            for row in rows:
+                lines.append(
+                    " & ".join([
+                        cell(row["beta"], "{:.1f}"),
+                        cell(row["M"], "{}"),
+                        cell(row["psnr_recon"], "{:.2f}"),
+                        cell(row["ssim_recon"], "{:.4f}"),
+                        cell(row["psnr_denoised"], "{:.2f}"),
+                        cell(row["ssim_denoised"], "{:.4f}"),
+                        cell(row["lpips_denoised"], "{:.4f}"),
+                        cell(row["delta_psnr"], "{:+.2f}"),
+                    ]) + r" \\"
+                )
+            lines.append(r"\bottomrule")
+            lines.append(r"\end{tabular}")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(lines) + "\n")
+            QMessageBox.information(self, "Saved", f"LaTeX saved to:\n{path}")
+        except Exception as e:
+            self.logger.error("LaTeX export failed: %s", e, exc_info=True)
+            QMessageBox.warning(self, "Export error", f"LaTeX export failed:\n{e}")
 
     def _draw_comparison_chart(self, show_psnr: bool, show_ssim: bool, show_lpips: bool):
         """Draw Quality Metrics Comparison chart (grouped bar chart).
