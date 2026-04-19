@@ -75,38 +75,42 @@ def create_mask(config: TestConfiguration, dataset, logger):
         raise ValueError(f"Unknown mask type: {config.mask_type}")
 
 
+def _native_applicator_for_mask(mask, dataset):
+    """Return the mask-specific default ("native") applicator."""
+    if isinstance(mask, MaskScatter):
+        return ApplicatorScatter(dataset, mask)
+    if isinstance(mask, MaskSweep):
+        return ApplicatorSweep(dataset, mask)
+    if isinstance(mask, (MaskHadamard, MaskHadamardCakeCutting,
+                         MaskHadamardWalshPaley, MaskCalSal)):
+        return ApplicatorHadamard(dataset, mask)
+    raise ValueError(f"Unsupported mask type for applicator: {type(mask)}")
+
+
 def create_applicator(config: TestConfiguration, mask, dataset):
-    """Create applicator based on mask type and reconstruction method."""
-    # Generate mask patterns
+    """Create the applicator for ``mask`` using ``config.reconstruction_method``.
+
+    ``method`` is mask-agnostic: ``pseudoinverse``/``fista``/``tv_norm`` use
+    the generic iterative solvers for any mask, and any other value
+    (including ``conventional`` / ``native`` / legacy empty strings) falls
+    back to the mask's native algorithm (Ghost Imaging, Sweep Linear,
+    Hadamard Linear).
+    """
     mask.generate_masks()
 
-    if isinstance(mask, MaskScatter):
-        method = config.reconstruction_method
-        if method == "conventional":
-            # Direct scatter reconstruction (simple sampling)
-            return ApplicatorScatter(dataset, mask)
-        elif method == "pseudoinverse":
-            return ApplicatorPseudoinverse(dataset, mask)
-        elif method == "fista":
-            applicator = ApplicatorFISTA(dataset, mask)
-            applicator.lambda_val = config.fista_lambda
-            applicator.max_iter = config.fista_iterations
-            return applicator
-        elif method == "tv_norm":
-            applicator = ApplicatorTV(dataset, mask)
-            applicator.lambda_val = config.tv_lambda
-            applicator.max_iter = config.tv_iterations
-            return applicator
-        else:
-            # Fallback to conventional
-            return ApplicatorScatter(dataset, mask)
+    method = (config.reconstruction_method or "").lower()
 
-    elif isinstance(mask, MaskSweep):
-        return ApplicatorSweep(dataset, mask)
+    if method == "pseudoinverse":
+        return ApplicatorPseudoinverse(dataset, mask)
+    if method == "fista":
+        applicator = ApplicatorFISTA(dataset, mask)
+        applicator.lambda_val = config.fista_lambda
+        applicator.max_iter = config.fista_iterations
+        return applicator
+    if method == "tv_norm":
+        applicator = ApplicatorTV(dataset, mask)
+        applicator.lambda_val = config.tv_lambda
+        applicator.max_iter = config.tv_iterations
+        return applicator
 
-    elif isinstance(mask, (MaskHadamard, MaskHadamardCakeCutting,
-                           MaskHadamardWalshPaley, MaskCalSal)):
-        return ApplicatorHadamard(dataset, mask)
-
-    else:
-        raise ValueError(f"Unsupported mask type for applicator: {type(mask)}")
+    return _native_applicator_for_mask(mask, dataset)

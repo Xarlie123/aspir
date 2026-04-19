@@ -410,12 +410,16 @@ class TestConfigWidget(QWidget):
         self.scatter_control.number_patterns_scatter_value.valueChanged.connect(self._on_value_changed)
         self.scatter_control.random_seed_scatter_value.valueChanged.connect(self._on_value_changed)
         self.scatter_control.select_applicator_scatter_list.currentTextChanged.connect(
-            self._on_scatter_applicator_changed
+            self._on_applicator_changed
         )
 
     def _connect_hadamard_signals(self):
         """Connect hadamard control signals to config updates."""
         self.hadamard_control.hadamard_slider.valueChanged.connect(self._on_value_changed)
+        if hasattr(self.hadamard_control, "reconstruction_method_combo"):
+            self.hadamard_control.reconstruction_method_combo.currentTextChanged.connect(
+                self._on_applicator_changed
+            )
 
     def _connect_sweep_signals(self):
         """Connect sweep control signals to config updates."""
@@ -424,20 +428,64 @@ class TestConfigWidget(QWidget):
         # Add/remove row buttons don't trigger cellChanged, so connect them explicitly
         self.sweep_control.add_row_button.clicked.connect(self._on_value_changed)
         self.sweep_control.remove_row_button.clicked.connect(self._on_value_changed)
+        if hasattr(self.sweep_control, "reconstruction_method_combo"):
+            self.sweep_control.reconstruction_method_combo.currentTextChanged.connect(
+                self._on_applicator_changed
+            )
 
-    def _on_scatter_applicator_changed(self, text: str):
-        """Update reconstruction parameters visibility when scatter applicator changes."""
+    # Display labels used by all three mask widgets ↔ canonical method key.
+    _RECON_DISPLAY_TO_KEY = {
+        "Conventional": "conventional",
+        "Native": "conventional",
+        "Pseudoinverse": "pseudoinverse",
+        "FISTA": "fista",
+        "TV-norm": "tv_norm",
+    }
+    _RECON_KEY_TO_DISPLAY = {
+        "conventional": "Conventional",
+        "native": "Conventional",
+        "pseudoinverse": "Pseudoinverse",
+        "fista": "FISTA",
+        "tv_norm": "TV-norm",
+    }
+
+    def _active_recon_combo(self):
+        """Return the reconstruction-method combo for the currently selected
+        mask family, or None if the active mask widget has no selector."""
+        mask_type = self.mask_type_combo.currentText()
+        if mask_type.startswith("scatter"):
+            return getattr(self.scatter_control,
+                           "select_applicator_scatter_list", None)
+        if mask_type == "sweep":
+            return getattr(self.sweep_control,
+                           "reconstruction_method_combo", None)
+        if mask_type.startswith("hadamard"):
+            return getattr(self.hadamard_control,
+                           "reconstruction_method_combo", None)
+        # cal_sal currently has no widget → no selector
+        return None
+
+    def _active_recon_method_key(self) -> str:
+        combo = self._active_recon_combo()
+        if combo is None:
+            return "conventional"
+        return self._RECON_DISPLAY_TO_KEY.get(combo.currentText(), "conventional")
+
+    def _set_active_recon_method_display(self, display_text: str):
+        combo = self._active_recon_combo()
+        if combo is None:
+            return
+        idx = combo.findText(display_text)
+        if idx >= 0:
+            combo.setCurrentIndex(idx)
+
+    def _on_applicator_changed(self, text: str):
+        """Update reconstruction parameters visibility when the active mask
+        widget's reconstruction-method combo changes."""
         if self._updating:
             return
 
-        # Map scatter applicator to reconstruction method
-        method_map = {
-            "Conventional": "conventional",
-            "Pseudoinverse": "pseudoinverse",
-            "FISTA": "fista",
-            "TV-norm": "tv_norm"
-        }
-        method = method_map.get(text, "conventional")
+        method = self._RECON_DISPLAY_TO_KEY.get(text, "conventional")
 
         # Show/hide FISTA/TV parameters
         show_params = method in ("fista", "tv_norm")
@@ -467,6 +515,15 @@ class TestConfigWidget(QWidget):
         }
         index = type_to_index.get(mask_type, 0)
         self.mask_control_stack.setCurrentIndex(index)
+
+        # Re-evaluate which reconstruction method is active, so the FISTA/TV
+        # params panel reflects the currently-visible combo rather than the
+        # scatter one.
+        combo = self._active_recon_combo()
+        if combo is not None:
+            self._on_applicator_changed(combo.currentText())
+        else:
+            self.recon_params_widget.setVisible(False)
 
         # Also trigger value change
         self._on_value_changed()
@@ -545,14 +602,28 @@ class TestConfigWidget(QWidget):
             self._update_sweep_table(config.sweep_angles, config.sweep_bar_widths, config.sweep_strides)
 
             # Reconstruction method - set via scatter applicator
-            applicator_map = {
+            # Mirror the saved reconstruction method onto the active widget's
+            # combo. Scatter uses "Conventional"; Sweep / Hadamard use "Native".
+            # For the legacy scatter combo we must use the old label.
+            scatter_label = {
                 "conventional": "Conventional",
                 "pseudoinverse": "Pseudoinverse",
                 "fista": "FISTA",
-                "tv_norm": "TV-norm"
-            }
-            applicator_text = applicator_map.get(config.reconstruction_method, "Conventional")
-            self.scatter_control.select_applicator_scatter_list.setCurrentText(applicator_text)
+                "tv_norm": "TV-norm",
+            }.get(config.reconstruction_method, "Conventional")
+            self.scatter_control.select_applicator_scatter_list.setCurrentText(scatter_label)
+            generic_label = self._RECON_KEY_TO_DISPLAY.get(
+                config.reconstruction_method, "Native"
+            )
+            # Remap "Conventional" → "Native" for widgets that use "Native".
+            if generic_label == "Conventional":
+                generic_label = "Native"
+            for widget in (self.sweep_control, self.hadamard_control):
+                combo = getattr(widget, "reconstruction_method_combo", None)
+                if combo is not None:
+                    idx = combo.findText(generic_label)
+                    if idx >= 0:
+                        combo.setCurrentIndex(idx)
 
             # FISTA/TV parameters
             if config.reconstruction_method == "fista":
@@ -637,6 +708,10 @@ class TestConfigWidget(QWidget):
         self.scatter_control.number_patterns_scatter_value.setReadOnly(read_only)
         self.scatter_control.random_seed_scatter_value.setReadOnly(read_only)
         self.scatter_control.select_applicator_scatter_list.setEnabled(not read_only)
+        for w in (self.sweep_control, self.hadamard_control):
+            combo = getattr(w, "reconstruction_method_combo", None)
+            if combo is not None:
+                combo.setEnabled(not read_only)
 
         # Hadamard controls
         self.hadamard_control.hadamard_slider.setEnabled(not read_only)
@@ -724,15 +799,8 @@ class TestConfigWidget(QWidget):
                          self._config.name, self._config.mask_type, self._config.scatter_num_patterns,
                          self._config.sweep_bar_widths, self._config.epochs)
 
-        # Reconstruction - get method from scatter applicator
-        applicator_text = self.scatter_control.select_applicator_scatter_list.currentText()
-        method_map = {
-            "Conventional": "conventional",
-            "Pseudoinverse": "pseudoinverse",
-            "FISTA": "fista",
-            "TV-norm": "tv_norm"
-        }
-        self._config.reconstruction_method = method_map.get(applicator_text, "conventional")
+        # Reconstruction — read from whichever mask widget is currently active.
+        self._config.reconstruction_method = self._active_recon_method_key()
         if self._config.reconstruction_method == "fista":
             self._config.fista_lambda = self.recon_lambda_spin.value()
             self._config.fista_iterations = self.recon_iter_spin.value()
