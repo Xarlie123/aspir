@@ -1,4 +1,3 @@
-# File: Simulacion/postprocesador/models/mobilenet_denoising.py
 import torch
 import torch.nn as nn
 

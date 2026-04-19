@@ -88,7 +88,7 @@ def save_experiment(window):
     # ---- Save Masks ----
     mk = getattr(window.simulation, "mask", None)
     try:
-        if mk is not None and getattr(mk, "mascaras", None) is not None:
+        if mk is not None and getattr(mk, "masks", None) is not None:
             mk_path = dirs["masks"] / "masks.npz"
             if hasattr(mk, "save_masks"):
                 ok_masks = bool(mk.save_masks(path=str(mk_path), compress=True))

@@ -46,7 +46,7 @@ class ApplicatorScatterFISTA(ApplicatorABC):
         # Retrieve the target image and convert to float64 for computation
         # to ensure precision with quantized formats
         image = np.asarray(self.dataset.data[idx_image], dtype=np.float64)
-        masks = self.mask.mascaras[idx_mask_min:idx_mask_max]
+        masks = self.mask.masks[idx_mask_min:idx_mask_max]
 
         # If no masks, return zero image
         if len(masks) == 0:
@@ -117,7 +117,7 @@ class ApplicatorScatterFISTA(ApplicatorABC):
 
     def process_image(self, idx):
         """Process one image using all masks."""
-        return self.apply_mask_range(0, len(self.mask.mascaras), idx)
+        return self.apply_mask_range(0, len(self.mask.masks), idx)
 
     def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """
@@ -125,7 +125,7 @@ class ApplicatorScatterFISTA(ApplicatorABC):
         is the flattened reconstructed image.
         """
         if idx_mask_max is None:
-            idx_mask_max = len(self.mask.mascaras)
+            idx_mask_max = len(self.mask.masks)
 
         recs = [
             self.apply_mask_range(idx_mask_min, idx_mask_max, i).flatten()

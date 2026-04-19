@@ -5,9 +5,9 @@ from PyQt5.QtWidgets import QWidget
 from ui.custom_widgets.pipeline_control.pipeline_control import Ui_pipeline_control
 
 class PipelineControlWidget(QWidget):
-    def __init__(self, simulacion, logger=None, parent=None):
+    def __init__(self, simulation, logger=None, parent=None):
         super().__init__(parent)
-        self.simulation = simulacion
+        self.simulation = simulation
         self.logger = logger.getChild("PipelineControlWidget") if logger else logging.getLogger("PipelineControlWidget")
         self.logger.debug("Initializing PipelineControlWidget")
 

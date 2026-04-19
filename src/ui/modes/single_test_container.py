@@ -81,7 +81,7 @@ class SingleTestContainer(QWidget):
         handlers should be a dict with keys:
         - 'dataset': UIDatasetHandler
         - 'masks': UIMaskHandler
-        - 'test': UITestMascaraHandler
+        - 'test': UITestMaskHandler
         - 'postprocessor': UIPostprocessorHandler
         - 'reports': UIReportsHandler
         """

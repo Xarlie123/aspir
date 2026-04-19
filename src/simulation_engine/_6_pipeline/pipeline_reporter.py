@@ -1,4 +1,3 @@
-# File: Simulacion/test_pipeline_runner/pipeline_reporter.py
 import os
 import tempfile
 import webbrowser

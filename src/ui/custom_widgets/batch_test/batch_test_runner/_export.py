@@ -171,10 +171,10 @@ def export_datasets(
         try:
             # Export mask patterns
             mask = entry["mask"]
-            if hasattr(mask, "mascaras") and mask.mascaras is not None:
+            if hasattr(mask, "masks") and mask.masks is not None:
                 np.savez_compressed(
                     os.path.join(test_dir, "masks.npz"),
-                    masks=mask.mascaras
+                    masks=mask.masks
                 )
                 logger.debug("Exported masks for %s", safe_name)
 

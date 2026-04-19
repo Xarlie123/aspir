@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSignal, QObject, Qt
 
 from ui.utils.worker_launcher import WorkerLauncher
 from ui.utils.file_formats import MODELS_DIR
-from ui._4_postprocessor.postprocessor_worker import PostprocesadoWorker
+from ui._4_postprocessor.postprocessor_worker import PostprocessorWorker
 from ui.custom_widgets.postprocessor_control.nn_control.nn_control_widget import NNControlWidget
 from ui.custom_widgets.visualizers.visual_postprocessor.visual_postprocessor_widget import VisualPostprocessorWidget
 from ui.custom_widgets.common.dataset_split_widget import DatasetSplitWidget
@@ -317,7 +317,7 @@ class UIPostprocessorHandler(QObject):
             return
 
         # Create and launch worker
-        self._worker = PostprocesadoWorker(
+        self._worker = PostprocessorWorker(
             self.simulation.postprocessor,
             mode="train",
             num_epochs=num_epochs,
@@ -334,7 +334,7 @@ class UIPostprocessorHandler(QObject):
         # Reset progress before starting
         self.visual_pp.reset_progress()
 
-        self.logger.debug("Launching PostprocesadoWorker…")
+        self.logger.debug("Launching PostprocessorWorker…")
         self.worker_thread = WorkerLauncher.launch(
             self._worker,
             on_progress=self.nn_control.trainProgress.emit,
@@ -344,7 +344,7 @@ class UIPostprocessorHandler(QObject):
         self.worker_thread.finished.connect(
             lambda: setattr(self, 'worker_thread', None)
         )
-        self.logger.info("PostprocesadoWorker thread started")
+        self.logger.info("PostprocessorWorker thread started")
 
     def _on_training_finished(self):
         """Callback when training finishes."""
@@ -364,7 +364,7 @@ class UIPostprocessorHandler(QObject):
 
     def _on_training_error(self, e):
         """Handle training worker error."""
-        self.logger.error("Error in PostprocesadoWorker: %s", e, exc_info=True)
+        self.logger.error("Error in PostprocessorWorker: %s", e, exc_info=True)
         QMessageBox.critical(None, "Error in postprocessing", str(e))
         if self.status_manager:
             self.status_manager.error_task(str(e)[:50])

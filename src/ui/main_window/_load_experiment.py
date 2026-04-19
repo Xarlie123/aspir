@@ -26,7 +26,7 @@ def load_experiment(window):
 
     yaml_path           = os.path.join(in_dir, "config.yaml")
     ds_path             = os.path.join(in_dir, "dataset.npz")
-    mk_path             = os.path.join(in_dir, "mascaras.npz")
+    mk_path             = os.path.join(in_dir, "masks.npz")
     manifest_path       = os.path.join(in_dir, "manifest.json")
     model_path          = os.path.join(in_dir, "model.pth")
     model_manifest_path = os.path.join(in_dir, "model_manifest.json")
@@ -117,18 +117,18 @@ def load_experiment(window):
             return _DatasetNPZHolder(img_size, logger=window.logger)
 
         else:
-            from simulation_engine._2_mask_gen.mask import MascaraABC
-            class _MascaraHolder(MascaraABC):
+            from simulation_engine._2_mask_gen.mask import MaskABC
+            class _MaskHolder(MaskABC):
                 def generate_masks(self, progress_callback=None):
                     raise RuntimeError("Holder cannot generate masks; use load_masks().")
             if img_size is None:
                 try:
                     with np.load(mk_path, allow_pickle=False) as _npz:
-                        m = _npz["mascaras"]
+                        m = _npz["masks"]
                         img_size = int(m.shape[1])
                 except Exception:
                     img_size = 0
-            return _MascaraHolder(img_size=img_size, logger=window.logger)
+            return _MaskHolder(img_size=img_size, logger=window.logger)
 
     # ---- Load YAML (UI state) ----
     ok_yaml = True
@@ -184,7 +184,7 @@ def load_experiment(window):
     mk = getattr(window.simulation, "mask", None)
     if mk is None and os.path.exists(mk_path):
         mk = _instantiate_from_manifest("mask", fallback_img_size=getattr(ds, "img_size", None))
-        if hasattr(window.simulation, "set_mascara"):
+        if hasattr(window.simulation, "set_mask"):
             try:
                 window.simulation.set_mask(mk)
             except Exception:
@@ -214,7 +214,7 @@ def load_experiment(window):
                 window.logger.error("Mask object does not expose load_masks(path=...).")
         else:
             ok_masks = False
-            window.logger.warning("No mascaras.npz or could not create mask.")
+            window.logger.warning("No masks.npz or could not create mask.")
     except Exception as e:
         ok_masks = False
         window.logger.exception("Error loading masks: %s", e)
@@ -258,7 +258,7 @@ def load_experiment(window):
                         model_name=model_name,
                         model_overrides=overrides,
                         dataset=window.simulation.dataset,
-                        aplicador=getattr(window.simulation, "applicator", None),
+                        applicator=getattr(window.simulation, "applicator", None),
                         batch_size=16,
                         lr=1e-3,
                         weight_decay=1e-5,
@@ -298,9 +298,9 @@ def load_experiment(window):
                     viz.update_info(
                         num_images=len(window.simulation.validation_results["denoised"]),
                         img_size=getattr(window.simulation.dataset, "img_size", 0),
-                        tipo_dataset=getattr(window.simulation.dataset, "dataset_type", ""),
-                        tipo_mascara=type(getattr(window.simulation, "mask", object())).__name__,
-                        tipo_postprocesado=model_name_for_info,
+                        dataset_type=getattr(window.simulation.dataset, "dataset_type", ""),
+                        mask_type=type(getattr(window.simulation, "mask", object())).__name__,
+                        postprocessor_type=model_name_for_info,
                         n_params=getattr(window.simulation.postprocessor, "n_params", None)
                     )
                     viz.image_slider_value.setValue(0)
@@ -349,9 +349,9 @@ def load_experiment(window):
                         viz.update_info(
                             num_images=len(denoised),
                             img_size=getattr(window.simulation.dataset, "img_size", 0),
-                            tipo_dataset=getattr(window.simulation.dataset, "dataset_type", ""),
-                            tipo_mascara=type(getattr(window.simulation, "mask", object())).__name__,
-                            tipo_postprocesado=model_name_for_info,
+                            dataset_type=getattr(window.simulation.dataset, "dataset_type", ""),
+                            mask_type=type(getattr(window.simulation, "mask", object())).__name__,
+                            postprocessor_type=model_name_for_info,
                             n_params=getattr(pp, "n_params", None)
                         )
                         viz.image_slider_value.setValue(0)

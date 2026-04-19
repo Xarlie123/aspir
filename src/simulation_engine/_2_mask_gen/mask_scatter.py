@@ -1,5 +1,4 @@
 
-# File: Simulacion/mascara_gen/mascara_scatter.py
 import logging
 import numpy as np
 from simulation_engine._2_mask_gen.mask import MaskABC
@@ -38,6 +37,6 @@ class MaskScatter(MaskABC):
                 H[i, x, y] = 1
             if progress_callback:
                 progress_callback(i + 1, self.num_patterns)
-        self.mascaras = H
+        self.masks = H
         self.num_patterns = H.shape[0]
         self.logger.info("Generated %d Scatter masks", self.num_patterns)

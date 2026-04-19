@@ -50,8 +50,8 @@ class ApplicatorSweep(ApplicatorABC):
 
         # Step 1: Calculate measurement values for each mask
         measurements = []
-        for i in range(idx_mask_min, min(idx_mask_max, len(self.mask.mascaras))):
-            mask = self.mask.mascaras[i].astype(np.float64)
+        for i in range(idx_mask_min, min(idx_mask_max, len(self.mask.masks))):
+            mask = self.mask.masks[i].astype(np.float64)
             masked_image = image * mask
             sum_masked_pixels = masked_image.sum()
             measurements.append(sum_masked_pixels)
@@ -67,7 +67,7 @@ class ApplicatorSweep(ApplicatorABC):
         # Step 3: Accumulate correlation between (measurement - average) and mask
         # This implements the standard ghost imaging reconstruction formula
         for i, measurement in enumerate(measurements, start=idx_mask_min):
-            mask = self.mask.mascaras[i].astype(np.float64)
+            mask = self.mask.masks[i].astype(np.float64)
             accumulated_image += (measurement - measurement_avg) * mask
 
         # Step 4: Normalize by number of measurements
@@ -89,7 +89,7 @@ class ApplicatorSweep(ApplicatorABC):
         Returns:
             Reconstructed image.
         """
-        image_rec = self.apply_mask_range(0, len(self.mask.mascaras), idx)
+        image_rec = self.apply_mask_range(0, len(self.mask.masks), idx)
         self.reconstructed_image = image_rec
         return image_rec
 
@@ -106,7 +106,7 @@ class ApplicatorSweep(ApplicatorABC):
             pandas.DataFrame: Each row is a flattened reconstructed image.
         """
         if idx_mask_max is None:
-            idx_mask_max = len(self.mask.mascaras)
+            idx_mask_max = len(self.mask.masks)
 
         accumulated_images = []
         for idx in range(len(self.dataset.data)):

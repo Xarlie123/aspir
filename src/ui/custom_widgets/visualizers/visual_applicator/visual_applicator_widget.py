@@ -160,7 +160,7 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
     def set_data(self, dataset, mask, applicator):
         """Load data and reset view."""
         self._dataset = list(dataset.data) if getattr(dataset, 'data', None) is not None else []
-        self._masks = list(mask.mascaras) if hasattr(mask, 'mascaras') and mask.mascaras is not None else []
+        self._masks = list(mask.masks) if hasattr(mask, 'masks') and mask.masks is not None else []
         self._applicator = applicator
 
         # Get data format from dataset if available

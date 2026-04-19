@@ -1,4 +1,3 @@
-# File: Simulacion/analizador/analizador_tiempos.py
 
 import logging
 import time

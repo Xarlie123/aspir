@@ -28,9 +28,9 @@ class ConfigYamlHandler:
     Maintains backward compatibility with legacy .yaml files.
     """
 
-    def __init__(self, ui, mascara_handler, logger=None, dataset_handler=None):
+    def __init__(self, ui, mask_handler, logger=None, dataset_handler=None):
         self.ui = ui
-        self.mascara_handler = mascara_handler
+        self.mask_handler = mask_handler
         self.dataset_handler = dataset_handler
         if logger is None:
             self.logger = logging.getLogger(self.__class__.__name__)
@@ -70,13 +70,13 @@ class ConfigYamlHandler:
             self.logger.debug(f"Collected widget {name}: {data['widgets'].get(name)}")
 
         # 2) Sweep table
-        sweep: SweepControlWidget = getattr(self.mascara_handler, 'sweep_control', None)
+        sweep: SweepControlWidget = getattr(self.mask_handler, 'sweep_control', None)
         if sweep:
             data['sweep_params'] = sweep.get_parameters()
             self.logger.debug(f"Collected sweep_params: {data['sweep_params']}")
 
         # 3) ScatterControlWidget
-        scatter: ScatterControlWidget = getattr(self.mascara_handler, 'scatter_control', None)
+        scatter: ScatterControlWidget = getattr(self.mask_handler, 'scatter_control', None)
         if scatter:
             data['scatter'] = {
                 'point_density': scatter.point_density_value.value(),
@@ -86,7 +86,7 @@ class ConfigYamlHandler:
             self.logger.debug(f"Collected scatter: {data['scatter']}")
 
         # 4) Hadamard sliders
-        for ctrl in getattr(self.mascara_handler, 'hadamard_controls', []):
+        for ctrl in getattr(self.mask_handler, 'hadamard_controls', []):
             entry = {
                 'low': ctrl.hadamard_slider.low_value,
                 'high': ctrl.hadamard_slider.high_value,
@@ -131,7 +131,7 @@ class ConfigYamlHandler:
                 self.logger.debug(f"Restored widget {name}: {val}")
 
         # 2) SweepControlWidget
-        sweep: SweepControlWidget = getattr(self.mascara_handler, 'sweep_control', None)
+        sweep: SweepControlWidget = getattr(self.mask_handler, 'sweep_control', None)
         if sweep and 'sweep_params' in data:
             sweep.sweep_parameters_table.setRowCount(0)
             for params in data['sweep_params']:
@@ -151,7 +151,7 @@ class ConfigYamlHandler:
                 self.logger.debug(f"Restored sweep row {row}: angle={angle}, bar_width={bar_width}, stride={stride}")
 
         # 3) ScatterControlWidget
-        scatter: ScatterControlWidget = getattr(self.mascara_handler, 'scatter_control', None)
+        scatter: ScatterControlWidget = getattr(self.mask_handler, 'scatter_control', None)
         if scatter and 'scatter' in data:
             sc = data['scatter']
             # Support both old Spanish keys and new English keys
@@ -168,7 +168,7 @@ class ConfigYamlHandler:
 
         # 4) Hadamard sliders
         had_data = data.get('hadamard', [])
-        for ctrl, vals in zip(getattr(self.mascara_handler, 'hadamard_controls', []), had_data):
+        for ctrl, vals in zip(getattr(self.mask_handler, 'hadamard_controls', []), had_data):
             ctrl.hadamard_slider.low_value = vals.get('low', 0)
             ctrl.hadamard_slider.high_value = vals.get('high', ctrl.hadamard_slider.max_val)
             ctrl.hadamard_slider.update()

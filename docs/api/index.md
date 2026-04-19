@@ -16,12 +16,12 @@ simulation_engine/
 
 ## Core Classes
 
-### Simulacion (Pipeline Orchestrator)
+### Simulation (Pipeline Orchestrator)
 
 ```python
-from simulation_engine.simulation import Simulacion
+from simulation_engine.simulation import Simulation
 
-sim = Simulacion(logger)
+sim = Simulation(logger)
 sim.set_dataset(dataset)
 sim.set_mask(mask, applicator_type_scatter='fista')
 sim.set_postprocessor(

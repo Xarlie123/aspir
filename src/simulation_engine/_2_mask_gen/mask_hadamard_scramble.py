@@ -1,4 +1,3 @@
-# File: Simulacion/mascara_gen/mascara_hadamard_scramble.py
 
 import logging
 import numpy as np
@@ -41,6 +40,6 @@ class MaskHadamardScramble(MaskABC):
             masks.append(mask2D)
             if progress_callback: progress_callback(i+1, Mtot)
         arr=np.array(masks)[self.min_idx:self.max_idx]
-        self.mascaras=arr
+        self.masks=arr
         self.num_patterns=arr.shape[0]
         self.logger.info("Generated %d Scramble masks", self.num_patterns)

@@ -10,7 +10,7 @@ from matplotlib import cm
 
 from ui.custom_widgets.visualizers.visual_postprocessor.visual_postprocessor import Ui_Visual_Postprocessor
 from ui.custom_widgets.common.multi_phase_progress import MultiPhaseProgressWidget
-from ui._4_postprocessor.postprocessor_worker import PostprocesadoWorker
+from ui._4_postprocessor.postprocessor_worker import PostprocessorWorker
 
 
 class ZoomableImageLabel(QLabel):
@@ -244,8 +244,8 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         # Create multi-phase progress widget
         self.phase_progress = MultiPhaseProgressWidget(
             phases=[
-                PostprocesadoWorker.PHASE_RECONSTRUCTION,
-                PostprocesadoWorker.PHASE_TRAINING,
+                PostprocessorWorker.PHASE_RECONSTRUCTION,
+                PostprocessorWorker.PHASE_TRAINING,
             ],
             title="Training Progress"
         )

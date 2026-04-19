@@ -17,10 +17,10 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from simulation_engine.simulation import Simulacion
+from simulation_engine.simulation import Simulation
 from ui._1_dataset.ui_dataset_handler import UIDatasetHandler
 from ui._2_masks.ui_mask_handler import UIMaskHandler
-from ui._3_test_masks.ui_test_mask_handler import UITestMascaraHandler
+from ui._3_test_masks.ui_test_mask_handler import UITestMaskHandler
 from ui._4_postprocessor.ui_postprocessor_handler import UIPostprocessorHandler
 from ui._5_reports.ui_reports_handler import UIReportsHandler
 from ui._7_pipeline.ui_pipeline_handler import UIPipelineHandler
@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
             self.logger.debug("Window icon set from: %s", icon_path)
 
-        self.simulation = Simulacion(logger=self.logger)
+        self.simulation = Simulation(logger=self.logger)
 
         # Status manager for task state
         self.status_manager = StatusManager(logger=self.logger)
@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
             self.ui, self.simulation, logger=self.logger,
             status_manager=self.status_manager
         )
-        self.ui_test_mask_handler = UITestMascaraHandler(
+        self.ui_test_mask_handler = UITestMaskHandler(
             self.ui, self.simulation, self.ui_mask_handler, logger=self.logger,
             status_manager=self.status_manager
         )

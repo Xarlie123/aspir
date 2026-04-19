@@ -1,4 +1,3 @@
-# File: ui/custom_widgets/mascara_control/sweep_control/sweep_control_widget.py
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal

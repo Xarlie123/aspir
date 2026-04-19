@@ -1,4 +1,3 @@
-# File: Simulacion/postprocesador/models/cgan.py
 # -*- coding: utf-8 -*-
 # Standalone generator-first cGAN (RCA-GAN-like) for denoising.
 # Compatible with PostprocessorNN (expects a single nn.Module with forward(noisy)->clean).

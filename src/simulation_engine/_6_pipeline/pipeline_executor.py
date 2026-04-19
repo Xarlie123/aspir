@@ -1,5 +1,3 @@
-# File: Simulacion/test_pipeline_runner/pipeline_executor.py
-
 """
 Module to execute the SPIm simulation pipeline based on a YAML configuration.
 Handles loading datasets, generating masks (with nested applicator), instantiating applicators,
@@ -9,7 +7,7 @@ and returning results.
 import yaml
 from time import perf_counter
 
-from simulation_engine.simulation import Simulacion
+from simulation_engine.simulation import Simulation
 from simulation_engine._1_dataset_gen.DatasetFromIRBeam import DatasetFromIRBeam
 from simulation_engine._1_dataset_gen.DatasetFromImage import DatasetFromImage
 from simulation_engine._1_dataset_gen.DatasetFromFolder import DatasetFromFolder
@@ -38,7 +36,7 @@ def execute_pipeline(tests, progress_per_task=None, progress_overall=None):
     Run the SPIm pipeline given test configurations.
     Reads 'size_px' from YAML (ir_beam) or ignores for single/folder types.
     """
-    sim = Simulacion()
+    sim = Simulation()
     results = []
     total_tasks = len(tests)
 
@@ -90,7 +88,7 @@ def execute_pipeline(tests, progress_per_task=None, progress_overall=None):
         mask = MaskClass(sim.dataset.img_size, **kwargs)
 
         sim.set_mask(mask)
-        sim.mascara.generate_masks(progress_callback=progress_per_task)
+        sim.mask.generate_masks(progress_callback=progress_per_task)
 
         # 3) Applicator
         aplicator_type = m_cfg.get('applicator')
@@ -100,13 +98,13 @@ def execute_pipeline(tests, progress_per_task=None, progress_overall=None):
         per_image_times = []
         for idx in range(len(sim.dataset.data)):
             t0 = perf_counter()
-            sim.aplicador.process_image(idx)
+            sim.applicator.process_image(idx)
             t1 = perf_counter()
             per_image_times.append(t1 - t0)
 
         # 5) Measure full-dataset performance
         t0_all = perf_counter()
-        sim.aplicador.process_dataset()
+        sim.applicator.process_dataset()
         t1_all = perf_counter()
         total_time = t1_all - t0_all
 

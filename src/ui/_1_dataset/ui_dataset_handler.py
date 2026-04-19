@@ -16,14 +16,14 @@ from ui.utils.worker_launcher import WorkerLauncher
 class UIDatasetHandler(QObject):
     dataset_updated = pyqtSignal(int)  # notify new img_size
 
-    def __init__(self, ui, simulacion, logger, ui_test_mascara=None, ui_mascara=None, status_manager=None):
+    def __init__(self, ui, simulation, logger, ui_test_mask=None, ui_mask=None, status_manager=None):
         super().__init__()
         self.ui = ui
-        self.simulation = simulacion
+        self.simulation = simulation
         self.logger = logger.getChild("UIDatasetHandler")
         self.logger.debug("Initializing UIDatasetHandler")
-        self.ui_test_mascara = ui_test_mascara
-        self.ui_mascara = ui_mascara
+        self.ui_test_mask = ui_test_mask
+        self.ui_mask = ui_mask
         self.status_manager = status_manager
 
         # Internal flag to prevent duplicate runs

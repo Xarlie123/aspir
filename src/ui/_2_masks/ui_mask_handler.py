@@ -1,4 +1,3 @@
-# File: ui/_2_masks/ui_mask_handler.py
 
 import logging
 import numpy as np
@@ -17,7 +16,7 @@ from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
 from ui.custom_widgets.mask_control.scatter_control.scatter_control_widget import ScatterControlWidget
 from ui.custom_widgets.mask_control.hadamard_control.hadamard_control_widget import HadamardControlWidget
-from ui._2_masks.mask_worker import MascaraWorker
+from ui._2_masks.mask_worker import MaskWorker
 from ui.custom_widgets.visualizers.visual_mask.visual_mask_widget import VisualMaskWidget
 # from ui.utils.widget_helpers import embed_widget  # No longer needed
 from ui.utils.worker_launcher import WorkerLauncher
@@ -59,11 +58,11 @@ class UIMaskHandler(QObject):
 
         # Connect post-mask signals
         self.mask_created.connect(
-            lambda dataset, mask, applicator: self.visual_widget.set_masks(mask.mascaras)
+            lambda dataset, mask, applicator: self.visual_widget.set_masks(mask.masks)
         )
         self.mask_created.connect(
             lambda dataset, mask, applicator: self.visual_widget.update_info(
-                len(mask.mascaras),
+                len(mask.masks),
                 dataset.img_size,
                 type(mask).__name__
             )
@@ -257,52 +256,52 @@ class UIMaskHandler(QObject):
             self.hadamard_controls.append(w)
             self.logger.debug("%s created", mask_cls.__name__)
 
-    def create_mask(self, mascara_obj):
+    def create_mask(self, mask_obj):
         """Manages mask creation and worker for selected mask."""
-        self.logger.info("Mask creation requested: %s", type(mascara_obj).__name__)
+        self.logger.info("Mask creation requested: %s", type(mask_obj).__name__)
         # Evita workers concurrentes
-        if getattr(self, 'mascara_thread', None) and self.mascara_thread.isRunning():
+        if getattr(self, 'mask_thread', None) and self.mask_thread.isRunning():
             self.logger.warning("Mask worker already running, ignoring new request")
             QMessageBox.warning(None, "Attention", "A mask is already being generated.")
             return
 
         # Configure in simulation
-        self.simulation.set_mask(mascara_obj)
-        self.logger.debug("Mask assigned in Simulation: %s", type(mascara_obj).__name__)
+        self.simulation.set_mask(mask_obj)
+        self.logger.debug("Mask assigned in Simulation: %s", type(mask_obj).__name__)
 
         # Lanza el worker
-        self._start_worker(mascara_obj)
+        self._start_worker(mask_obj)
 
-    def _start_worker(self, mascara):
-        """Launches the MascaraWorker with progress and callbacks."""
-        self.logger.debug("Starting MascaraWorker for %s", type(mascara).__name__)
+    def _start_worker(self, mask):
+        """Launches the MaskWorker with progress and callbacks."""
+        self.logger.debug("Starting MaskWorker for %s", type(mask).__name__)
 
         # Notify status manager that task is starting
         if self.status_manager:
             self.status_manager.start_task("Mask generation")
 
-        self.mascara_worker = MascaraWorker(mascara, logger=self.logger)
+        self.mask_worker = MaskWorker(mask, logger=self.logger)
         thread = WorkerLauncher.launch(
-            self.mascara_worker,
+            self.mask_worker,
             on_progress=self.visual_widget.set_progress,
             on_finished=self._on_mask_finished,
             on_error=lambda e: self._on_mask_error(e)
         )
-        self.mascara_thread = thread
-        thread.finished.connect(lambda: setattr(self, 'mascara_thread', None))
+        self.mask_thread = thread
+        thread.finished.connect(lambda: setattr(self, 'mask_thread', None))
         thread.finished.connect(thread.deleteLater)
-        self.logger.debug("MascaraWorker launched and references saved")
+        self.logger.debug("MaskWorker launched and references saved")
 
     def _on_mask_error(self, e):
         """Handle mask worker error."""
-        self.logger.error("Error in MascaraWorker: %s", e, exc_info=True)
+        self.logger.error("Error in MaskWorker: %s", e, exc_info=True)
         QMessageBox.critical(None, "Error", str(e))
         if self.status_manager:
             self.status_manager.error_task(str(e)[:50])
 
     def _on_mask_finished(self):
         """Callback when worker finishes: emits mask_created signal."""
-        self.logger.info("MascaraWorker finished, emitting mask_created")
+        self.logger.info("MaskWorker finished, emitting mask_created")
 
         # Notify status manager that task is finished
         if self.status_manager:

@@ -1,4 +1,3 @@
-# File: Simulacion/dataset_gen/DatasetFromCelebrities.py
 # Always comment Python code in English
 
 import os

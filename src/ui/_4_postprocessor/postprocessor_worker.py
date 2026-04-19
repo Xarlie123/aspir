@@ -3,7 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 import time  # For simulated preprocessing
 
 
-class PostprocesadoWorker(QObject):
+class PostprocessorWorker(QObject):
     # Overall progress
     progress = pyqtSignal(int)               # % of progress
     finished = pyqtSignal()                  # task finished
@@ -21,28 +21,28 @@ class PostprocesadoWorker(QObject):
     PHASE_TRAINING = "Training"
     PHASE_INFERENCE = "Inference"
 
-    def __init__(self, postprocesador, mode, num_epochs=None, index=None, logger=None):
+    def __init__(self, postprocessor, mode, num_epochs=None, index=None, logger=None):
         """
         Initialize the worker with the given postprocessor, mode, optional epoch count
         and an optional logger.
         """
         super().__init__()
-        self.postprocesador = postprocesador
+        self.postprocessor = postprocessor
         self.mode = mode
         self.num_epochs = num_epochs
         self.index = index
 
         # Set up logger: use provided logger or create a new one
         if logger is not None:
-            self.logger = logger.getChild("PostprocesadoWorker")
+            self.logger = logger.getChild("PostprocessorWorker")
         else:
-            self.logger = logging.getLogger("SPIm.PostprocesadoWorker")
+            self.logger = logging.getLogger("ASPIR.PostprocessorWorker")
         self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("Initializing PostprocesadoWorker")
+        self.logger.debug("Initializing PostprocessorWorker")
 
     def run(self):
         """Execute training or inference with progress callbacks."""
-        model = self.postprocesador.model
+        model = self.postprocessor.model
         num_params = sum(p.numel() for p in model.parameters())
         self.logger.info(
             "Using model %s with %d parameters",
@@ -72,7 +72,7 @@ class PostprocesadoWorker(QObject):
                     self.phase_progress.emit(self.PHASE_TRAINING, pct)
 
                 # Training with metrics callback (val_losses, test_losses, val_psnr, val_ssim, val_lpips)
-                self.postprocesador.train_with_metrics(
+                self.postprocessor.train_with_metrics(
                     num_epochs=self.num_epochs,
                     progress_callback=training_progress_callback,
                     metrics_callback=lambda v, t, p, s, l: self.metrics.emit(v, t, p, s, l)
@@ -80,8 +80,8 @@ class PostprocesadoWorker(QObject):
                 self.phase_completed.emit(self.PHASE_TRAINING)
 
                 # Compute and log final validation & test losses
-                val_loss  = self.postprocesador.validate()
-                test_loss = self.postprocesador.test_loss()
+                val_loss  = self.postprocessor.validate()
+                test_loss = self.postprocessor.test_loss()
                 self.logger.info(
                     "Training finished: val_loss=%.4f, test_loss=%.4f",
                     val_loss, test_loss
@@ -96,7 +96,7 @@ class PostprocesadoWorker(QObject):
                 self.phase_progress.emit(self.PHASE_INFERENCE, 0)
 
                 # Run inference
-                orig, noise, recon = self.postprocesador.test_dataset()
+                orig, noise, recon = self.postprocessor.test_dataset()
                 self.logger.debug(
                     "Inference results ready: orig=%d, noise=%d, recon=%d",
                     len(orig), len(noise), len(recon)

@@ -41,8 +41,8 @@ class ApplicatorScatter(ApplicatorABC):
 
         # Calculate detector measurements for each mask
         measurements = []
-        for i in range(idx_mask_min, min(idx_mask_max, len(self.mask.mascaras))):
-            mask = self.mask.mascaras[i].astype(np.float64)
+        for i in range(idx_mask_min, min(idx_mask_max, len(self.mask.masks))):
+            mask = self.mask.masks[i].astype(np.float64)
             masked_image = image * mask
             measurement = masked_image.sum()
             measurements.append(measurement)
@@ -57,7 +57,7 @@ class ApplicatorScatter(ApplicatorABC):
 
         # Accumulate weighted masks by measurement difference
         for i, measurement in enumerate(measurements, start=idx_mask_min):
-            mask = self.mask.mascaras[i]
+            mask = self.mask.masks[i]
             accumulated_image += (measurement - measurement_avg) * mask
 
         # Normalize by number of measurements
@@ -78,7 +78,7 @@ class ApplicatorScatter(ApplicatorABC):
         Returns:
             Reconstructed image.
         """
-        image_rec = self.apply_mask_range(0, len(self.mask.mascaras), idx)
+        image_rec = self.apply_mask_range(0, len(self.mask.masks), idx)
         self.reconstructed_image = image_rec
         return image_rec
 
@@ -95,7 +95,7 @@ class ApplicatorScatter(ApplicatorABC):
             DataFrame where each row is a flattened reconstructed image.
         """
         if idx_mask_max is None:
-            idx_mask_max = len(self.mask.mascaras)
+            idx_mask_max = len(self.mask.masks)
 
         accumulated_images = []
         for idx in range(len(self.dataset.data)):

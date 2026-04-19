@@ -1,4 +1,3 @@
-# File: Simulacion/dataset_gen/dataset_from_ir_beam.py
 
 import numpy as np
 import matplotlib.pyplot as plt

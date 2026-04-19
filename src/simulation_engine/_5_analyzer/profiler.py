@@ -35,7 +35,7 @@ class PipelineProfiler:
         Initialize the profiler.
 
         Args:
-            simulation: The Simulacion object containing applicator and postprocessor
+            simulation: The Simulation object containing applicator and postprocessor
             logger: Optional logger instance
         """
         self.simulation = simulation

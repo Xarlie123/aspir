@@ -62,7 +62,7 @@ class ApplicatorScatterTV(ApplicatorABC):
         image = np.asarray(self.dataset.data[idx_image], dtype=np.float64)
 
         # Select masks and compute measurements
-        masks = self.mask.mascaras[idx_mask_min:idx_mask_max]
+        masks = self.mask.masks[idx_mask_min:idx_mask_max]
         N = len(masks)
 
         # If no masks, return zero image
@@ -133,7 +133,7 @@ class ApplicatorScatterTV(ApplicatorABC):
         Returns:
             Reconstructed image.
         """
-        return self.apply_mask_range(0, len(self.mask.mascaras), idx)
+        return self.apply_mask_range(0, len(self.mask.masks), idx)
 
     def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """
@@ -148,7 +148,7 @@ class ApplicatorScatterTV(ApplicatorABC):
             pandas.DataFrame: Each row is a flattened reconstructed image.
         """
         if idx_mask_max is None:
-            idx_mask_max = len(self.mask.mascaras)
+            idx_mask_max = len(self.mask.masks)
 
         reconstructed_images = []
         for idx in range(len(self.dataset.data)):

@@ -30,7 +30,7 @@ class ApplicatorHadamard(ApplicatorABC):
 
         Parameters:
             dataset: Dataset object providing 2D grayscale images (H, W).
-            mask: Mask object with `mascaras` attribute containing Hadamard patterns
+            mask: Mask object with `masks` attribute containing Hadamard patterns
                   with bipolar values {+1, -1}.
         """
         super().__init__(dataset, mask)
@@ -41,17 +41,17 @@ class ApplicatorHadamard(ApplicatorABC):
 
     def _ensure_masks_available(self):
         """
-        Ensure self.mask.mascaras exists and is non-empty.
+        Ensure self.mask.masks exists and is non-empty.
         Try to call a generator method if available; otherwise raise a clear error.
         """
-        masks = getattr(self.mask, "mascaras", None)
+        masks = getattr(self.mask, "masks", None)
         if masks is None or len(masks) == 0:
             # Try common generator method names if they exist (best-effort).
-            for name in ("generar_mascaras", "generate_masks", "generar", "generate", "build"):
+            for name in ("generate_masks", "generate", "build"):
                 if hasattr(self.mask, name):
                     fn = getattr(self.mask, name)
                     try:
-                        fn()  # Try without args; many implementations fill self.mask.mascaras
+                        fn()  # Try without args; many implementations fill self.mask.masks
                     except TypeError:
                         # If the generator needs a size/dim, infer from dataset images
                         if len(getattr(self.dataset, "data", [])) == 0:
@@ -66,10 +66,10 @@ class ApplicatorHadamard(ApplicatorABC):
                             pass
                     break  # we tried one generator; re-check below
 
-            masks = getattr(self.mask, "mascaras", None)
+            masks = getattr(self.mask, "masks", None)
             if masks is None or len(masks) == 0:
                 raise ValueError(
-                    "The mask has no available patterns in 'mascaras'. "
+                    "The mask has no available patterns in 'masks'. "
                     "Make sure to generate them before using the applicator."
                 )
         return masks

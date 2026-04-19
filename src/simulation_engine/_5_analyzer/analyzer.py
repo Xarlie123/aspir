@@ -1,4 +1,3 @@
-# File: Simulacion/analizador/analizador.py
 
 import logging
 from .analyzer_noise import NoiseAnalyzer
@@ -22,10 +21,10 @@ class Analyzer:
                  pmlib_server_ip="127.0.0.1",
                  pmlib_server_port=6526):
         # Set up a logger for this facade
-        self.logger = logging.getLogger("SPIm.Analizador")
+        self.logger = logging.getLogger("ASPIR.Analyzer")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug(
-            "Initializing Analizador: model=%s, device=%s, warmup_runs=%d, data_format=%s",
+            "Initializing Analyzer: model=%s, device=%s, warmup_runs=%d, data_format=%s",
             type(model).__name__ if model is not None else None,
             device, warmup_runs, data_format
         )

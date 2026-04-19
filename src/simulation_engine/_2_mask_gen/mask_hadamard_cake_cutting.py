@@ -1,4 +1,3 @@
-# File: Simulacion/mascara_gen/mascara_hadamard_cake_cutting.py
 
 import logging
 import numpy as np
@@ -104,8 +103,8 @@ class MaskHadamardCakeCutting(MaskABC):
         if progress_callback:
             progress_callback(overall, overall)
 
-        self.mascaras = np.array(patterns)
-        self.num_patterns = self.mascaras.shape[0]
+        self.masks = np.array(patterns)
+        self.num_patterns = self.masks.shape[0]
         self.logger.info("Generated %d CakeCutting masks", self.num_patterns)
 
     def count_regions(self, B):

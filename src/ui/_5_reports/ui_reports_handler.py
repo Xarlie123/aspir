@@ -247,10 +247,10 @@ class UIReportsHandler(QObject):
         )
 
         # Analyze quality metrics
-        analizador = Analyzer(orig, recons, denoised)
+        analyzer = Analyzer(orig, recons, denoised)
         try:
             # Unpack 6 values (PSNR, SSIM, LPIPS for noisy & reconstructed)
-            pn, sn, ln, pr, sr, lr = analizador.analyze_noise()
+            pn, sn, ln, pr, sr, lr = analyzer.analyze_noise()
             self.logger.info("Quality analysis completed")
         except Exception as e:
             self.logger.error("Error during quality analysis: %s", e, exc_info=True)
@@ -450,7 +450,7 @@ class UIReportsHandler(QObject):
         }
 
         # Calculate acquisition time
-        num_masks = len(getattr(self.simulation.mask, 'mascaras', []))
+        num_masks = len(getattr(self.simulation.mask, 'masks', []))
         t_acq_single_s = 1.0 / (sampling_rate_khz * 1e3) if sampling_rate_khz > 0 else 0.0
         t_acq_ms = t_acq_single_s * num_masks * 1000.0
 

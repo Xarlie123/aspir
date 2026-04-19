@@ -1,4 +1,3 @@
-# File: Simulacion/dataset_gen/dataset.py
 
 import os
 import cv2

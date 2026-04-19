@@ -1,5 +1,4 @@
 
-# File: Simulacion/mascara_gen/mascara_sweep.py
 import logging
 import numpy as np
 from simulation_engine._2_mask_gen.mask import MaskABC
@@ -29,7 +28,7 @@ class MaskSweep(MaskABC):
         geometric distance, avoiding artifacts from polygon clipping.
         """
         self.logger.info("Generating Sweep masks")
-        mascaras = []
+        masks = []
         total = 0
 
         # First pass: count total masks for progress reporting
@@ -92,7 +91,7 @@ class MaskSweep(MaskABC):
                 # Only add non-empty masks
                 pixel_count = mask.sum()
                 if pixel_count >= min_pixels:
-                    mascaras.append(mask.astype(np.uint8) * 255)
+                    masks.append(mask.astype(np.uint8) * 255)
                     self.logger.debug(
                         "Mask generated at angle=%.1f°, offset=%.1f, pixels=%d",
                         angle_deg, offset, pixel_count
@@ -102,6 +101,6 @@ class MaskSweep(MaskABC):
                 if progress_callback and current <= total:
                     progress_callback(current, total)
 
-        self.mascaras = np.array(mascaras)
-        self.num_patterns = len(mascaras)
+        self.masks = np.array(masks)
+        self.num_patterns = len(masks)
         self.logger.info("Generated %d Sweep masks", self.num_patterns)

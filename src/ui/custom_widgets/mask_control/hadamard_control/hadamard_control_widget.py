@@ -1,4 +1,3 @@
-# File: ui/custom_widgets/mascara_control/hadamard_control/hadamard_control_widget.py
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal, Qt
@@ -62,9 +61,9 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         self.hadamard_slider.percentageChanged.connect(self._on_slider_percentage_changed)
 
         # 6) Connect and style the button
-        self.generate_masks_button.clicked.connect(self._on_generate_mascara)
+        self.generate_masks_button.clicked.connect(self._on_generate_mask)
         apply_button_style(self.generate_masks_button, BUTTON_STYLE_GREEN)
-        self.logger.debug("Button generate_masks_button connected to slot _on_generate_mascara")
+        self.logger.debug("Button generate_masks_button connected to slot _on_generate_mask")
 
         # 7) Let the layout measure the widget properly
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
@@ -135,11 +134,11 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         self._img_size = img_size
         self.logger.info("Image size set to %d", img_size)
 
-    def _on_generate_mascara(self):
+    def _on_generate_mask(self):
         """
         Slot to generate the mask when the button is clicked.
         """
-        self.logger.debug("_on_generate_mascara called; img_size=%s", self._img_size)
+        self.logger.debug("_on_generate_mask called; img_size=%s", self._img_size)
         if self._img_size is None:
             QMessageBox.warning(self, "Error", "Create a dataset first.")
             self.logger.warning("Attempted to generate mask without img_size set")

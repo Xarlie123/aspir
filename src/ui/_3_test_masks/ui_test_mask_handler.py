@@ -11,7 +11,7 @@ from ui.custom_widgets.visualizers.visual_applicator.visual_applicator_widget im
 from PIL import Image, ImageDraw, ImageFont
 
 
-class UITestMascaraHandler(QObject):
+class UITestMaskHandler(QObject):
     """
     Handler for mask testing: visualizes dataset and applicator.
     Updates previews when the Test Masks tab becomes visible.
@@ -29,7 +29,7 @@ class UITestMascaraHandler(QObject):
             self.logger = logging.getLogger(self.__class__.__name__)
         else:
             self.logger = logger.getChild(self.__class__.__name__)
-        self.logger.debug("Initializing UITestMascaraHandler")
+        self.logger.debug("Initializing UITestMaskHandler")
 
         self.img_size = 64  # default image size
 

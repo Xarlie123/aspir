@@ -1,5 +1,3 @@
-# File: Simulation/simulation.py
-
 from time import perf_counter
 
 # Import mask generators
@@ -24,14 +22,14 @@ from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 # Import the Analyzer facade
 from simulation_engine._5_analyzer.analyzer import Analyzer
 
-class Simulacion:
+class Simulation:
     """
-    Main SPIm simulation engine.
+    Main ASPIR simulation engine.
     Manages dataset, mask, applicator, postprocessor and analyzer.
     """
     def __init__(self, logger):
-        self.logger = logger.getChild("Simulacion")
-        self.logger.debug("Initializing Simulacion")
+        self.logger = logger.getChild("Simulation")
+        self.logger.debug("Initializing Simulation")
         self.dataset = None
         self.mask = None
         self.applicator = None

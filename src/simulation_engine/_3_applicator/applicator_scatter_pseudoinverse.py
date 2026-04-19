@@ -27,7 +27,7 @@ class ApplicatorScatterPseudoinverse(ApplicatorABC):
 
         Parameters:
             dataset: Object containing the images (has attribute 'data').
-            mask: Object containing the masks (has attribute 'mascaras').
+            mask: Object containing the masks (has attribute 'masks').
         """
         super().__init__(dataset, mask)
         self.dataset = dataset
@@ -56,7 +56,7 @@ class ApplicatorScatterPseudoinverse(ApplicatorABC):
         image = np.asarray(self.dataset.data[idx_image], dtype=np.float64)
 
         # Extract the selected masks
-        masks = self.mask.mascaras[idx_mask_min:idx_mask_max]
+        masks = self.mask.masks[idx_mask_min:idx_mask_max]
 
         # If no masks selected, return zero image
         if len(masks) == 0:
@@ -95,7 +95,7 @@ class ApplicatorScatterPseudoinverse(ApplicatorABC):
         Returns:
             Reconstructed image.
         """
-        return self.apply_mask_range(0, len(self.mask.mascaras), idx)
+        return self.apply_mask_range(0, len(self.mask.masks), idx)
 
     def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """
@@ -110,7 +110,7 @@ class ApplicatorScatterPseudoinverse(ApplicatorABC):
             pandas.DataFrame: Each row is a flattened reconstructed image.
         """
         if idx_mask_max is None:
-            idx_mask_max = len(self.mask.mascaras)
+            idx_mask_max = len(self.mask.masks)
 
         reconstructed_images = []
         for idx in range(len(self.dataset.data)):

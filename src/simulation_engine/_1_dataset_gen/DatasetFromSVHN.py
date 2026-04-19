@@ -1,4 +1,3 @@
-# File: Simulacion/dataset_gen/DatasetFromSVHN.py
 import os
 import logging
 import numpy as np

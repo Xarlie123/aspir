@@ -1,4 +1,3 @@
-# File: Simulacion/mascara_gen/mascara_cal_sal.py
 
 import numpy as np
 import logging
@@ -65,8 +64,8 @@ class MaskCalSal(MaskABC):
                     progress_callback(count, total)
         # recorte
         arr = np.array(patterns)
-        self.mascaras = arr[self.min_idx:self.max_idx]
-        self.num_patterns = self.mascaras.shape[0]
+        self.masks = arr[self.min_idx:self.max_idx]
+        self.num_patterns = self.masks.shape[0]
         self.logger.info(
             "Generated %d Cal-Sal masks (indices %d:%d)",
             self.num_patterns, self.min_idx, self.max_idx
