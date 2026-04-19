@@ -125,8 +125,7 @@ aspir/
 ├── datasets/                     # Downloaded and generated datasets
 ├── settings/                     # Application settings (log config, etc.)
 ├── docker/                       # Docker configuration
-├── pyproject.toml                # Project metadata + dependencies (single source of truth)
-└── requirements_*.txt            # Thin per-platform wrappers around pyproject.toml
+└── pyproject.toml                # Project metadata + dependencies (PEP 621)
 ```
 
 ## Requirements

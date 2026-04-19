@@ -85,9 +85,6 @@ cd src
 python main.py
 ```
 
-The legacy `pip install -r requirements_linux.txt` still works — the file is a
-thin wrapper that resolves to `-e .`.
-
 ### Windows (CUDA)
 
 ```powershell
@@ -110,8 +107,6 @@ For machines without an NVIDIA GPU:
 ```powershell
 pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
 ```
-
-`requirements_windows_cpu.txt` is a convenience wrapper that encodes this.
 
 ### NVIDIA Jetson (JetPack 6.2 / CUDA 12.6)
 

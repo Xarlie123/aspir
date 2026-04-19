@@ -1,7 +1,0 @@
-# ASPIR — Docker image (CUDA base; PyTorch provides its own CUDA libraries)
-#
-# Single source of truth for dependencies is pyproject.toml. The Dockerfile
-# installs with this file instead of `pip install .` directly so that
-# dependency changes can still trigger a rebuild via layer cache invalidation
-# on this file.
-.

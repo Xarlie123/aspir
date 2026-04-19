@@ -1,6 +1,0 @@
-# Documentation build dependencies
-#
-# Single source of truth is the [project.optional-dependencies.docs] group
-# in ../pyproject.toml. Read the Docs and CI pick up this file from the
-# repository root during the build.
--e ..[docs]

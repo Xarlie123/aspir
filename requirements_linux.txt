@@ -1,9 +1,0 @@
-# ASPIR — Linux desktop/laptop (CUDA 12.x)
-#
-# Single source of truth for dependencies is pyproject.toml.
-# Installing this file is equivalent to:
-#
-#     pip install -e .
-#
-# Keep the leading "-e ." so editable installs work.
--e .
