@@ -74,6 +74,9 @@ class TestConfiguration:
     optimizer: str = "Adam"  # Adam, AdamW, SGD, RMSprop
     use_gpu: bool = True  # Use GPU if available
 
+    # Model-specific architecture parameters (e.g. depth, base_channels, ...)
+    architecture_config: Dict[str, Any] = field(default_factory=dict)
+
     # Dataset split configuration (percentages, must sum to 100)
     train_split: int = 80  # Train percentage
     val_split: int = 10    # Validation percentage
@@ -128,6 +131,7 @@ class TestConfiguration:
             "loss_function": self.loss_function,
             "optimizer": self.optimizer,
             "use_gpu": self.use_gpu,
+            "architecture_config": dict(self.architecture_config),
             # Dataset split
             "train_split": self.train_split,
             "val_split": self.val_split,
@@ -179,6 +183,7 @@ class TestConfiguration:
             loss_function=data.get("loss_function", "MSE"),
             optimizer=data.get("optimizer", "Adam"),
             use_gpu=data.get("use_gpu", True),
+            architecture_config=dict(data.get("architecture_config", {})),
             # Dataset split
             train_split=data.get("train_split", 80),
             val_split=data.get("val_split", 10),

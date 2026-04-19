@@ -238,6 +238,8 @@ class ArchitectureConfigWidget(QWidget):
             if name in self._param_widgets:
                 widget, spec = self._param_widgets[name]
                 self._set_widget_value(widget, spec, value)
+        # _set_widget_value blocks signals, so recompute the estimate manually.
+        self._update_param_count_estimate()
 
     def _get_widget_value(self, widget: QWidget, spec: ParamSpec) -> Any:
         """Extract value from widget based on parameter type."""

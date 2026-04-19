@@ -266,6 +266,7 @@ class BatchTestRunner(QThread):
             "loss_function": config.loss_function,
             "optimizer": config.optimizer,
             "use_gpu": config.use_gpu,
+            "architecture_config": dict(config.architecture_config or {}),
             "train_split": config.train_split,
             "val_split": config.val_split,
             "test_split": config.test_split,
@@ -581,6 +582,7 @@ class BatchTestRunner(QThread):
             "loss_function": config.loss_function,
             "optimizer": config.optimizer,
             "use_gpu": config.use_gpu,
+            "architecture_config": dict(config.architecture_config or {}),
             "train_split": config.train_split,
             "val_split": config.val_split,
             "test_split": config.test_split,
@@ -741,7 +743,9 @@ class BatchTestRunner(QThread):
             training_curves["val_lpips"] = val_lpips
 
         # Prepare model overrides from config
-        model_overrides = {}
+        # Start with per-model architecture parameters, then add training-level
+        # overrides (e.g. dropout from the DNN panel takes precedence).
+        model_overrides = dict(config.architecture_config or {})
         if config.dropout > 0:
             model_overrides['dropout'] = config.dropout
 

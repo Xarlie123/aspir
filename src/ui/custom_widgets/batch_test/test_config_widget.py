@@ -25,6 +25,9 @@ from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import Sw
 # Import mask classes for Hadamard variants
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 
+# Architecture configuration widget (per-model hyperparameters)
+from ui.custom_widgets.postprocessor_control.architecture_config import ArchitectureConfigWidget
+
 
 class TestConfigWidget(QWidget):
     """
@@ -210,6 +213,13 @@ class TestConfigWidget(QWidget):
 
         dnn_layout.setColumnStretch(1, 1)
         dnn_layout.setColumnStretch(3, 1)
+
+        # Row 5: Architecture configuration (model-specific hyperparameters)
+        self.arch_config_widget = ArchitectureConfigWidget(parent=self, logger=self.logger)
+        self.arch_config_widget.configChanged.connect(lambda _cfg: self._on_value_changed())
+        self.arch_config_widget.set_model(self.model_combo.currentText())
+        self.model_combo.currentTextChanged.connect(self.arch_config_widget.set_model)
+        dnn_layout.addWidget(self.arch_config_widget, 5, 0, 1, 4)
 
         scroll_layout.addWidget(dnn_group)
 
@@ -558,6 +568,10 @@ class TestConfigWidget(QWidget):
 
             # DNN params
             self.model_combo.setCurrentText(config.model_name)
+            # Refresh architecture panel for this model and restore saved overrides
+            self.arch_config_widget.set_model(config.model_name)
+            if config.architecture_config:
+                self.arch_config_widget.set_config(config.architecture_config)
             self.epochs_spin.setValue(config.epochs)
             self.batch_size_spin.setValue(config.batch_size)
             self.lr_spin.setValue(config.learning_rate)
@@ -647,6 +661,7 @@ class TestConfigWidget(QWidget):
         self.loss_function_combo.setEnabled(not read_only)
         self.optimizer_combo.setEnabled(not read_only)
         self.use_gpu_checkbox.setEnabled(not read_only)
+        self.arch_config_widget.setEnabled(not read_only)
 
         # Dataset split
         self.train_split_spin.setReadOnly(read_only)
@@ -735,6 +750,7 @@ class TestConfigWidget(QWidget):
         self._config.loss_function = self.loss_function_combo.currentText()
         self._config.optimizer = self.optimizer_combo.currentText()
         self._config.use_gpu = self.use_gpu_checkbox.isChecked()
+        self._config.architecture_config = self.arch_config_widget.get_config()
 
         # Dataset split
         self._config.train_split = self.train_split_spin.value()

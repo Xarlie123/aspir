@@ -231,13 +231,23 @@ class ArchitecturePreviewPopup(QDialog):
 
             model_cls = model_entry["cls"]
             defaults = model_entry.get("defaults", {}).copy()
+            # Apply per-test architecture overrides (features, depth, ...) so
+            # the preview reflects what was actually trained.
+            arch_overrides = test.get("architecture_config") or {}
+            defaults.update(arch_overrides)
             if "img_size" in defaults:
                 defaults["img_size"] = input_size
+            # Filter to kwargs the model actually accepts, to stay robust to
+            # stale overrides from older batch reports.
+            import inspect
+            sig = inspect.signature(model_cls.__init__)
+            valid = set(sig.parameters) - {"self"}
+            kwargs = {k: v for k, v in defaults.items() if k in valid}
 
-            self.model = model_cls(**defaults)
+            self.model = model_cls(**kwargs)
             self.model_name = model_name
             self.input_size = input_size
-            self.config = model_entry.get("defaults", {})
+            self.config = kwargs
 
             self.logger.info("Switched to model: %s for test: %s", model_name, test_name)
         except Exception as e:

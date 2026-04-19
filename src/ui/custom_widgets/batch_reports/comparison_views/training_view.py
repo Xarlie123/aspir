@@ -367,15 +367,26 @@ class TrainingView(QWidget):
 
         # Create model instance
         try:
+            import inspect
             model_cls = model_entry["cls"]
             defaults = model_entry.get("defaults", {}).copy()
+
+            # Apply per-test architecture overrides so the preview matches
+            # what was actually trained (e.g. features=[8,16] instead of default).
+            arch_overrides = test.get("architecture_config") or {}
+            defaults.update(arch_overrides)
 
             # Set input size if model accepts it
             if "img_size" in defaults:
                 defaults["img_size"] = input_size
 
-            model = model_cls(**defaults)
-            self.logger.info("Created model instance: %s with defaults: %s", model_name, defaults)
+            # Filter to kwargs the model accepts (robust to legacy keys).
+            sig = inspect.signature(model_cls.__init__)
+            valid = set(sig.parameters) - {"self"}
+            kwargs = {k: v for k, v in defaults.items() if k in valid}
+
+            model = model_cls(**kwargs)
+            self.logger.info("Created model instance: %s with kwargs: %s", model_name, kwargs)
         except Exception as e:
             self.logger.error("Failed to create model: %s", e, exc_info=True)
             QMessageBox.warning(
@@ -416,7 +427,7 @@ class TrainingView(QWidget):
             model=model,
             model_name=model_name,
             input_size=input_size,
-            config=model_entry.get("defaults"),
+            config=kwargs,
             ground_truth_images=ground_truth_images,
             noisy_images=noisy_images,
             denoised_images=denoised_images,

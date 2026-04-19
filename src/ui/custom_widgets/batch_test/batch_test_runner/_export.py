@@ -197,6 +197,7 @@ def export_datasets(
                 "epochs": config.epochs,
                 "batch_size": config.batch_size,
                 "learning_rate": config.learning_rate,
+                "architecture_config": dict(getattr(config, "architecture_config", {}) or {}),
             }
             with open(config_path, 'w') as f:
                 json.dump(config_dict, f, indent=2)
