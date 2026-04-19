@@ -471,7 +471,8 @@ class SamplesGridPopup(BaseFigureExportPopup):
         Return a short execution-time string for a test column title.
 
         - Linear Recon  → ``timing_reconstruction_ms`` (CPU)
-        - NN Denoised   → reconstruction + inference (CPU + GPU)
+        - NN Denoised   → reconstruction + inference. Device label is CPU+GPU
+          only when the test was actually run on the GPU; otherwise CPU only.
         """
         if col_config.col_type not in (
             GridColumnConfig.TYPE_TEST, GridColumnConfig.TYPE_TEST_DENOISED
@@ -483,10 +484,18 @@ class SamplesGridPopup(BaseFigureExportPopup):
         recon_ms = test.get("timing_reconstruction_ms")
         if col_config.col_type == GridColumnConfig.TYPE_TEST_DENOISED:
             gpu_ms = test.get("timing_gpu_mean_ms") or 0
-            if recon_ms is None and not gpu_ms:
+            cpu_ms = test.get("timing_cpu_mean_ms") or 0
+            # Was GPU actually used? Prefer the explicit config flag, fall
+            # back to "gpu timing is present and non-zero".
+            used_gpu = bool(test.get("use_gpu")) and gpu_ms > 0
+            inference_ms = gpu_ms if used_gpu else cpu_ms
+            if recon_ms is None and not inference_ms:
                 return None
-            total = (recon_ms or 0) + gpu_ms
-            return f"t = {total:.2f} ms (CPU+GPU)"
+            total = (recon_ms or 0) + inference_ms
+            device = "CPU+GPU" if used_gpu else "CPU"
+            # Put the device label on its own line so it doesn't stretch the
+            # column wider than the image.
+            return f"t = {total:.2f} ms\n({device})"
         if recon_ms is None:
             return None
         return f"t = {recon_ms:.2f} ms"
@@ -547,9 +556,11 @@ class SamplesGridPopup(BaseFigureExportPopup):
         show_time = self.show_time_cb.isChecked()
         show_beta = self.show_beta_cb.isChecked()
 
-        # Title block: one line for the name + (optional) one line for t=...
-        # Plus matplotlib's default title pad of 15 pt ≈ 21 px at 100 DPI.
-        n_title_lines = 1 + (1 if show_time else 0)
+        # Title block: one line for the name + up to 2 lines for t=... and
+        # the device label when show_time is enabled (Denoised rows break
+        # onto "t = X ms" / "(CPU+GPU)"). Plus matplotlib's default title
+        # pad of 15 pt ≈ 21 px at 100 DPI.
+        n_title_lines = 1 + (2 if show_time else 0)
         title_height_px = 21 + int(font_size * 1.6 * n_title_lines)
 
         beta_line_px = 0
