@@ -19,15 +19,15 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
     Widget to visualize mask application to the dataset.
     Rewritten to match VisualDatasetWidget's approach (QWidget + QGridLayout instead of QGraphicsView).
     """
-    # Mapping of applicator classes to user-friendly names
+    # Mapping of applicator classes to the paper's algorithm names.
     APPLICATOR_NAMES = {
-        'ApplicatorScatter': 'Conventional',
+        'ApplicatorScatter': 'Ghost Imaging',
         'ApplicatorPseudoinverse': 'Pseudoinverse',
         'ApplicatorFISTA': 'FISTA',
         'ApplicatorTV': 'TV-norm',
-        'ApplicatorSweep': 'Sweep',
-        'ApplicatorHadamard': 'Hadamard',
-        # Legacy names kept so old saved experiments still render.
+        'ApplicatorSweep': 'Sweep Linear',
+        'ApplicatorHadamard': 'Hadamard Linear',
+        # Legacy class names kept so old saved experiments still render.
         'ApplicatorScatterPseudoinverse': 'Pseudoinverse',
         'ApplicatorScatterFISTA': 'FISTA',
         'ApplicatorScatterTV': 'TV-norm',
