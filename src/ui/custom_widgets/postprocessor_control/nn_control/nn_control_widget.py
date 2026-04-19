@@ -21,7 +21,11 @@ from ui.custom_widgets.postprocessor_control.architecture_config import (
 from ui.custom_widgets.common.button_styles import BUTTON_STYLE_GREEN, apply_button_style
 
 # Import the generic postprocessor engine
-from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN, MODEL_REGISTRY
+from simulation_engine._4_postprocessor.postprocessor_nn import (
+    MODEL_REGISTRY,
+    PostprocessorNN,
+    display_to_key,
+)
 
 class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
     """
@@ -105,7 +109,7 @@ class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
 
     def _on_preview_architecture(self):
         """Show architecture preview popup with the current configuration."""
-        model_key = self._current_model.lower()
+        model_key = display_to_key(self._current_model)
         entry = MODEL_REGISTRY.get(model_key)
 
         if not entry:

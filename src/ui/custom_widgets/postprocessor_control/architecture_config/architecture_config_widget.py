@@ -103,7 +103,14 @@ class ArchitectureConfigWidget(QWidget):
         Args:
             model_name: Name of the model (case-insensitive)
         """
-        self._current_model = model_name.lower() if model_name else None
+        # Store the canonical registry key so estimate/schema comparisons
+        # can use the new kebab-case names without going through the legacy
+        # alias fallback every time.
+        if model_name:
+            from simulation_engine._4_postprocessor.postprocessor_nn import display_to_key
+            self._current_model = display_to_key(model_name)
+        else:
+            self._current_model = None
         self._clear_param_widgets()
 
         if not self._current_model:

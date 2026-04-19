@@ -230,6 +230,51 @@ def resolve_model_name(model_name: str) -> str:
         return model_name
     return _LEGACY_MODEL_ALIASES.get(model_name, model_name)
 
+
+# ---------------------------------------------------------------------------
+# GUI display names
+# ---------------------------------------------------------------------------
+# The GUI shows user-facing labels that don't match the canonical keys
+# (mixed capitalisation, spaces, underscores). Keep them verbatim — changing
+# the visible strings would surprise users — and provide a direct translation
+# table so call sites don't have to rely on the legacy-alias fallback.
+#
+# The order is the order used by the model-selection menu.
+MODEL_DISPLAY_NAMES: Dict[str, str] = {
+    "autoencoder":              "Autoencoder",
+    "cgan-denoising":           "cGAN Denoising",
+    "dncnn":                    "DnCNN",
+    "u-net":                    "U-Net",
+    "u-net-residual-attention": "U-Net-Residual-Attention",
+    "residual-cnn":             "Residual_CNN",
+    "noise2void":               "Noise2Void",
+    "mobilenet-denoising":      "MobileNet_Denoising",
+    "dilated-cnn":              "DilatedCNN",
+}
+
+# Reverse index built once; guards against silent drift if an entry is added
+# to one dict but not the other.
+_DISPLAY_TO_KEY: Dict[str, str] = {v: k for k, v in MODEL_DISPLAY_NAMES.items()}
+assert set(MODEL_DISPLAY_NAMES.keys()) == set(MODEL_REGISTRY.keys()), (
+    "MODEL_DISPLAY_NAMES and MODEL_REGISTRY must have matching keys"
+)
+
+
+def display_to_key(display: str) -> str:
+    """
+    Map a GUI display name to its canonical MODEL_REGISTRY key.
+
+    Accepts display names verbatim (e.g. ``'cGAN Denoising'``,
+    ``'Residual_CNN'``) and returns the kebab-case canonical key
+    (e.g. ``'cgan-denoising'``, ``'residual-cnn'``).
+
+    Falls through to :func:`resolve_model_name` so raw or legacy strings
+    already stored on disk (pre-unification experiment manifests) keep working.
+    """
+    if display in _DISPLAY_TO_KEY:
+        return _DISPLAY_TO_KEY[display]
+    return resolve_model_name(display.lower())
+
 class PostprocessorNN(Postprocessor):
     """
     Generic training/inference engine that takes:

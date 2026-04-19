@@ -145,7 +145,8 @@ def save_experiment(window):
         try:
             model_name = ""
             if hasattr(window.ui_postprocessor_handler, "get_current_model"):
-                model_name = window.ui_postprocessor_handler.get_current_model().lower()
+                from simulation_engine._4_postprocessor.postprocessor_nn import display_to_key
+                model_name = display_to_key(window.ui_postprocessor_handler.get_current_model())
             elif hasattr(pp, "model_name"):
                 model_name = str(pp.model_name).lower()
 

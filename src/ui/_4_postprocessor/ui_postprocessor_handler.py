@@ -11,25 +11,21 @@ from ui.custom_widgets.postprocessor_control.nn_control.nn_control_widget import
 from ui.custom_widgets.visualizers.visual_postprocessor.visual_postprocessor_widget import VisualPostprocessorWidget
 from ui.custom_widgets.common.dataset_split_widget import DatasetSplitWidget
 
-from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
+from simulation_engine._4_postprocessor.postprocessor_nn import (
+    MODEL_DISPLAY_NAMES,
+    PostprocessorNN,
+    display_to_key,
+)
 
 
 class UIPostprocessorHandler(QObject):
     images_ready = pyqtSignal(list, list, list)
     training_finished = pyqtSignal()  # Emitted when training completes successfully
 
-    # Available neural network models
-    MODELS = [
-        "Autoencoder",
-        "cGAN Denoising",
-        "DnCNN",
-        "U-Net",
-        "U-Net-Residual-Attention",
-        "Residual_CNN",
-        "Noise2Void",
-        "MobileNet_Denoising",
-        "DilatedCNN",
-    ]
+    # Available neural network models — display names come from the single
+    # source of truth in postprocessor_nn.MODEL_DISPLAY_NAMES so the menu
+    # and the registry can never drift.
+    MODELS = list(MODEL_DISPLAY_NAMES.values())
 
     def __init__(self, ui, simulation, logger, status_manager=None):
         super().__init__()
@@ -299,7 +295,7 @@ class UIPostprocessorHandler(QObject):
                 self.simulation.mask,
                 self.simulation.applicator,
                 postprocessor_cls = PostprocessorNN,
-                model_name         = model_name.lower(),
+                model_name         = display_to_key(model_name),
                 model_overrides    = overrides,
                 batch_size         = batch_size,
                 lr                 = lr,
@@ -385,8 +381,8 @@ class UIPostprocessorHandler(QObject):
             QMessageBox.warning(None, "No Model", "Postprocessor has no model to export.")
             return
 
-        # Get current model name for default filename
-        model_name = self.nn_control.get_model().lower().replace(" ", "_").replace("-", "_")
+        # Build filesystem-safe filename from the canonical registry key
+        model_name = display_to_key(self.nn_control.get_model()).replace("-", "_")
         default_filename = f"{model_name}_weights.pt"
 
         # Ensure models directory exists
@@ -448,8 +444,8 @@ class UIPostprocessorHandler(QObject):
         if self.simulation.dataset:
             img_size = getattr(self.simulation.dataset, 'img_size', 64)
 
-        # Get current model name for default filename
-        model_name = self.nn_control.get_model().lower().replace(" ", "_").replace("-", "_")
+        # Build filesystem-safe filename from the canonical registry key
+        model_name = display_to_key(self.nn_control.get_model()).replace("-", "_")
         default_filename = f"{model_name}_{img_size}x{img_size}.onnx"
 
         # Ensure models directory exists
