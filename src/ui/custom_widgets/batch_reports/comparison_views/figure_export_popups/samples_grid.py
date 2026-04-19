@@ -238,7 +238,20 @@ class SamplesGridPopup(BaseFigureExportPopup):
         self.show_ratio_header_cb = QCheckBox("Show 'Sampling ratio' header")
         self.show_ratio_header_cb.setChecked(True)
         self.show_ratio_header_cb.stateChanged.connect(self._update_preview)
-        options_layout.addWidget(self.show_ratio_header_cb, 6, 0, 1, 4)
+        options_layout.addWidget(self.show_ratio_header_cb, 6, 0, 1, 2)
+
+        options_layout.addWidget(QLabel("Header offset (px):"), 6, 2)
+        self.ratio_header_offset_spin = QSpinBox()
+        self.ratio_header_offset_spin.setRange(0, 300)
+        self.ratio_header_offset_spin.setValue(40)
+        self.ratio_header_offset_spin.setSingleStep(5)
+        self.ratio_header_offset_spin.setToolTip(
+            "Vertical distance in pixels between the top of the column titles "
+            "and the 'Sampling ratio' line. Increase if the line overlaps the "
+            "column titles (happens when β is shown on a second line)."
+        )
+        self.ratio_header_offset_spin.valueChanged.connect(self._update_preview)
+        options_layout.addWidget(self.ratio_header_offset_spin, 6, 3)
 
         # Per-column β value in the title
         self.show_beta_cb = QCheckBox("Show β (sampling ratio per column)")
@@ -247,7 +260,7 @@ class SamplesGridPopup(BaseFigureExportPopup):
             "(e.g. β=8.3%). Not shown for Ground Truth columns."
         )
         self.show_beta_cb.setChecked(False)
-        self.show_beta_cb.stateChanged.connect(self._update_preview)
+        self.show_beta_cb.stateChanged.connect(self._on_show_beta_changed)
         options_layout.addWidget(self.show_beta_cb, 7, 0, 1, 4)
 
         left_layout.addWidget(options_group)
@@ -411,6 +424,25 @@ class SamplesGridPopup(BaseFigureExportPopup):
             self.test_color_btn.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #666;")
             self._update_preview()
 
+    def _on_show_beta_changed(self, state: int):
+        """Auto-nudge the Sampling-ratio header up when β adds a second title
+        line, so the line stops overlapping the titles. The user can still
+        fine-tune via the offset spinbox afterwards."""
+        default_offset = 40
+        bumped_offset = 90
+        current = self.ratio_header_offset_spin.value()
+        if self.show_beta_cb.isChecked():
+            if current == default_offset:
+                self.ratio_header_offset_spin.blockSignals(True)
+                self.ratio_header_offset_spin.setValue(bumped_offset)
+                self.ratio_header_offset_spin.blockSignals(False)
+        else:
+            if current == bumped_offset:
+                self.ratio_header_offset_spin.blockSignals(True)
+                self.ratio_header_offset_spin.setValue(default_offset)
+                self.ratio_header_offset_spin.blockSignals(False)
+        self._update_preview()
+
     def _compute_beta_percent(self, col_config: GridColumnConfig) -> float | None:
         """
         Compute the sampling ratio β = n_patterns / n_pixels for a test column,
@@ -509,10 +541,16 @@ class SamplesGridPopup(BaseFigureExportPopup):
         left_margin_px = int(font_size * 12) if show_row_labels else 10
         right_margin_px = 10
         top_margin_px = int(font_size * 5) if show_labels else 20
-        if show_ratio_header and show_labels:
-            top_margin_px += int(font_size * 2.5)  # Extra space for "Sampling ratio" header
         if self.show_beta_cb.isChecked() and show_labels:
             top_margin_px += int(font_size * 2)  # Extra line for β value
+        if show_ratio_header and show_labels:
+            # Make sure the "Sampling ratio" header line and its text always
+            # fit above the column titles, whatever offset the user picked.
+            header_offset_px = self.ratio_header_offset_spin.value()
+            top_margin_px = max(
+                top_margin_px + int(font_size * 2.5),
+                header_offset_px + int(font_size * 3),
+            )
         bottom_margin_px = 10
 
         # Calculate total figure size in pixels
@@ -681,8 +719,10 @@ class SamplesGridPopup(BaseFigureExportPopup):
             first_x0, _, _, first_y1 = get_ax_bounds(0, first_test_col)
             _, _, last_x1, _ = get_ax_bounds(0, last_test_col)
 
-            # Position line above the titles
-            line_y = first_y1 + 40 / fig_height_px
+            # Position line above the titles (offset is user-configurable via
+            # the "Header offset" spinbox).
+            header_offset_px = self.ratio_header_offset_spin.value()
+            line_y = first_y1 + header_offset_px / fig_height_px
             line_x_start = first_x0
             line_x_end = last_x1
 
@@ -746,10 +786,14 @@ class SamplesGridPopup(BaseFigureExportPopup):
         left_margin = int(font_size * 12) if show_row_labels else 10
         right_margin = 10
         top_margin = int(font_size * 5) if show_labels else 20
-        if show_ratio_header and show_labels:
-            top_margin += int(font_size * 2.5)
         if self.show_beta_cb.isChecked() and show_labels:
             top_margin += int(font_size * 2)
+        if show_ratio_header and show_labels:
+            header_offset_px = self.ratio_header_offset_spin.value()
+            top_margin = max(
+                top_margin + int(font_size * 2.5),
+                header_offset_px + int(font_size * 3),
+            )
         bottom_margin = 10
 
         # Calculate max image size that fits
