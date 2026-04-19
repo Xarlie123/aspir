@@ -532,12 +532,33 @@ class QualityView(QWidget):
         if isinstance(meta, dict):
             ds = meta.get("dataset_info", {}) or {}
             if "img_size" in ds:
-                img_size = int(ds["img_size"])
+                try:
+                    img_size = int(ds["img_size"])
+                except (TypeError, ValueError):
+                    img_size = None
         if img_size is None:
-            # Fall back to any stored image shape
-            qpi = test.get("quality_per_image", {}) or {}
-            if qpi.get("psnr_denoised"):
-                pass  # No image shape here, skip
+            # Fall back to reading the stored test_images.npz shape. Cache on
+            # the test dict so we don't hit disk repeatedly.
+            cached = test.get("_img_size_cached")
+            if cached is not None:
+                img_size = cached
+            else:
+                import numpy as np
+                from pathlib import Path
+                try:
+                    batch_dir = test.get("_batch_dir")
+                    name = test.get("_original_name", test.get("name", ""))
+                    if batch_dir and name:
+                        safe = "".join(c if c.isalnum() or c in "._-" else "_"
+                                       for c in name)
+                        npz = Path(batch_dir) / "data" / safe / "test_images.npz"
+                        if npz.exists():
+                            with np.load(str(npz)) as data:
+                                if "originals" in data.files:
+                                    img_size = int(data["originals"].shape[-1])
+                                    test["_img_size_cached"] = img_size
+                except Exception as e:
+                    self.logger.debug("img_size fallback failed: %s", e)
         if img_size:
             return img_size * img_size
         return None

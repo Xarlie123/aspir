@@ -216,6 +216,9 @@ class BatchReportModel(QObject):
                 test_copy['_experiment_index'] = exp_idx
                 test_copy['_experiment_path'] = str(exp.path)
                 test_copy['_batch_dir'] = str(exp.path.parent)
+                # Expose the experiment metadata so views can read, e.g.,
+                # ``dataset_info.img_size`` when computing the sampling ratio.
+                test_copy['_experiment_metadata'] = exp.metadata
                 # Store original name for file path lookup (survives renames)
                 test_copy['_original_name'] = test.get('name', '')
                 all_tests.append(test_copy)
