@@ -240,6 +240,16 @@ class SamplesGridPopup(BaseFigureExportPopup):
         self.show_ratio_header_cb.stateChanged.connect(self._update_preview)
         options_layout.addWidget(self.show_ratio_header_cb, 6, 0, 1, 4)
 
+        # Per-column β value in the title
+        self.show_beta_cb = QCheckBox("Show β (sampling ratio per column)")
+        self.show_beta_cb.setToolTip(
+            "Append β = n_patterns / n_pixels to each test column title "
+            "(e.g. β=8.3%). Not shown for Ground Truth columns."
+        )
+        self.show_beta_cb.setChecked(False)
+        self.show_beta_cb.stateChanged.connect(self._update_preview)
+        options_layout.addWidget(self.show_beta_cb, 7, 0, 1, 4)
+
         left_layout.addWidget(options_group)
 
         # Save button
@@ -401,6 +411,46 @@ class SamplesGridPopup(BaseFigureExportPopup):
             self.test_color_btn.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #666;")
             self._update_preview()
 
+    def _compute_beta_percent(self, col_config: GridColumnConfig) -> float | None:
+        """
+        Compute the sampling ratio β = n_patterns / n_pixels for a test column,
+        expressed as a percentage. Returns None when the information is missing.
+        """
+        if col_config.col_type != GridColumnConfig.TYPE_TEST:
+            return None
+        if not (0 <= col_config.test_idx < len(self._tests)):
+            return None
+
+        test = self._tests[col_config.test_idx]
+
+        # Pixel count: prefer stored image shape over guessing from config.
+        n_pixels = None
+        originals, _, _ = self._load_test_images(test)
+        if originals is not None and originals.ndim >= 3:
+            n_pixels = int(originals.shape[-1]) * int(originals.shape[-2])
+        if n_pixels is None:
+            # Fall back to the experiment-level dataset_info when available.
+            batch_meta = test.get("_experiment_metadata") or {}
+            ds = batch_meta.get("dataset_info", {}) if isinstance(batch_meta, dict) else {}
+            if "img_size" in ds:
+                n_pixels = int(ds["img_size"]) ** 2
+
+        # Pattern count: prefer the timing-phase count; otherwise derive it.
+        n_patterns = test.get("timing_num_patterns")
+        if n_patterns is None:
+            mask_type = (test.get("mask_type") or "").lower()
+            if mask_type == "scatter":
+                n_patterns = test.get("scatter_num_patterns")
+            elif mask_type.startswith("hadamard") or mask_type == "cal_sal":
+                lo = test.get("hadamard_min_idx")
+                hi = test.get("hadamard_max_idx")
+                if lo is not None and hi is not None:
+                    n_patterns = max(0, int(hi) - int(lo))
+
+        if not n_pixels or not n_patterns:
+            return None
+        return 100.0 * float(n_patterns) / float(n_pixels)
+
     def _load_column_images(self, col_config: GridColumnConfig) -> tuple:
         """Load images for a column configuration."""
         if col_config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH:
@@ -461,6 +511,8 @@ class SamplesGridPopup(BaseFigureExportPopup):
         top_margin_px = int(font_size * 5) if show_labels else 20
         if show_ratio_header and show_labels:
             top_margin_px += int(font_size * 2.5)  # Extra space for "Sampling ratio" header
+        if self.show_beta_cb.isChecked() and show_labels:
+            top_margin_px += int(font_size * 2)  # Extra line for β value
         bottom_margin_px = 10
 
         # Calculate total figure size in pixels
@@ -546,9 +598,15 @@ class SamplesGridPopup(BaseFigureExportPopup):
 
         # Add column titles at the top
         if show_labels:
+            show_beta = self.show_beta_cb.isChecked()
             for col_idx, col_config in enumerate(columns):
                 ax = axes[0][col_idx]
-                ax.set_title(col_config.title, fontsize=font_size, fontweight='bold', pad=15)
+                title = col_config.title
+                if show_beta and col_config.col_type == GridColumnConfig.TYPE_TEST:
+                    beta_pct = self._compute_beta_percent(col_config)
+                    if beta_pct is not None:
+                        title = f"{title}\nβ = {beta_pct:.1f}%"
+                ax.set_title(title, fontsize=font_size, fontweight='bold', pad=15)
 
         # Add row labels on the left (outside the axes)
         if show_row_labels:
@@ -690,6 +748,8 @@ class SamplesGridPopup(BaseFigureExportPopup):
         top_margin = int(font_size * 5) if show_labels else 20
         if show_ratio_header and show_labels:
             top_margin += int(font_size * 2.5)
+        if self.show_beta_cb.isChecked() and show_labels:
+            top_margin += int(font_size * 2)
         bottom_margin = 10
 
         # Calculate max image size that fits
