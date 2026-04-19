@@ -27,12 +27,18 @@ class GridColumnConfig:
 
     TYPE_GROUND_TRUTH = "ground_truth"
     TYPE_TEST = "test"
+    TYPE_TEST_DENOISED = "test_denoised"
 
     def __init__(self, col_type: str = TYPE_GROUND_TRUTH, test_idx: int = -1, test_name: str = ""):
         self.col_type = col_type
         self.test_idx = test_idx  # Index in the tests list (-1 for ground truth)
         self.test_name = test_name  # Display name
-        self.title = "Ground Truth" if col_type == self.TYPE_GROUND_TRUTH else test_name
+        if col_type == self.TYPE_GROUND_TRUTH:
+            self.title = "Ground Truth"
+        elif col_type == self.TYPE_TEST_DENOISED:
+            self.title = f"{test_name} (NN)" if test_name else "NN denoised"
+        else:
+            self.title = test_name
 
 
 class GridColumnCardWidget(QFrame):
@@ -81,11 +87,15 @@ class GridColumnCardWidget(QFrame):
     def _get_type_text(self) -> str:
         if self.config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH:
             return "[Reference]"
+        if self.config.col_type == GridColumnConfig.TYPE_TEST_DENOISED:
+            return "[NN Denoised]"
         return "[Test]"
 
     def _update_style(self, dragging: bool = False):
         if self.config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH:
             color = "#e8f5e9"  # Green tint
+        elif self.config.col_type == GridColumnConfig.TYPE_TEST_DENOISED:
+            color = "#f3e5f5"  # Purple tint
         else:
             color = "#fff3e0"  # Orange tint
 
@@ -187,20 +197,23 @@ class GridColumnConfigDialog(QDialog):
         type_layout = QVBoxLayout(type_group)
 
         self.type_combo = QComboBox()
-        self.type_combo.addItem("Ground Truth (Reference)", GridColumnConfig.TYPE_GROUND_TRUTH)
+        self.type_combo.addItem("Ground Truth (Reference)", ("gt", -1))
         for i, test in enumerate(self.tests):
             name = test.get("name", f"Test {i+1}")
             exp_name = test.get("_experiment_name", "")
             display = f"{name} ({exp_name})" if exp_name else name
-            self.type_combo.addItem(display, i)
+            self.type_combo.addItem(f"{display} — Linear Recon", ("test", i))
+            self.type_combo.addItem(f"{display} — NN Denoised", ("nn", i))
 
         # Set current
         if self.config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH:
             self.type_combo.setCurrentIndex(0)
         else:
-            # Find the test index
+            wanted_kind = ("nn" if self.config.col_type == GridColumnConfig.TYPE_TEST_DENOISED
+                           else "test")
             for i in range(1, self.type_combo.count()):
-                if self.type_combo.itemData(i) == self.config.test_idx:
+                data = self.type_combo.itemData(i)
+                if data == (wanted_kind, self.config.test_idx):
                     self.type_combo.setCurrentIndex(i)
                     break
 
@@ -235,34 +248,36 @@ class GridColumnConfigDialog(QDialog):
 
     def _on_type_changed(self):
         idx = self.type_combo.currentIndex()
-        if idx == 0:
-            # Ground Truth
+        data = self.type_combo.itemData(idx)
+        kind, test_idx = data
+        if kind == "gt":
             if not self.title_edit.text() or self.title_edit.text() == self.config.title:
                 self.title_edit.setText("Ground Truth")
         else:
-            # Test
-            test_idx = self.type_combo.itemData(idx)
             test = self.tests[test_idx]
             name = test.get("name", f"Test {test_idx+1}")
+            suggested = f"{name} (NN)" if kind == "nn" else name
             if not self.title_edit.text() or self.title_edit.text() == self.config.title:
-                self.title_edit.setText(name)
+                self.title_edit.setText(suggested)
 
     def _on_accept(self):
         idx = self.type_combo.currentIndex()
-        if idx == 0:
+        kind, test_idx = self.type_combo.itemData(idx)
+        if kind == "gt":
             self.config.col_type = GridColumnConfig.TYPE_GROUND_TRUTH
             self.config.test_idx = -1
             self.config.test_name = ""
+            default_title = "Ground Truth"
         else:
-            self.config.col_type = GridColumnConfig.TYPE_TEST
-            self.config.test_idx = self.type_combo.itemData(idx)
-            test = self.tests[self.config.test_idx]
-            self.config.test_name = test.get("name", f"Test {self.config.test_idx+1}")
+            self.config.col_type = (GridColumnConfig.TYPE_TEST_DENOISED
+                                     if kind == "nn" else GridColumnConfig.TYPE_TEST)
+            self.config.test_idx = test_idx
+            test = self.tests[test_idx]
+            self.config.test_name = test.get("name", f"Test {test_idx+1}")
+            default_title = (f"{self.config.test_name} (NN)" if kind == "nn"
+                              else self.config.test_name)
 
-        self.config.title = self.title_edit.text() or (
-            "Ground Truth" if self.config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH
-            else self.config.test_name
-        )
+        self.config.title = self.title_edit.text() or default_title
         self.accept()
 
 
@@ -310,6 +325,11 @@ class GridColumnListWidget(QWidget):
         add_test_btn.clicked.connect(self._add_test)
         btn_layout.addWidget(add_test_btn)
 
+        add_denoised_btn = QPushButton("+ Denoised")
+        add_denoised_btn.setToolTip("Add a column showing the NN-denoised output of a test")
+        add_denoised_btn.clicked.connect(self._add_denoised)
+        btn_layout.addWidget(add_denoised_btn)
+
         remove_btn = QPushButton("- Remove Last")
         remove_btn.clicked.connect(self._remove_last)
         btn_layout.addWidget(remove_btn)
@@ -351,6 +371,22 @@ class GridColumnListWidget(QWidget):
         test = self.tests[test_idx]
         name = test.get("name", f"Test {test_idx+1}")
         config = GridColumnConfig(GridColumnConfig.TYPE_TEST, test_idx, name)
+        self._add_column_with_config(config)
+        self.columns_changed.emit()
+
+    def _add_denoised(self):
+        if len(self.columns) >= 8 or not self.tests:
+            return
+        used = {c.test_idx for c in self.columns
+                if c.col_type == GridColumnConfig.TYPE_TEST_DENOISED}
+        test_idx = 0
+        for i in range(len(self.tests)):
+            if i not in used:
+                test_idx = i
+                break
+        test = self.tests[test_idx]
+        name = test.get("name", f"Test {test_idx+1}")
+        config = GridColumnConfig(GridColumnConfig.TYPE_TEST_DENOISED, test_idx, name)
         self._add_column_with_config(config)
         self.columns_changed.emit()
 

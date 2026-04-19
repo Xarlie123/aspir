@@ -253,6 +253,17 @@ class SamplesGridPopup(BaseFigureExportPopup):
         self.ratio_header_offset_spin.valueChanged.connect(self._update_preview)
         options_layout.addWidget(self.ratio_header_offset_spin, 6, 3)
 
+        # Per-column execution time in the title
+        self.show_time_cb = QCheckBox("Show execution time per column")
+        self.show_time_cb.setToolTip(
+            "Append execution time to each test column title. "
+            "Linear Recon cards show timing_reconstruction_ms; NN Denoised "
+            "cards show reconstruction + inference (CPU + GPU)."
+        )
+        self.show_time_cb.setChecked(False)
+        self.show_time_cb.stateChanged.connect(self._update_preview)
+        options_layout.addWidget(self.show_time_cb, 8, 0, 1, 4)
+
         # Per-column β value in the title
         self.show_beta_cb = QCheckBox("Show β (sampling ratio per column)")
         self.show_beta_cb.setToolTip(
@@ -455,6 +466,31 @@ class SamplesGridPopup(BaseFigureExportPopup):
                 self.ratio_header_offset_spin.blockSignals(False)
         self._update_preview()
 
+    def _compute_column_time_text(self, col_config: GridColumnConfig) -> str | None:
+        """
+        Return a short execution-time string for a test column title.
+
+        - Linear Recon  → ``timing_reconstruction_ms`` (CPU)
+        - NN Denoised   → reconstruction + inference (CPU + GPU)
+        """
+        if col_config.col_type not in (
+            GridColumnConfig.TYPE_TEST, GridColumnConfig.TYPE_TEST_DENOISED
+        ):
+            return None
+        if not (0 <= col_config.test_idx < len(self._tests)):
+            return None
+        test = self._tests[col_config.test_idx]
+        recon_ms = test.get("timing_reconstruction_ms")
+        if col_config.col_type == GridColumnConfig.TYPE_TEST_DENOISED:
+            gpu_ms = test.get("timing_gpu_mean_ms") or 0
+            if recon_ms is None and not gpu_ms:
+                return None
+            total = (recon_ms or 0) + gpu_ms
+            return f"t = {total:.2f} ms (CPU+GPU)"
+        if recon_ms is None:
+            return None
+        return f"t = {recon_ms:.2f} ms"
+
     def _compute_beta_percent(self, col_config: GridColumnConfig) -> float | None:
         """
         Compute the sampling ratio β = n_patterns / n_pixels for a test column,
@@ -558,6 +594,8 @@ class SamplesGridPopup(BaseFigureExportPopup):
         top_margin_px = int(font_size * 5) if show_labels else 20
         if self.show_beta_cb.isChecked() and show_labels:
             top_margin_px += int(font_size * 2)  # Extra line for β value
+        if self.show_time_cb.isChecked() and show_labels:
+            top_margin_px += int(font_size * 2)  # Extra line for execution time
         if show_ratio_header and show_labels:
             # Make sure the "Sampling ratio" header line and its text always
             # fit above the column titles, whatever offset the user picked.
@@ -611,9 +649,12 @@ class SamplesGridPopup(BaseFigureExportPopup):
                 row_axes.append(ax)
             axes.append(row_axes)
 
-        # Count ground truth columns and test columns
+        # Count ground truth columns and test columns (both linear recon and
+        # denoised are considered "test" columns for the group border and the
+        # Sampling-ratio header).
         gt_cols = [i for i, c in enumerate(columns) if c.col_type == GridColumnConfig.TYPE_GROUND_TRUTH]
-        test_cols = [i for i, c in enumerate(columns) if c.col_type == GridColumnConfig.TYPE_TEST]
+        test_cols = [i for i, c in enumerate(columns)
+                     if c.col_type in (GridColumnConfig.TYPE_TEST, GridColumnConfig.TYPE_TEST_DENOISED)]
 
         # Fill the grid
         for row_idx, sample_idx in enumerate(row_indices):
@@ -627,6 +668,9 @@ class SamplesGridPopup(BaseFigureExportPopup):
                 if col_config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH:
                     if originals is not None and sample_idx < len(originals):
                         img = originals[sample_idx]
+                elif col_config.col_type == GridColumnConfig.TYPE_TEST_DENOISED:
+                    if denoised is not None and sample_idx < len(denoised):
+                        img = denoised[sample_idx]
                 else:
                     # Show reconstructed images for tests
                     if reconstructions is not None and sample_idx < len(reconstructions):
@@ -652,13 +696,21 @@ class SamplesGridPopup(BaseFigureExportPopup):
         # Add column titles at the top
         if show_labels:
             show_beta = self.show_beta_cb.isChecked()
+            show_time = self.show_time_cb.isChecked()
             for col_idx, col_config in enumerate(columns):
                 ax = axes[0][col_idx]
                 title = col_config.title
-                if show_beta and col_config.col_type == GridColumnConfig.TYPE_TEST:
+                is_test_col = col_config.col_type in (
+                    GridColumnConfig.TYPE_TEST, GridColumnConfig.TYPE_TEST_DENOISED
+                )
+                if show_beta and is_test_col:
                     beta_pct = self._compute_beta_percent(col_config)
                     if beta_pct is not None:
                         title = f"{title}\nβ = {beta_pct:.1f}%"
+                if show_time and is_test_col:
+                    time_text = self._compute_column_time_text(col_config)
+                    if time_text:
+                        title = f"{title}\n{time_text}"
                 ax.set_title(title, fontsize=font_size, fontweight='bold', pad=15)
 
         # Add row labels on the left (outside the axes)
@@ -811,6 +863,8 @@ class SamplesGridPopup(BaseFigureExportPopup):
         right_margin = 10
         top_margin = int(font_size * 5) if show_labels else 20
         if self.show_beta_cb.isChecked() and show_labels:
+            top_margin += int(font_size * 2)
+        if self.show_time_cb.isChecked() and show_labels:
             top_margin += int(font_size * 2)
         if show_ratio_header and show_labels:
             header_offset_px = self.ratio_header_offset_spin.value()
