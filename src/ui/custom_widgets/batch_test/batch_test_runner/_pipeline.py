@@ -4,7 +4,6 @@ from __future__ import annotations
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
-from simulation_engine._2_mask_gen.mask_hadamard_scramble import MaskHadamardScramble
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
@@ -32,14 +31,6 @@ def create_mask(config: TestConfiguration, dataset, logger):
     elif config.mask_type == "hadamard_natural":
         max_idx = min(config.hadamard_max_idx, img_size * img_size)
         return MaskHadamard(
-            img_size=img_size,
-            min_idx=config.hadamard_min_idx,
-            max_idx=max_idx,
-            logger=logger
-        )
-    elif config.mask_type == "hadamard_scramble":
-        max_idx = min(config.hadamard_max_idx, img_size * img_size)
-        return MaskHadamardScramble(
             img_size=img_size,
             min_idx=config.hadamard_min_idx,
             max_idx=max_idx,
@@ -113,7 +104,7 @@ def create_applicator(config: TestConfiguration, mask, dataset):
     elif isinstance(mask, MaskSweep):
         return ApplicatorSweep(dataset, mask)
 
-    elif isinstance(mask, (MaskHadamard, MaskHadamardScramble, MaskHadamardCakeCutting,
+    elif isinstance(mask, (MaskHadamard, MaskHadamardCakeCutting,
                            MaskHadamardWalshPaley, MaskCalSal)):
         return ApplicatorHadamard(dataset, mask)
 

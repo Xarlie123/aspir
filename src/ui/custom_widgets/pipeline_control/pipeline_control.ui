@@ -173,11 +173,6 @@
         </item>
         <item>
          <property name="text">
-          <string>Hadamard Scramble</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
           <string>Hadamard Cake Cutting</string>
          </property>
         </item>
@@ -206,7 +201,6 @@
         <widget class="QWidget" name="barrido_page"/>
         <widget class="QWidget" name="scatter_page"/>
         <widget class="QWidget" name="hadamard_natural_page"/>
-        <widget class="QWidget" name="hadamard_scramble_page"/>
         <widget class="QWidget" name="hadamard_cake_cutting_page"/>
         <widget class="QWidget" name="hadamard_walsh_paley_page"/>
         <widget class="QWidget" name="cal_sal_transform_page"/>

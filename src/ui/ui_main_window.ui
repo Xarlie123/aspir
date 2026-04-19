@@ -468,38 +468,6 @@
          </layout>
         </item>
         <item>
-         <widget class="QLabel" name="hadamard_scramble_info_text">
-          <property name="font">
-           <font>
-            <pointsize>15</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>4. Hadamard Scramble</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="hadamard_scramble_layout">
-          <item>
-           <widget class="QWidget" name="hadamard_scramble_placeholder" native="true">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>105</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
          <widget class="QLabel" name="hadamard_cake_cutting_info_text">
           <property name="font">
            <font>
@@ -507,7 +475,7 @@
            </font>
           </property>
           <property name="text">
-           <string>5. Hadamard Cake Cutting</string>
+           <string>4. Hadamard Cake Cutting</string>
           </property>
          </widget>
         </item>
@@ -539,7 +507,7 @@
            </font>
           </property>
           <property name="text">
-           <string>6. Hadamard Walsh Paley</string>
+           <string>5. Hadamard Walsh Paley</string>
           </property>
          </widget>
         </item>
@@ -571,7 +539,7 @@
            </font>
           </property>
           <property name="text">
-           <string>7. Cal-Sal Transform</string>
+           <string>6. Cal-Sal Transform</string>
           </property>
          </widget>
         </item>
@@ -603,7 +571,7 @@
            </font>
           </property>
           <property name="text">
-           <string>8. Fourier</string>
+           <string>7. Fourier</string>
           </property>
          </widget>
         </item>

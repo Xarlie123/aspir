@@ -10,7 +10,6 @@ from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
-from simulation_engine._2_mask_gen.mask_hadamard_scramble import MaskHadamardScramble
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
@@ -79,7 +78,6 @@ class UIMaskHandler(QObject):
             "Sweep",
             "Scatter",
             "Hadamard (Natural)",
-            "Hadamard (Scramble)",
             "Hadamard (Cake Cutting)",
             "Hadamard (Walsh-Paley)",
             "Cal/Sal"
@@ -155,7 +153,6 @@ class UIMaskHandler(QObject):
         # Hadamard variants and Cal/Sal
         hadamard_titles = [
             "Hadamard Natural",
-            "Hadamard Scramble",
             "Hadamard Cake Cutting",
             "Hadamard Walsh-Paley",
             "Cal/Sal Transform"
@@ -241,7 +238,6 @@ class UIMaskHandler(QObject):
         self.hadamard_controls = []
         mask_classes = [
             MaskHadamard,
-            MaskHadamardScramble,
             MaskHadamardCakeCutting,
             MaskHadamardWalshPaley,
             MaskCalSal,

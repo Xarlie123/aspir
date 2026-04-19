@@ -214,7 +214,6 @@ class BatchTestConfig:
     MASK_TYPES = [
         "scatter",
         "hadamard_natural",
-        "hadamard_scramble",
         "hadamard_cake_cutting",
         "hadamard_walsh_paley",
         "sweep",

@@ -4,7 +4,6 @@ from time import perf_counter
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
-from simulation_engine._2_mask_gen.mask_hadamard_scramble import MaskHadamardScramble
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
@@ -77,7 +76,6 @@ class Simulation:
 
         elif isinstance(self.mask, (
             MaskHadamard,
-            MaskHadamardScramble,
             MaskHadamardCakeCutting,
             MaskHadamardWalshPaley,
             MaskCalSal

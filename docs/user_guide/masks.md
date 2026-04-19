@@ -23,7 +23,6 @@ Structured orthogonal patterns based on Hadamard matrices. Requires image size t
 
 - **Variants**:
   - **Natural**: Standard Hadamard order
-  - **Scrambled**: Randomized pattern order for improved compressive sensing
   - **Cake-Cutting**: Frequency-ordered patterns, sampling from low to high frequencies
   - **Walsh-Paley**: Sequential ordering based on Walsh functions
 

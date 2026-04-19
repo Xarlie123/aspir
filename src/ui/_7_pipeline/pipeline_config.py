@@ -71,7 +71,7 @@ class TestConfigManager:
                 for key in ('num_patterns', 'point_density', 'seed'):
                     if key in m:
                         new_m[key] = m[key]
-            elif mtype in ('hadamard', 'hadamard_scramble', 'hadamard_cake_cutting', 'hadamard_walsh_paley'):
+            elif mtype in ('hadamard', 'hadamard_cake_cutting', 'hadamard_walsh_paley'):
                 # No extra parameters for Hadamard variants
                 pass
             elif mtype == 'sweep':

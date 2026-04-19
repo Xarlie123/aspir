@@ -10,7 +10,7 @@ ASPIR allows users to import or generate datasets, create mask patterns, select 
 
 The ASPIR pipeline covers every stage of a Single-Pixel Imaging experiment. Users can **generate or import datasets** from individual images, folders, infrared beam simulations (LightPipes), or well-known benchmarks such as CelebA and SVHN.
 
-Once a dataset is loaded, ASPIR provides several **mask pattern generators** — Scatter, Hadamard (with variants like Scrambled, Cake-Cutting, and Walsh-Paley), Sweep, and Fourier — that simulate the spatial light modulator encoding used in real SPI setups.
+Once a dataset is loaded, ASPIR provides several **mask pattern generators** — Scatter, Hadamard (with variants like Cake-Cutting and Walsh-Paley), Sweep, and Fourier — that simulate the spatial light modulator encoding used in real SPI setups.
 
 The acquired measurements are then passed through **classical reconstruction algorithms** including Ghost Imaging, Pseudoinverse, FISTA, and TV-Norm, each offering different trade-offs between speed, noise robustness, and compression tolerance.
 

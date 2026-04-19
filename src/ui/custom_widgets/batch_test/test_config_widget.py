@@ -450,7 +450,6 @@ class TestConfigWidget(QWidget):
         type_to_index = {
             "scatter": 0,
             "hadamard_natural": 1,
-            "hadamard_scramble": 1,
             "hadamard_cake_cutting": 1,
             "hadamard_walsh_paley": 1,
             "sweep": 2,
@@ -688,7 +687,7 @@ class TestConfigWidget(QWidget):
             self._config.mask_seed = self.scatter_control.random_seed_scatter_value.value()
             self.logger.debug("[DEBUG]   -> scatter: density=%s, patterns=%s, seed=%s",
                              self._config.scatter_point_density, self._config.scatter_num_patterns, self._config.mask_seed)
-        elif mask_type in ("hadamard_natural", "hadamard_scramble",
+        elif mask_type in ("hadamard_natural",
                            "hadamard_cake_cutting", "hadamard_walsh_paley"):
             self._config.hadamard_min_idx = self.hadamard_control.hadamard_slider.low_value
             self._config.hadamard_max_idx = self.hadamard_control.hadamard_slider.high_value
