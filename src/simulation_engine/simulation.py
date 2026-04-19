@@ -40,50 +40,98 @@ class Simulation:
         self.dataset = dataset
         self.logger.info("Dataset assigned: %r", getattr(dataset, 'name', dataset))
 
-    def set_mask(self, mask, applicator_type_scatter=None):
+    # Canonical reconstruction-method keys accepted by set_applicator.
+    # "native" delegates to the mask's natural reconstruction (Ghost Imaging,
+    # Sweep Linear, Hadamard Linear). The rest are mask-agnostic iterative
+    # solvers that reuse the sensing matrix ``mask.masks``.
+    _RECON_METHOD_ALIASES = {
+        # Canonical
+        "native": "native",
+        "pseudoinverse": "pseudoinverse",
+        "fista": "fista",
+        "tv_norm": "tv_norm",
+        # Display / legacy names accepted for GUI + old batch configs
+        None: "native",
+        "": "native",
+        "conventional": "native",
+        "ghost imaging": "native",
+        "ghost_imaging": "native",
+        "sweep linear": "native",
+        "hadamard linear": "native",
+        "pinv": "pseudoinverse",
+        "tv-norm": "tv_norm",
+        "tv norm": "tv_norm",
+    }
+
+    @classmethod
+    def _canonical_recon_method(cls, name):
+        if isinstance(name, str):
+            key = name.strip().lower()
+        else:
+            key = name
+        return cls._RECON_METHOD_ALIASES.get(key, key)
+
+    def set_mask(self, mask, reconstruction_method=None,
+                 applicator_type_scatter=None):
         """
-        Associates the mask and configures the applicator.
-        If the mask defines applicator_type_scatter, uses it.
+        Associate the mask and configure the applicator.
+
+        ``reconstruction_method`` accepts ``"native"``, ``"pseudoinverse"``,
+        ``"fista"``, ``"tv_norm"`` (and a handful of display aliases). The
+        old ``applicator_type_scatter`` parameter is still honored for
+        backward compatibility. If the mask instance carries an
+        ``applicator_type_scatter`` attribute it wins, mirroring how the
+        scatter mask control stores the user's dropdown selection.
         """
         self.mask = mask
         self.logger.info("Mask assigned: %s", type(mask).__name__)
         if self.dataset is None:
             raise RuntimeError("Must establish the dataset before the mask.")
-        option = getattr(mask, 'applicator_type_scatter', None) or applicator_type_scatter
-        self.set_applicator(applicator_type_scatter=option)
+        option = (getattr(mask, 'applicator_type_scatter', None)
+                  or reconstruction_method
+                  or applicator_type_scatter)
+        self.set_applicator(reconstruction_method=option)
 
-    def set_applicator(self, applicator_type_scatter=None):
+    def set_applicator(self, reconstruction_method=None,
+                       applicator_type_scatter=None):
         """
-        Instantiates and associates the correct applicator according to the current mask.
+        Instantiate the applicator implementing ``reconstruction_method`` over
+        the current mask. ``"native"`` picks the mask-specific algorithm
+        (Ghost Imaging, Sweep Linear or Hadamard Linear); the iterative
+        solvers work with any mask whose sensing matrix is exposed via
+        ``mask.masks``.
         """
         if self.mask is None or self.dataset is None:
             raise RuntimeError("Dataset and mask must be defined.")
         cls_name = type(self.mask).__name__
-        self.logger.debug("Configuring applicator for %s", cls_name)
+        method = self._canonical_recon_method(
+            reconstruction_method if reconstruction_method is not None
+            else applicator_type_scatter
+        )
+        self.logger.debug("Configuring applicator for %s (method=%s)",
+                          cls_name, method)
 
-        if isinstance(self.mask, MaskScatter):
-            if applicator_type_scatter == 'Pseudoinverse':
-                self.applicator = ApplicatorPseudoinverse(self.dataset, self.mask)
-            elif applicator_type_scatter == 'FISTA':
-                self.applicator = ApplicatorFISTA(self.dataset, self.mask)
-            elif applicator_type_scatter == 'TV-norm':
-                self.applicator = ApplicatorTV(self.dataset, self.mask)
-            else:
-                self.applicator = ApplicatorScatter(self.dataset, self.mask)
-
-        elif isinstance(self.mask, MaskSweep):
-            self.applicator = ApplicatorSweep(self.dataset, self.mask)
-
-        elif isinstance(self.mask, (
-            MaskHadamard,
-            MaskHadamardCakeCutting,
-            MaskHadamardWalshPaley,
-            MaskCalSal
-        )):
-            self.applicator =  ApplicatorHadamard(self.dataset, self.mask)
-
+        if method == "pseudoinverse":
+            self.applicator = ApplicatorPseudoinverse(self.dataset, self.mask)
+        elif method == "fista":
+            self.applicator = ApplicatorFISTA(self.dataset, self.mask)
+        elif method == "tv_norm":
+            self.applicator = ApplicatorTV(self.dataset, self.mask)
         else:
-            raise ValueError(f"Unsupported mask: {cls_name}")
+            # Native: mask-specific default.
+            if isinstance(self.mask, MaskScatter):
+                self.applicator = ApplicatorScatter(self.dataset, self.mask)
+            elif isinstance(self.mask, MaskSweep):
+                self.applicator = ApplicatorSweep(self.dataset, self.mask)
+            elif isinstance(self.mask, (
+                MaskHadamard,
+                MaskHadamardCakeCutting,
+                MaskHadamardWalshPaley,
+                MaskCalSal,
+            )):
+                self.applicator = ApplicatorHadamard(self.dataset, self.mask)
+            else:
+                raise ValueError(f"Unsupported mask: {cls_name}")
 
         self.logger.info("Applicator configured: %s", type(self.applicator).__name__)
 

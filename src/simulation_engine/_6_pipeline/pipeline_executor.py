@@ -88,9 +88,9 @@ def execute_pipeline(tests, progress_per_task=None, progress_overall=None):
         sim.set_mask(mask)
         sim.mask.generate_masks(progress_callback=progress_per_task)
 
-        # 3) Applicator
-        aplicator_type = m_cfg.get('applicator')
-        sim.set_applicator(applicator_type_scatter=aplicator_type)
+        # 3) Applicator (YAML key "applicator" carries the reconstruction
+        # method: "native" / "pseudoinverse" / "fista" / "tv_norm").
+        sim.set_applicator(reconstruction_method=m_cfg.get('applicator'))
 
         # 4) Measure per-image performance
         per_image_times = []
