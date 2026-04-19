@@ -380,12 +380,27 @@ class MainWindow(QMainWindow):
 
         if menu_index == 0:  # IR Profile
             widget = ds_handler.ir_widget
-            # Set image dimension
-            idx = widget.image_dimension_value.findText(str(img_size))
-            if idx >= 0:
-                widget.image_dimension_value.setCurrentIndex(idx)
-            # Set number of images
-            widget.dataset_size_value.setValue(num_images)
+            # Forward the whole dataset_info through the widget's set_settings
+            # so the user sees exactly which beam parameters were used. Fields
+            # absent from dataset_info keep their current UI values.
+            settings = {
+                "img_size": img_size,
+                "num_images": num_images,
+            }
+            if "seed" in dataset_info and dataset_info["seed"] is not None:
+                settings["seed"] = int(dataset_info["seed"])
+            if "data_format" in dataset_info:
+                settings["data_format"] = dataset_info["data_format"]
+            mode_settings = {}
+            if "mode_distribution" in dataset_info:
+                mode_settings["mode_distribution"] = dataset_info["mode_distribution"]
+            if "speckle_noise" in dataset_info:
+                mode_settings["speckle_noise"] = dataset_info["speckle_noise"]
+            if "max_mode_order" in dataset_info:
+                mode_settings["max_mode_order"] = dataset_info["max_mode_order"]
+            if mode_settings:
+                settings["mode_settings"] = mode_settings
+            widget.set_settings(settings)
 
         elif menu_index == 1:  # Single Image
             widget = ds_handler.selecciona_imagen_widget
@@ -413,6 +428,11 @@ class MainWindow(QMainWindow):
                 widget.image_dimension_value.setCurrentIndex(idx)
             # Set number of images
             widget.dataset_size_value.setValue(num_images)
+            # Restore seed and data_format if they were saved
+            if dataset_info.get("seed") is not None:
+                widget.random_seed_value.setValue(int(dataset_info["seed"]))
+            if "data_format" in dataset_info and hasattr(widget, "data_format_selector"):
+                widget.data_format_selector.set_format(dataset_info["data_format"])
 
         self.logger.debug("Populated dataset widget for menu_index=%d", menu_index)
 

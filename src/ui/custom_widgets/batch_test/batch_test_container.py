@@ -436,6 +436,17 @@ class BatchTestContainer(QWidget):
                 elif hasattr(ds, 'dataset_path'):
                     dataset_info["source_path"] = ds.dataset_path
 
+                # Generator-specific parameters: persist enough so the Single
+                # Test dataset panel can be re-populated exactly on reload.
+                if hasattr(ds, 'seed'):
+                    dataset_info["seed"] = ds.seed
+                if hasattr(ds, 'data_format') and ds.data_format is not None:
+                    dataset_info["data_format"] = ds.data_format
+                if ds.__class__.__name__ == "DatasetFromIRBeam":
+                    dataset_info["mode_distribution"] = dict(getattr(ds, 'mode_distribution', {}))
+                    dataset_info["speckle_noise"] = float(getattr(ds, 'speckle_noise', 0.0))
+                    dataset_info["max_mode_order"] = int(getattr(ds, 'max_mode_order', 3))
+
             if self._batch_config.save(filepath, dataset_info=dataset_info):
                 self.logger.info("Saved batch config to: %s", filepath)
                 msg = f"Configuration saved to:\n{filepath}"
@@ -494,6 +505,18 @@ class BatchTestContainer(QWidget):
                     dataset_msg += f"  • Size: {ds_size}×{ds_size}, {ds_num} images"
                     if ds_path:
                         dataset_msg += f"\n  • Source: {ds_path}"
+                    if dataset_info.get("seed") is not None:
+                        dataset_msg += f"\n  • Seed: {dataset_info['seed']}"
+                    if "data_format" in dataset_info:
+                        dataset_msg += f"\n  • Data format: {dataset_info['data_format']}"
+                    if "mode_distribution" in dataset_info:
+                        md = dataset_info["mode_distribution"]
+                        mode_str = ", ".join(f"{k}={v:.0f}%" for k, v in md.items())
+                        dataset_msg += f"\n  • Modes: {mode_str}"
+                    if "speckle_noise" in dataset_info:
+                        dataset_msg += f"\n  • Speckle noise: {dataset_info['speckle_noise']:.2f}"
+                    if "max_mode_order" in dataset_info:
+                        dataset_msg += f"\n  • Max mode order: {dataset_info['max_mode_order']}"
 
                     dataset_msg += "\n\nDo you want to load/generate this dataset now?"
                     dataset_msg += "\n\n• Yes: Switch to Single Test and generate the dataset"
