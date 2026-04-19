@@ -531,6 +531,41 @@ class SamplesGridPopup(BaseFigureExportPopup):
             return None
         return 100.0 * float(n_patterns) / float(n_pixels)
 
+    def _compute_header_geometry(self, font_size: int, show_labels: bool) -> tuple:
+        """
+        Compute vertical offsets (in pixels, measured up from the axes top
+        edge) for the column title block, the β header band, and the
+        "Sampling ratio" header, making sure they do not overlap.
+
+        Returns (title_height_px, beta_line_px, ratio_line_px).
+        ``ratio_line_px`` is the larger of the user-configured "Header
+        offset" and the auto-computed stack height.
+        """
+        if not show_labels:
+            return 0, 0, self.ratio_header_offset_spin.value()
+
+        show_time = self.show_time_cb.isChecked()
+        show_beta = self.show_beta_cb.isChecked()
+
+        # Title block: one line for the name + (optional) one line for t=...
+        # Plus matplotlib's default title pad of 15 pt ≈ 21 px at 100 DPI.
+        n_title_lines = 1 + (1 if show_time else 0)
+        title_height_px = 21 + int(font_size * 1.6 * n_title_lines)
+
+        beta_line_px = 0
+        if show_beta:
+            # Leave a small gap between title top and the β line, plus room
+            # for the β label itself above the line.
+            beta_line_px = title_height_px + int(font_size * 0.8)
+
+        # The top "Sampling ratio" line sits above the β band (or titles if
+        # β is off). Respect the user's manual header offset as a minimum.
+        user_offset = self.ratio_header_offset_spin.value()
+        auto_offset = (beta_line_px + int(font_size * 2.5)) if show_beta \
+            else (title_height_px + int(font_size * 2))
+        ratio_line_px = max(user_offset, auto_offset)
+        return title_height_px, beta_line_px, ratio_line_px
+
     def _load_column_images(self, col_config: GridColumnConfig) -> tuple:
         """Load images for a column configuration."""
         if col_config.col_type == GridColumnConfig.TYPE_GROUND_TRUTH:
@@ -591,19 +626,14 @@ class SamplesGridPopup(BaseFigureExportPopup):
             if show_row_labels else 10
         )
         right_margin_px = 10
-        top_margin_px = int(font_size * 5) if show_labels else 20
-        if self.show_beta_cb.isChecked() and show_labels:
-            top_margin_px += int(font_size * 2)  # Extra line for β value
-        if self.show_time_cb.isChecked() and show_labels:
-            top_margin_px += int(font_size * 2)  # Extra line for execution time
-        if show_ratio_header and show_labels:
-            # Make sure the "Sampling ratio" header line and its text always
-            # fit above the column titles, whatever offset the user picked.
-            header_offset_px = self.ratio_header_offset_spin.value()
-            top_margin_px = max(
-                top_margin_px + int(font_size * 2.5),
-                header_offset_px + int(font_size * 3),
-            )
+        title_height_px, beta_line_px, ratio_line_px = self._compute_header_geometry(
+            font_size, show_labels
+        )
+        # Start with room for the tallest needed band and add breathing room.
+        top_margin_px = 20 if not show_labels else (
+            max(title_height_px, beta_line_px + int(font_size * 2),
+                ratio_line_px + int(font_size * 3) if show_ratio_header else 0)
+        )
         bottom_margin_px = 10
 
         # Calculate total figure size in pixels
@@ -695,7 +725,6 @@ class SamplesGridPopup(BaseFigureExportPopup):
 
         # Add column titles at the top
         if show_labels:
-            show_beta = self.show_beta_cb.isChecked()
             show_time = self.show_time_cb.isChecked()
             for col_idx, col_config in enumerate(columns):
                 ax = axes[0][col_idx]
@@ -703,10 +732,6 @@ class SamplesGridPopup(BaseFigureExportPopup):
                 is_test_col = col_config.col_type in (
                     GridColumnConfig.TYPE_TEST, GridColumnConfig.TYPE_TEST_DENOISED
                 )
-                if show_beta and is_test_col:
-                    beta_pct = self._compute_beta_percent(col_config)
-                    if beta_pct is not None:
-                        title = f"{title}\nβ = {beta_pct:.1f}%"
                 if show_time and is_test_col:
                     time_text = self._compute_column_time_text(col_config)
                     if time_text:
@@ -783,31 +808,73 @@ class SamplesGridPopup(BaseFigureExportPopup):
                                 clip_on=False)
                 self._figure.add_artist(rect)
 
-        # Add "Sampling ratio" header line above test columns
+        # Add "Sampling ratio" header line above test columns. Its height is
+        # taken from the stacked header geometry so it always sits above the
+        # β band and the column titles.
         if show_ratio_header and test_cols and show_labels:
             first_test_col = test_cols[0]
             last_test_col = test_cols[-1]
 
-            # Get bounds for first and last test column
             first_x0, _, _, first_y1 = get_ax_bounds(0, first_test_col)
             _, _, last_x1, _ = get_ax_bounds(0, last_test_col)
 
-            # Position line above the titles (offset is user-configurable via
-            # the "Header offset" spinbox).
-            header_offset_px = self.ratio_header_offset_spin.value()
-            line_y = first_y1 + header_offset_px / fig_height_px
-            line_x_start = first_x0
-            line_x_end = last_x1
-
+            line_y = first_y1 + ratio_line_px / fig_height_px
             self._figure.add_artist(Line2D(
-                [line_x_start, line_x_end], [line_y, line_y],
+                [first_x0, last_x1], [line_y, line_y],
                 transform=self._figure.transFigure,
                 color='black', linewidth=1.5, clip_on=False
             ))
 
-            text_x = (line_x_start + line_x_end) / 2
-            self._figure.text(text_x, line_y + 0.02, "Sampling ratio",
+            text_x = (first_x0 + last_x1) / 2
+            self._figure.text(text_x, line_y + 0.006, "Sampling ratio",
                             fontsize=font_size, ha='center', va='bottom', fontweight='bold')
+
+        # Per-group β header bands (between the column titles and the
+        # "Sampling ratio" header). Linear+Denoised pairs share one band.
+        if self.show_beta_cb.isChecked() and test_cols and show_labels:
+            # Group consecutive test columns that share the same test_idx and
+            # form a Linear+Denoised pair; otherwise treat each column alone.
+            groups: list[list[int]] = []
+            i = 0
+            while i < len(columns):
+                col = columns[i]
+                if col.col_type not in (
+                    GridColumnConfig.TYPE_TEST, GridColumnConfig.TYPE_TEST_DENOISED
+                ):
+                    i += 1
+                    continue
+                grp = [i]
+                if i + 1 < len(columns):
+                    nxt = columns[i + 1]
+                    if (nxt.col_type in (GridColumnConfig.TYPE_TEST,
+                                         GridColumnConfig.TYPE_TEST_DENOISED)
+                            and nxt.test_idx == col.test_idx
+                            and nxt.col_type != col.col_type):
+                        grp.append(i + 1)
+                groups.append(grp)
+                i += len(grp)
+
+            # β band position is taken from the header geometry (stacked
+            # above titles, below the "Sampling ratio" line).
+            for grp in groups:
+                first_x0, _, _, first_y1 = get_ax_bounds(0, grp[0])
+                _, _, last_x1, _ = get_ax_bounds(0, grp[-1])
+                beta_pct = self._compute_beta_percent(columns[grp[0]])
+                if beta_pct is None:
+                    continue
+                line_y = first_y1 + beta_line_px / fig_height_px
+                self._figure.add_artist(Line2D(
+                    [first_x0, last_x1], [line_y, line_y],
+                    transform=self._figure.transFigure,
+                    color='black', linewidth=1.0, clip_on=False,
+                ))
+                text_x = (first_x0 + last_x1) / 2
+                self._figure.text(
+                    text_x, line_y + 0.006,
+                    f"β = {beta_pct:.1f}%",
+                    fontsize=max(7, font_size - 1),
+                    ha='center', va='bottom', fontweight='bold',
+                )
 
         self._canvas.draw()
 
@@ -861,17 +928,13 @@ class SamplesGridPopup(BaseFigureExportPopup):
             if show_row_labels else 10
         )
         right_margin = 10
-        top_margin = int(font_size * 5) if show_labels else 20
-        if self.show_beta_cb.isChecked() and show_labels:
-            top_margin += int(font_size * 2)
-        if self.show_time_cb.isChecked() and show_labels:
-            top_margin += int(font_size * 2)
-        if show_ratio_header and show_labels:
-            header_offset_px = self.ratio_header_offset_spin.value()
-            top_margin = max(
-                top_margin + int(font_size * 2.5),
-                header_offset_px + int(font_size * 3),
-            )
+        title_height_px, beta_line_px, ratio_line_px = self._compute_header_geometry(
+            font_size, show_labels
+        )
+        top_margin = 20 if not show_labels else (
+            max(title_height_px, beta_line_px + int(font_size * 2),
+                ratio_line_px + int(font_size * 3) if show_ratio_header else 0)
+        )
         bottom_margin = 10
 
         # Calculate max image size that fits

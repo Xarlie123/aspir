@@ -389,8 +389,31 @@ class GridColumnListWidget(QWidget):
         test = self.tests[test_idx]
         name = test.get("name", f"Test {test_idx+1}")
         config = GridColumnConfig(GridColumnConfig.TYPE_TEST_DENOISED, test_idx, name)
-        self._add_column_with_config(config)
+
+        # Keep denoised columns right next to their Linear Recon twin, so the
+        # β header band can span the pair.
+        insert_at = None
+        for i, existing in enumerate(self.columns):
+            if (existing.col_type == GridColumnConfig.TYPE_TEST
+                    and existing.test_idx == test_idx):
+                insert_at = i + 1
+                break
+        if insert_at is None:
+            self._add_column_with_config(config)
+        else:
+            self._insert_column_with_config(config, insert_at)
         self.columns_changed.emit()
+
+    def _insert_column_with_config(self, config: GridColumnConfig, position: int):
+        self.columns.insert(position, config)
+        card = GridColumnCardWidget(config, position)
+        card.double_clicked.connect(self._on_card_double_clicked)
+        card.drag_started.connect(self._on_drag_started)
+        self.cards.insert(position, card)
+        self.cards_layout.insertWidget(position, card)
+        # Refresh indices so drag/drop keeps working.
+        for i, c in enumerate(self.cards):
+            c.index = i
 
     def _add_column_with_config(self, config: GridColumnConfig):
         self.columns.append(config)
