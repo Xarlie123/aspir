@@ -23,7 +23,10 @@ from simulation_engine.simulation import Simulation
 
 sim = Simulation(logger)
 sim.set_dataset(dataset)
-sim.set_mask(mask, applicator_type_scatter='fista')
+# reconstruction_method: "native" (default), "pseudoinverse", "fista" or
+# "tv_norm". "native" picks the mask-specific algorithm — Ghost Imaging
+# (Scatter), Sweep Linear (Sweep) or Hadamard Linear (Hadamard / Cal-Sal).
+sim.set_mask(mask, reconstruction_method='fista')
 sim.set_postprocessor(
     dataset, mask, applicator,
     model_name='u-net', batch_size=16, lr=1e-3,
@@ -77,12 +80,21 @@ mask.generate_masks()
 ### Applicators (Reconstruction)
 
 All applicators inherit from `ApplicatorABC` and implement `process_dataset()`.
+The mask-specific applicators (`ApplicatorScatter`, `ApplicatorSweep`,
+`ApplicatorHadamard`) implement their native algorithm; the generic
+iterative solvers (`ApplicatorPseudoinverse`, `ApplicatorFISTA`,
+`ApplicatorTV`) work with any mask that exposes a sensing matrix in
+`mask.masks`.
 
 ```python
+# Iterative reconstruction (works with Scatter, Sweep or Hadamard masks)
 from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
 
 applicator = ApplicatorFISTA(dataset, mask, maxit=500, lam=1e-3)
 results_df = applicator.process_dataset()
+
+# Or let Simulation pick the applicator by method name:
+sim.set_mask(mask, reconstruction_method='tv_norm')
 ```
 
 ### Neural Network Models

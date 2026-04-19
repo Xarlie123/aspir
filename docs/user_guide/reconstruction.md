@@ -1,10 +1,24 @@
 # Reconstruction Algorithms
 
 ASPIR implements several algorithms to reconstruct images from SPI measurements.
+Every mask family exposes a **Reconstruction method** dropdown with the same
+four options: its native algorithm plus the three mask-agnostic iterative
+solvers. Internally they all implement the same `ApplicatorABC` interface, so
+they can be mixed freely with any mask that populates `mask.masks` as the
+sensing matrix.
+
+| Mask family | Native algorithm | Iterative solvers (always available) |
+|-------------|------------------|--------------------------------------|
+| Scatter     | Ghost Imaging     | Pseudoinverse, FISTA, TV-Norm        |
+| Sweep       | Sweep Linear      | Pseudoinverse, FISTA, TV-Norm        |
+| Hadamard *  | Hadamard Linear   | Pseudoinverse, FISTA, TV-Norm        |
+| Cal-Sal     | Hadamard Linear   | Pseudoinverse, FISTA, TV-Norm        |
+
+\* applies to Natural, Cake-Cutting and Walsh-Paley variants.
 
 ## Available Methods
 
-### Ghost Imaging (Conventional)
+### Ghost Imaging
 
 Classical correlation-based reconstruction.
 
@@ -19,8 +33,29 @@ Where:
 
 **Characteristics**:
 - Very fast computation
-- Works with any number of patterns
+- Default for **Scatter** masks
 - Quality improves with more patterns
+
+### Sweep Linear
+
+Correlation-based reconstruction specialised for sweep bar patterns. Shares
+the formula above but interprets the patterns as translating bars.
+
+**Characteristics**:
+- Default for **Sweep** masks
+- Very fast; reuses each bar pattern as both sensing and back-projection.
+
+### Hadamard Linear
+
+Dot-product reconstruction using the orthogonality of Hadamard patterns.
+
+$$
+\hat{x} = \frac{1}{N} S^\top y
+$$
+
+**Characteristics**:
+- Default for **Hadamard** and **Cal-Sal** masks
+- Exact reconstruction when all Hadamard patterns are used
 
 ### Pseudoinverse
 
@@ -76,16 +111,19 @@ $$
 
 ## Comparison
 
-| Method | Speed | Compression | Noise Robustness |
-|--------|-------|-------------|------------------|
-| Ghost Imaging | ★★★★★ | ★★☆☆☆ | ★★☆☆☆ |
-| Pseudoinverse | ★★★★☆ | ★★☆☆☆ | ★★☆☆☆ |
-| FISTA | ★★☆☆☆ | ★★★★★ | ★★★★☆ |
-| TV-Norm | ★★☆☆☆ | ★★★★☆ | ★★★★★ |
+| Method          | Speed    | Compression | Noise Robustness |
+|-----------------|----------|-------------|------------------|
+| Ghost Imaging   | ★★★★★    | ★★☆☆☆       | ★★☆☆☆            |
+| Sweep Linear    | ★★★★★    | ★★☆☆☆       | ★★☆☆☆            |
+| Hadamard Linear | ★★★★★    | ★★★☆☆       | ★★★☆☆            |
+| Pseudoinverse   | ★★★★☆    | ★★☆☆☆       | ★★☆☆☆            |
+| FISTA           | ★★☆☆☆    | ★★★★★       | ★★★★☆            |
+| TV-Norm         | ★★☆☆☆    | ★★★★☆       | ★★★★★            |
 
 ## When to Use Each
 
-- **Ghost Imaging**: Quick previews, real-time applications
-- **Pseudoinverse**: Full sampling with low noise
-- **FISTA**: Compressive sensing with sparse signals
-- **TV-Norm**: Natural images with edges, noisy measurements
+- **Ghost Imaging / Sweep Linear / Hadamard Linear**: native algorithm for
+  each mask — quick previews and the fastest path to a reconstruction.
+- **Pseudoinverse**: full sampling with low noise; works on every mask.
+- **FISTA**: compressive sensing with sparse signals.
+- **TV-Norm**: natural images with edges, noisy measurements.
