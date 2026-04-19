@@ -502,9 +502,12 @@ class BatchTestRunner(QThread):
 
             if self.export_level == ExportLevel.ALL_DATA:
                 orig, recons, denoised = postprocessor.test_dataset()
+                # PostprocessorNN does not expose .mask; pull it from the
+                # applicator (applicator.mask is set in ApplicatorABC.__init__).
+                mask_obj = getattr(applicator, 'mask', None) if applicator else None
                 self._test_data[index] = {
-                    "mask": getattr(postprocessor, 'mask', None),
-                    "applicator": getattr(postprocessor, 'applicator', None),
+                    "mask": mask_obj,
+                    "applicator": applicator,
                     "originals": orig,
                     "reconstructions": recons,
                     "denoised": denoised,
