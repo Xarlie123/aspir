@@ -1,12 +1,17 @@
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QHBoxLayout, QLabel, QComboBox
 from ui.custom_widgets.mask_control.sweep_control.ui_sweep_control import Ui_Sweep_Control
 from ui.custom_widgets.common.button_styles import (
     BUTTON_STYLE_GREEN, BUTTON_STYLE_ORANGE, BUTTON_STYLE_RED, apply_button_style
 )
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
+
+# Shared dropdown options for the "Reconstruction method" selector.
+# The first label maps to the mask-specific native algorithm; the rest go
+# through the iterative applicators (see Simulation.set_applicator).
+RECON_METHOD_CHOICES = ("Native", "Pseudoinverse", "FISTA", "TV-norm")
 
 class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
     """
@@ -73,9 +78,43 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
         # Add default sweep parameters (4 angles: 0°, 90°, 45°, -45° with bar_width=5, stride=2)
         self._add_default_rows()
 
+        # Reconstruction-method dropdown (injected at runtime so the Qt
+        # Designer .ui file stays untouched).
+        self._add_recon_method_controls()
+
         # allow widget to use its preferred size
         self.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         self.adjustSize()
+
+    def _add_recon_method_controls(self):
+        """Insert a 'Reconstruction method' dropdown above the Generate button."""
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        label = QLabel("Reconstruction method:")
+        label.setStyleSheet("font-size: 11px;")
+        row.addWidget(label)
+        self.reconstruction_method_combo = QComboBox()
+        self.reconstruction_method_combo.addItems(RECON_METHOD_CHOICES)
+        self.reconstruction_method_combo.setToolTip(
+            "Native = Sweep Linear (ghost-imaging correlation).\n"
+            "Other options use the generic iterative solvers."
+        )
+        row.addWidget(self.reconstruction_method_combo)
+        row.addStretch()
+        parent_layout = self.generate_masks_button.parent().layout()
+        button_index = parent_layout.indexOf(self.generate_masks_button)
+        if button_index >= 0:
+            parent_layout.insertLayout(button_index, row)
+        else:
+            parent_layout.addLayout(row)
+
+    def get_reconstruction_method(self) -> str:
+        return self.reconstruction_method_combo.currentText()
+
+    def set_reconstruction_method(self, value: str):
+        idx = self.reconstruction_method_combo.findText(value)
+        if idx >= 0:
+            self.reconstruction_method_combo.setCurrentIndex(idx)
 
     def set_img_size(self, img_size: int):
         """Set image size for mask instantiation."""
@@ -149,7 +188,11 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
 
         try:
             mask = MaskSweep(self._img_size, params)
-            self.logger.info("MaskSweep created with %d parameters", len(params))
+            # Stash the user's choice so Simulation.set_mask picks it up via
+            # getattr(mask, 'applicator_type_scatter', None).
+            mask.applicator_type_scatter = self.get_reconstruction_method()
+            self.logger.info("MaskSweep created with %d parameters (method=%s)",
+                             len(params), mask.applicator_type_scatter)
         except Exception as e:
             QMessageBox.critical(self, "Error creating sweep mask", str(e))
             self.logger.error("Error creating MaskSweep: %s", e, exc_info=True)

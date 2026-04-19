@@ -73,6 +73,8 @@ class ConfigYamlHandler:
         sweep: SweepControlWidget = getattr(self.mask_handler, 'sweep_control', None)
         if sweep:
             data['sweep_params'] = sweep.get_parameters()
+            if hasattr(sweep, 'get_reconstruction_method'):
+                data['sweep_recon_method'] = sweep.get_reconstruction_method()
             self.logger.debug(f"Collected sweep_params: {data['sweep_params']}")
 
         # 3) ScatterControlWidget
@@ -90,8 +92,10 @@ class ConfigYamlHandler:
             entry = {
                 'low': ctrl.hadamard_slider.low_value,
                 'high': ctrl.hadamard_slider.high_value,
-                'mask_cls': ctrl._mask_cls.__name__
+                'mask_cls': ctrl._mask_cls.__name__,
             }
+            if hasattr(ctrl, 'get_reconstruction_method'):
+                entry['recon_method'] = ctrl.get_reconstruction_method()
             data['hadamard'].append(entry)
             self.logger.debug(f"Collected hadamard ctrl: {entry}")
 
@@ -149,6 +153,8 @@ class ConfigYamlHandler:
                 if stride is not None:
                     sweep.sweep_parameters_table.item(row, 2).setText(str(stride))
                 self.logger.debug(f"Restored sweep row {row}: angle={angle}, bar_width={bar_width}, stride={stride}")
+            if 'sweep_recon_method' in data and hasattr(sweep, 'set_reconstruction_method'):
+                sweep.set_reconstruction_method(data['sweep_recon_method'])
 
         # 3) ScatterControlWidget
         scatter: ScatterControlWidget = getattr(self.mask_handler, 'scatter_control', None)
@@ -172,6 +178,8 @@ class ConfigYamlHandler:
             ctrl.hadamard_slider.low_value = vals.get('low', 0)
             ctrl.hadamard_slider.high_value = vals.get('high', ctrl.hadamard_slider.max_val)
             ctrl.hadamard_slider.update()
+            if 'recon_method' in vals and hasattr(ctrl, 'set_reconstruction_method'):
+                ctrl.set_reconstruction_method(vals['recon_method'])
             self.logger.debug(f"Restored hadamard ctrl: {vals}")
 
         # 5) Data format selectors

@@ -1,7 +1,10 @@
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QHBoxLayout, QLabel, QDoubleSpinBox
+from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QHBoxLayout, QLabel, QDoubleSpinBox, QComboBox
+
+# Kept in sync with the Sweep widget so both families offer the same choices.
+RECON_METHOD_CHOICES = ("Native", "Pseudoinverse", "FISTA", "TV-norm")
 from ui.custom_widgets.mask_control.hadamard_control.ui_hadamard_control import Ui_Hadamard_Control
 from ui.custom_widgets.mask_control.hadamard_control.qrange_slider import QRangeSlider
 from ui.custom_widgets.common.button_styles import BUTTON_STYLE_GREEN, apply_button_style
@@ -54,8 +57,9 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         self.hadamard_slider = new_slider
         max_label.setText(str(max_val))
 
-        # 4) Add percentage spinbox row
+        # 4) Add percentage spinbox row + reconstruction-method dropdown
         self._add_percentage_controls()
+        self._add_recon_method_controls()
 
         # 5) Connect slider percentage signal to spinbox
         self.hadamard_slider.percentageChanged.connect(self._on_slider_percentage_changed)
@@ -105,6 +109,35 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         button_index = self.main_layout.indexOf(self.generate_masks_button)
         self.main_layout.insertLayout(button_index, pct_layout)
 
+    def _add_recon_method_controls(self):
+        """Insert a 'Reconstruction method' dropdown above the Generate button."""
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        label = QLabel("Reconstruction method:")
+        label.setStyleSheet("font-size: 11px;")
+        row.addWidget(label)
+        self.reconstruction_method_combo = QComboBox()
+        self.reconstruction_method_combo.addItems(RECON_METHOD_CHOICES)
+        self.reconstruction_method_combo.setToolTip(
+            "Native = Hadamard Linear (dot product with orthogonal patterns).\n"
+            "Other options use the generic iterative solvers."
+        )
+        row.addWidget(self.reconstruction_method_combo)
+        row.addStretch()
+        button_index = self.main_layout.indexOf(self.generate_masks_button)
+        if button_index >= 0:
+            self.main_layout.insertLayout(button_index, row)
+        else:
+            self.main_layout.addLayout(row)
+
+    def get_reconstruction_method(self) -> str:
+        return self.reconstruction_method_combo.currentText()
+
+    def set_reconstruction_method(self, value: str):
+        idx = self.reconstruction_method_combo.findText(value)
+        if idx >= 0:
+            self.reconstruction_method_combo.setCurrentIndex(idx)
+
     def _on_slider_percentage_changed(self, percentage: float):
         """Update spinbox when slider changes."""
         if self._updating_percentage:
@@ -148,12 +181,14 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         self.logger.info("Generating mask with range [%d, %d]", low, high)
         try:
             mask_obj = self._mask_cls(self._img_size, low, high, logger=self.logger)
+            mask_obj.applicator_type_scatter = self.get_reconstruction_method()
         except Exception as e:
             QMessageBox.warning(self, "Error", str(e))
             self.logger.error("Error instantiating mask: %s", e)
             return
         self._mask = mask_obj
-        self.logger.info("Mask generated: %s", type(mask_obj).__name__)
+        self.logger.info("Mask generated: %s (method=%s)",
+                         type(mask_obj).__name__, mask_obj.applicator_type_scatter)
         self.maskReady.emit(mask_obj)
 
     @property
