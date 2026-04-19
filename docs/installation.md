@@ -62,7 +62,11 @@ docker run --rm -it `
 
 For development or if you prefer not to use Docker.
 
-### Linux
+Dependencies are declared once in `pyproject.toml` (PEP 621). Optional-dependency
+groups (`cpu`, `jetson`, `dev`, `docs`) let you pick the right set for your
+platform without maintaining separate lock files.
+
+### Linux (CUDA)
 
 ```bash
 # Clone repository
@@ -73,31 +77,64 @@ cd aspir
 python -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements_linux.txt
+# Install the project and its dependencies (editable)
+pip install -e .
 
 # Run (working directory MUST be src/)
 cd src
 python main.py
 ```
 
-### Windows
+The legacy `pip install -r requirements_linux.txt` still works — the file is a
+thin wrapper that resolves to `-e .`.
+
+### Windows (CUDA)
 
 ```powershell
-# Clone repository
 git clone https://github.com/Xarlie123/aspir.git
 cd aspir
 
-# Create virtual environment
 python -m venv .venv
 .venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements_windows.txt
+pip install -e .
 
-# Run (working directory MUST be src/)
 cd src
 python main.py
+```
+
+### Windows (CPU-only)
+
+For machines without an NVIDIA GPU:
+
+```powershell
+pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
+```
+
+`requirements_windows_cpu.txt` is a convenience wrapper that encodes this.
+
+### NVIDIA Jetson (JetPack 6.2 / CUDA 12.6)
+
+PyTorch for aarch64 is not on PyPI; install it first from the Jetson AI Lab
+index, then the rest of the project:
+
+```bash
+# 1. Torch for Jetson (pick the wheel that matches your JetPack + Python)
+pip install --extra-index-url https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ torch
+
+# 2. The rest of the project plus the Jetson extras
+pip install -e .[jetson]
+```
+
+TensorRT comes pre-installed with JetPack — do not try to `pip install` it
+on the device.
+
+### Developer extras
+
+```bash
+pip install -e .[dev]          # ruff + import-linter
+pip install -e .[docs]         # Sphinx stack
+pip install -e .[dev,docs]     # both
 ```
 
 ## Optional Tools

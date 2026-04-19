@@ -1,7 +1,6 @@
-# Documentation dependencies
-sphinx>=7.0
-myst-parser>=2.0
-sphinx-rtd-theme>=2.0
-sphinx-copybutton>=0.5
-sphinx-design>=0.5
-sphinxcontrib-mermaid>=0.9
+# Documentation build dependencies
+#
+# Single source of truth is the [project.optional-dependencies.docs] group
+# in ../pyproject.toml. Read the Docs and CI pick up this file from the
+# repository root during the build.
+-e ..[docs]

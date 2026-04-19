@@ -68,13 +68,18 @@ RUN wget -qO - https://developer.download.nvidia.com/devtools/repos/ubuntu2204/a
 # -----------------------------------------------------------------------------
 WORKDIR /app
 
-# Copy requirements first for better layer caching
-# Use requirements_docker.txt which doesn't pin NVIDIA packages
-# (PyTorch brings its own compatible CUDA libraries)
-COPY requirements_docker.txt .
-
-RUN python -m pip install --upgrade pip && \
-    pip install -r requirements_docker.txt
+# Install Python dependencies from pyproject.toml (single source of truth).
+# The application source tree itself is mounted at runtime via
+# `-v "$(pwd)":/app`, so we only need the dependency manifest during the
+# image build. We create stub package directories so setuptools' editable
+# install succeeds — pip writes a .pth file pointing to /app/src/, and the
+# real src/ will be there at runtime thanks to the volume mount.
+COPY pyproject.toml README.md ./
+RUN mkdir -p src/simulation_engine src/ui && \
+    touch src/main.py src/simulation_engine/__init__.py src/ui/__init__.py && \
+    python -m pip install --upgrade pip && \
+    pip install -e . && \
+    rm -rf src
 
 # -----------------------------------------------------------------------------
 # Entry point

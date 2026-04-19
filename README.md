@@ -28,8 +28,9 @@ cd aspir
 python -m venv .venv
 source .venv/bin/activate
 
-# 3. Install dependencies
-pip install -r requirements_linux.txt
+# 3. Install the project and its dependencies
+#    (dependencies are declared in pyproject.toml)
+pip install -e .
 
 # 4. Run (working directory MUST be src/)
 cd src
@@ -47,13 +48,16 @@ cd aspir
 python -m venv .venv
 .venv\Scripts\activate
 
-# 3. Install dependencies
-pip install -r requirements_windows.txt
+# 3. Install the project and its dependencies
+pip install -e .
 
 # 4. Run (working directory MUST be src/)
 cd src
 python main.py
 ```
+
+> CPU-only Windows: add `--extra-index-url https://download.pytorch.org/whl/cpu`
+> to the `pip install` above.
 
 ### Option 2: Docker (Recommended)
 
@@ -121,9 +125,8 @@ aspir/
 ├── datasets/                     # Downloaded and generated datasets
 ├── settings/                     # Application settings (log config, etc.)
 ├── docker/                       # Docker configuration
-├── requirements_windows.txt      # Python dependencies (Windows)
-├── requirements_linux.txt        # Python dependencies (Linux)
-└── requirements_docker.txt       # Python dependencies (Docker)
+├── pyproject.toml                # Project metadata + dependencies (single source of truth)
+└── requirements_*.txt            # Thin per-platform wrappers around pyproject.toml
 ```
 
 ## Requirements

@@ -1,0 +1,169 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+
+# =============================================================================
+# Project metadata (PEP 621)
+# =============================================================================
+[project]
+name = "aspir"
+version = "1.0.0"
+description = "A Single-Pixel Imaging Research Platform — end-to-end pipeline for SPI with classical reconstruction and deep-learning post-processing."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "CC-BY-4.0"}
+authors = [
+    {name = "Carlos Chabert Ull", email = "cchabert@uji.es"},
+]
+keywords = [
+    "single-pixel-imaging",
+    "computational-imaging",
+    "denoising",
+    "deep-learning",
+    "infrared",
+    "SPI",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+
+# -----------------------------------------------------------------------------
+# Runtime dependencies
+# -----------------------------------------------------------------------------
+# These are the packages imported directly from src/. Transitive dependencies
+# (nvidia-*-cu12, tensorboard, keras, absl-py, etc.) are intentionally NOT
+# listed — pip resolves them from what torch/kaggle/matplotlib actually need.
+#
+# Minimum versions are chosen conservatively: the code uses features available
+# since these versions, but we avoid upper pins unless there is a known
+# incompatibility, so `pip install` stays reproducible for longer.
+# -----------------------------------------------------------------------------
+dependencies = [
+    # Scientific computing
+    "numpy>=1.24,<3",
+    "scipy>=1.11",
+    "pandas>=2.0",
+
+    # Imaging & vision
+    "Pillow>=10.0",
+    "opencv-python-headless>=4.8",
+    "scikit-image>=0.21",
+
+    # Plotting / GUI
+    "matplotlib>=3.7",
+    "PyQt5>=5.15",
+
+    # Deep learning
+    "torch>=2.2",
+    "lpips>=0.1.4",
+
+    # Inverse problems (FISTA / TV-norm reconstruction)
+    "pylops>=2.3",
+    "pyproximal>=0.9",
+
+    # Optical simulation (IR-beam dataset generator)
+    "LightPipes>=2.1",
+
+    # ONNX export for edge deployment
+    "onnxscript>=0.1",
+
+    # Dataset download (Kaggle datasets)
+    "kaggle>=1.6",
+
+    # Utilities
+    "PyYAML>=6.0",
+    "tqdm>=4.66",
+    "pdf2image>=1.16",    # architecture preview: PDF → image (requires poppler at runtime)
+    "psutil>=5.9",        # system info / CPU-energy backend
+    "pynvml>=12",         # NVIDIA GPU energy (imported lazily, guarded)
+]
+
+
+# -----------------------------------------------------------------------------
+# Optional-dependency groups
+# -----------------------------------------------------------------------------
+[project.optional-dependencies]
+
+# CPU-only torch build. pip does NOT use this group automatically; you need
+# to pass the PyTorch CPU index explicitly:
+#
+#     pip install . --extra-index-url https://download.pytorch.org/whl/cpu
+#
+# The ".[cpu]" extra is kept only as a marker for the install-instruction
+# tooling; the real work is done by --extra-index-url.
+cpu = [
+    "torch>=2.2",
+]
+
+# NVIDIA Jetson (L4T / JetPack 6.2). The aarch64 PyTorch wheel is NOT on PyPI;
+# install it first from the NVIDIA index, then:
+#
+#     pip install --extra-index-url https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ torch
+#     pip install ".[jetson]"
+#
+# See docs/installation.md for the full Jetson setup.
+jetson = [
+    "jetson-stats>=4.3",
+]
+
+# Linting and architecture checks. Install with:
+#
+#     pip install ".[dev]"
+dev = [
+    "ruff>=0.4",
+    "import-linter>=2.0",
+]
+
+# Sphinx documentation build. Install with:
+#
+#     pip install ".[docs]"
+docs = [
+    "sphinx>=7.0",
+    "myst-parser>=2.0",
+    "sphinx-rtd-theme>=2.0",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.5",
+    "sphinxcontrib-mermaid>=0.9",
+]
+
+
+# -----------------------------------------------------------------------------
+# URLs
+# -----------------------------------------------------------------------------
+[project.urls]
+Homepage      = "https://github.com/Xarlie123/aspir"
+Documentation = "https://aspir.readthedocs.io"
+Repository    = "https://github.com/Xarlie123/aspir.git"
+Issues        = "https://github.com/Xarlie123/aspir/issues"
+
+
+# =============================================================================
+# Build configuration
+# =============================================================================
+# Source is under src/; there are two top-level packages (simulation_engine
+# and ui) and one top-level module (main.py). An editable install
+# (`pip install -e .`) makes them importable so developers can run
+# `python -m main` from anywhere, but the historical workflow
+# (`cd src && python main.py`) keeps working too.
+# =============================================================================
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules  = ["main"]
+
+[tool.setuptools.packages.find]
+where   = ["src"]
+include = ["simulation_engine*", "ui*"]
+exclude = ["*__pycache__*"]
