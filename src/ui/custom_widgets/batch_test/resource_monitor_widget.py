@@ -68,14 +68,40 @@ def _jtop_gpu_load(jt) -> Optional[float]:
 
 def _jtop_mem_percent(jt) -> Optional[float]:
     """Percent of RAM in use. On Tegra the GPU shares system RAM, so this
-    is the closest thing to "VRAM used"."""
+    is the closest thing to "VRAM used". Robust to jtop's multiple schemas
+    (flat ``stats`` dict, ``memory['RAM']`` dict, ``memory.RAM`` attribute)."""
+    # Flat ``jt.stats`` — jtop 4.x publishes RAM as a percent here.
+    stats = getattr(jt, "stats", None)
+    if isinstance(stats, dict) and "RAM" in stats:
+        try:
+            value = float(stats["RAM"])
+            if 0.0 <= value <= 100.0:
+                return value
+        except (TypeError, ValueError):
+            pass
+
+    # Structured ``jt.memory`` — either a dict or a service object.
     mem = getattr(jt, "memory", None)
+    ram = None
     if isinstance(mem, dict):
-        ram = mem.get("RAM", {})
-        tot = ram.get("tot") or ram.get("total")
-        used = ram.get("used")
+        ram = mem.get("RAM") or mem.get("ram")
+    elif mem is not None:
+        ram = getattr(mem, "RAM", None) or getattr(mem, "ram", None)
+
+    if ram is not None:
+        tot = None
+        used = None
+        if isinstance(ram, dict):
+            tot = ram.get("tot") or ram.get("total")
+            used = ram.get("used")
+        else:
+            tot = getattr(ram, "tot", None) or getattr(ram, "total", None)
+            used = getattr(ram, "used", None)
         if tot and used is not None:
-            return 100.0 * used / tot
+            try:
+                return 100.0 * float(used) / float(tot)
+            except (TypeError, ZeroDivisionError):
+                pass
     return None
 
 
@@ -303,6 +329,17 @@ class ResourceMonitorWidget(QWidget):
                             self.gpu_bar.setValue(int(gpu_percent))
                             self.gpu_bar.setFormat("%p%")
                             self._update_bar_color(self.gpu_bar, gpu_percent, "#FF9800")
+                        if mem_percent is None:
+                            # Some jtop builds don't surface RAM in the flat
+                            # ``stats`` dict. Fall back to the torch view so
+                            # the bar still carries a meaningful number.
+                            try:
+                                allocated = torch.cuda.memory_allocated(0)
+                                total = torch.cuda.get_device_properties(0).total_memory
+                                if total > 0:
+                                    mem_percent = 100.0 * allocated / total
+                            except Exception:
+                                pass
                         if mem_percent is not None:
                             self.gpu_mem_bar.setValue(int(mem_percent))
                             self.gpu_mem_bar.setFormat("%p%")
