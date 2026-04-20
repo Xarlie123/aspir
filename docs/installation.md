@@ -171,6 +171,43 @@ on the device. Likewise, do **not** install the x86 Docker image on Jetson;
 the CUDA layer is host-specific and the build will fail on the first
 ``apt-get install``.
 
+#### Enable jtop for GPU / energy monitoring
+
+ASPIR reads Jetson GPU utilisation, VRAM and power through the
+``jetson-stats`` daemon (``jtop``). Enable it once per machine:
+
+```bash
+sudo pip install -U jetson-stats        # installs the jtop CLI + service
+sudo systemctl enable --now jtop        # starts the background daemon
+```
+
+Without this service the batch-test Resource Monitor shows GPU "--" and
+the Energy report comes back as 0 mJ / 0 W — the ina3221 sysfs paths
+differ per board and our fallback scanner can miss them.
+
+#### Enable CUDA profiling (optional)
+
+PyTorch's CUDA profiler relies on CUPTI, which JetPack 6.x gates to
+admin users by default. Without it the timing reports still work (they
+use ``torch.cuda.Event``), but the fine-grained "CUDA activities"
+breakdown in the profiler popup is missing. Log line to look for:
+
+```
+CUPTI_ERROR_INSUFFICIENT_PRIVILEGES (35)
+CUPTI initialization failed — CUDA profiler activities will be missing
+```
+
+If you need that breakdown, relax the kernel module option once:
+
+```bash
+echo 'options nvidia NVreg_RestrictProfilingToAdminUsers=0' | \
+    sudo tee /etc/modprobe.d/nvidia-profiling.conf
+sudo reboot
+```
+
+See the NVIDIA reference for context:
+<https://developer.nvidia.com/nvidia-development-tools-solutions-err-nvgpuctrperm-cupti>
+
 Once NVIDIA ships a JetPack with the CUDA 13 driver and Jetson-AI-Lab
 publishes torch wheels compiled against NumPy 2, the `[jetson]` caps in
 `pyproject.toml` can be relaxed.
