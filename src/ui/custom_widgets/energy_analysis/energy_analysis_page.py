@@ -53,7 +53,7 @@ class EnergyAnalysisPage(QWidget):
         if logger:
             self.logger = logger.getChild("EnergyAnalysisPage")
         else:
-            self.logger = logging.getLogger("SPIm.EnergyAnalysisPage")
+            self.logger = logging.getLogger("ASPIR.EnergyAnalysisPage")
 
         # Data storage
         self._energy_data = {}

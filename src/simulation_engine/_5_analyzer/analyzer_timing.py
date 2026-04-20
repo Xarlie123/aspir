@@ -17,7 +17,7 @@ class TimingAnalyzer:
             raise ImportError("PyTorch is required for TimingAnalyzer")
 
         # Set up logger for timing analysis
-        self.logger = logging.getLogger("SPIm.TimingAnalyzer")
+        self.logger = logging.getLogger("ASPIR.TimingAnalyzer")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug(
             "Initializing TimingAnalyzer: device=%s, warmup_runs=%d",

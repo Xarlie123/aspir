@@ -47,7 +47,7 @@ class EnergyReportPopup(QDialog):
         if logger:
             self.logger = logger.getChild("EnergyReportPopup")
         else:
-            self.logger = logging.getLogger("SPIm.EnergyReportPopup")
+            self.logger = logging.getLogger("ASPIR.EnergyReportPopup")
 
         # Data storage
         self._energy_data = {}

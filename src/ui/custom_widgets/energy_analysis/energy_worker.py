@@ -83,7 +83,7 @@ class EnergyMeasurementWorker(QObject):
         if logger is not None:
             self.logger = logger.getChild("EnergyWorker")
         else:
-            self.logger = logging.getLogger("SPIm.EnergyWorker")
+            self.logger = logging.getLogger("ASPIR.EnergyWorker")
         self.logger.setLevel(logging.DEBUG)
 
         self._is_cancelled = False

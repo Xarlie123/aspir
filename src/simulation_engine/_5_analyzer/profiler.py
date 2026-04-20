@@ -21,7 +21,7 @@ from torch.profiler import profile, record_function, ProfilerActivity, tensorboa
 
 class PipelineProfiler:
     """
-    Profiler for the SPIm pipeline to detect performance bottlenecks.
+    Profiler for the ASPIR pipeline to detect performance bottlenecks.
 
     Profiles:
     - Reconstruction (CPU)
@@ -43,7 +43,7 @@ class PipelineProfiler:
         if logger:
             self.logger = logger.getChild("PipelineProfiler")
         else:
-            self.logger = logging.getLogger("SPIm.PipelineProfiler")
+            self.logger = logging.getLogger("ASPIR.PipelineProfiler")
 
         self._last_results = None
         self._trace_dir = None

@@ -22,7 +22,7 @@ class VisualNoiseAnalysisWidget(QtWidgets.QWidget, Ui_Visual_Noise_Analysis):
         if logger is not None:
             self.logger = logger.getChild("VisualNoiseAnalysisWidget")
         else:
-            self.logger = logging.getLogger("SPIm.VisualNoiseAnalysisWidget")
+            self.logger = logging.getLogger("ASPIR.VisualNoiseAnalysisWidget")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug("Initializing VisualNoiseAnalysisWidget")
 

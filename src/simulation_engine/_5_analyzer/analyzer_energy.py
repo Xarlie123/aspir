@@ -116,7 +116,7 @@ class EnergyAnalyzer:
             pmlib_server_port: PMLib server port (for Jetson)
             logger: Logger instance
         """
-        self.logger = logger or logging.getLogger("SPIm.EnergyAnalyzer")
+        self.logger = logger or logging.getLogger("ASPIR.EnergyAnalyzer")
 
         self.model = model
         self.device = device

@@ -41,7 +41,7 @@ class TimingAnalysisPage(QWidget):
         if logger:
             self.logger = logger.getChild("TimingAnalysisPage")
         else:
-            self.logger = logging.getLogger("SPIm.TimingAnalysisPage")
+            self.logger = logging.getLogger("ASPIR.TimingAnalysisPage")
 
         # Data storage
         self._timing_data = {}

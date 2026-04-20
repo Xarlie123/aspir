@@ -36,7 +36,7 @@ class ArchitectureConfigWidget(QWidget):
         if logger:
             self.logger = logger.getChild("ArchitectureConfigWidget")
         else:
-            self.logger = logging.getLogger("SPIm.ArchitectureConfigWidget")
+            self.logger = logging.getLogger("ASPIR.ArchitectureConfigWidget")
 
         self._current_model: Optional[str] = None
         self._param_widgets: Dict[str, tuple] = {}  # name -> (widget, ParamSpec)

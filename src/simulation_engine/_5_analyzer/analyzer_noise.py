@@ -19,7 +19,7 @@ class NoiseAnalyzer:
 
     def __init__(self, originals, noisy, reconstructions, data_format=None):
         # Set up a logger for noise analysis
-        self.logger = logging.getLogger("SPIm.NoiseAnalyzer")
+        self.logger = logging.getLogger("ASPIR.NoiseAnalyzer")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug(
             "Initializing NoiseAnalyzer: n_originals=%d, n_noisy=%d, n_recon=%d",

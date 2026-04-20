@@ -167,7 +167,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         if logger is not None:
             self.logger = logger.getChild("VisualPostprocessorWidget")
         else:
-            self.logger = logging.getLogger("SPIm.VisualPostprocessorWidget")
+            self.logger = logging.getLogger("ASPIR.VisualPostprocessorWidget")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug("Initializing VisualPostprocessorWidget")
 

@@ -44,11 +44,11 @@ class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
         super().__init__(parent)
         self.setupUi(self)
 
-        # Set up logger: use provided or default SPIm logger
+        # Set up logger: use provided or default ASPIR logger
         if logger is not None:
             self.logger = logger.getChild("NNControlWidget")
         else:
-            self.logger = logging.getLogger("SPIm.NNControlWidget")
+            self.logger = logging.getLogger("ASPIR.NNControlWidget")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug("Initializing NNControlWidget")
 

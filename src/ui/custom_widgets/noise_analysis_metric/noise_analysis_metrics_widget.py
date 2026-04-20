@@ -40,7 +40,7 @@ class NoiseAnalysisMetricsWidget(QtWidgets.QWidget, Ui_Analisis_Ruido_metricas):
         if logger is not None:
             self.logger = logger.getChild("NoiseAnalysisMetricsWidget")
         else:
-            self.logger = logging.getLogger("SPIm.NoiseAnalysisMetricsWidget")
+            self.logger = logging.getLogger("ASPIR.NoiseAnalysisMetricsWidget")
         self.logger.setLevel(logging.DEBUG)
 
         # Scenes

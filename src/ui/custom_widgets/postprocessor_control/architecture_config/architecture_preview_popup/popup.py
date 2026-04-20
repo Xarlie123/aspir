@@ -152,7 +152,7 @@ class ArchitecturePreviewPopup(QDialog):
         if logger:
             self.logger = logger.getChild("ArchitecturePreviewPopup")
         else:
-            self.logger = logging.getLogger("SPIm.ArchitecturePreviewPopup")
+            self.logger = logging.getLogger("ASPIR.ArchitecturePreviewPopup")
 
         # State
         self._pdf_path: Optional[str] = None

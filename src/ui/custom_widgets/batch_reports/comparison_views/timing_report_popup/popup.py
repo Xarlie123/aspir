@@ -55,7 +55,7 @@ class BatchTimingReportPopup(QDialog):
         if logger:
             self.logger = logger.getChild("BatchTimingReportPopup")
         else:
-            self.logger = logging.getLogger("SPIm.BatchTimingReportPopup")
+            self.logger = logging.getLogger("ASPIR.BatchTimingReportPopup")
 
         self._tests = tests
         self._current_test_idx = current_test_idx

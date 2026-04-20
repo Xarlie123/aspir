@@ -31,7 +31,7 @@ class TimingReportPopup(QDialog):
         if logger:
             self.logger = logger.getChild("TimingReportPopup")
         else:
-            self.logger = logging.getLogger("SPIm.TimingReportPopup")
+            self.logger = logging.getLogger("ASPIR.TimingReportPopup")
 
         # Data storage
         self._timing_data = {}

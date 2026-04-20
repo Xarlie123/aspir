@@ -33,7 +33,7 @@ class QualityMetricsPage(QWidget):
         if logger:
             self.logger = logger.getChild("QualityMetricsPage")
         else:
-            self.logger = logging.getLogger("SPIm.QualityMetricsPage")
+            self.logger = logging.getLogger("ASPIR.QualityMetricsPage")
 
         # Data storage
         self._orig_images = []

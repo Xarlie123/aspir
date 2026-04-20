@@ -36,7 +36,7 @@ class ProfilerResultsPopup(QDialog):
         if logger:
             self.logger = logger.getChild("ProfilerResultsPopup")
         else:
-            self.logger = logging.getLogger("SPIm.ProfilerResultsPopup")
+            self.logger = logging.getLogger("ASPIR.ProfilerResultsPopup")
 
         self.simulation = simulation
         self._results = None

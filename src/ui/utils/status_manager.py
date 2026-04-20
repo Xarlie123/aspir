@@ -22,7 +22,7 @@ class StatusManager(QObject):
         if logger is not None:
             self.logger = logger.getChild("StatusManager")
         else:
-            self.logger = logging.getLogger("SPIm.StatusManager")
+            self.logger = logging.getLogger("ASPIR.StatusManager")
 
         self._current_task = None
         self._is_busy = False

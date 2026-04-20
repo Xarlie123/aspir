@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         # Initialize logging system using LogManager
         self.log_manager = get_log_manager()
-        self.logger = self.log_manager.setup_logging("SPIm")
+        self.logger = self.log_manager.setup_logging("ASPIR")
         self.logger.debug("Initializing MainWindow")
 
         # UI + simulation

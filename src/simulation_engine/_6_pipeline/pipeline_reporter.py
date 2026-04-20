@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class PipelineReporter:
     """
-    Generatestes an HTML report from precomputed SPIm pipeline results.
+    Generatestes an HTML report from precomputed ASPIR pipeline results.
     Each result dict must contain:
       - 'name': str
       - 'params': dict

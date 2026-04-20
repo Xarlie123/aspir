@@ -1,5 +1,5 @@
 """
-Module to execute the SPIm simulation pipeline based on a YAML configuration.
+Module to execute the ASPIR simulation pipeline based on a YAML configuration.
 Handles loading datasets, generating masks (with nested applicator), instantiating applicators,
 performing progress callbacks, measuring per-image and full-dataset performance,
 and returning results.
@@ -32,7 +32,7 @@ def load_tests(cfg_path):
 
 def execute_pipeline(tests, progress_per_task=None, progress_overall=None):
     """
-    Run the SPIm pipeline given test configurations.
+    Run the ASPIR pipeline given test configurations.
     Reads 'size_px' from YAML (ir_beam) or ignores for single/folder types.
     """
     sim = Simulation()

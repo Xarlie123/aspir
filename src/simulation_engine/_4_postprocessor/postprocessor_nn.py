@@ -304,11 +304,11 @@ class PostprocessorNN(Postprocessor):
     ):
         super().__init__()
 
-        # Set up logger: use provided or root SPIm logger
+        # Set up logger: use provided or root ASPIR logger
         if logger is not None:
             self.logger = logger.getChild("PostprocessorNN")
         else:
-            self.logger = logging.getLogger("SPIm.PostprocessorNN")
+            self.logger = logging.getLogger("ASPIR.PostprocessorNN")
         self.logger.setLevel(logging.DEBUG)
         self.logger.debug("Initializing PostprocessorNN")
 

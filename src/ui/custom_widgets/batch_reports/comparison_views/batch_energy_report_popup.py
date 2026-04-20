@@ -52,7 +52,7 @@ class BatchEnergyReportPopup(QDialog):
         if logger:
             self.logger = logger.getChild("BatchEnergyReportPopup")
         else:
-            self.logger = logging.getLogger("SPIm.BatchEnergyReportPopup")
+            self.logger = logging.getLogger("ASPIR.BatchEnergyReportPopup")
 
         self._tests: List[Dict[str, Any]] = []
 

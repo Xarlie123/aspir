@@ -88,7 +88,7 @@ class LogManager:
         except Exception as e:
             print(f"Warning: Could not save log config: {e}")
 
-    def setup_logging(self, app_name: str = "SPIm") -> logging.Logger:
+    def setup_logging(self, app_name: str = "ASPIR") -> logging.Logger:
         """
         Setup the logging system.
 

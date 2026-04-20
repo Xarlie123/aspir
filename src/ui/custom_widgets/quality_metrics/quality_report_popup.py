@@ -33,7 +33,7 @@ class QualityReportPopup(QDialog):
         if logger:
             self.logger = logger.getChild("QualityReportPopup")
         else:
-            self.logger = logging.getLogger("SPIm.QualityReportPopup")
+            self.logger = logging.getLogger("ASPIR.QualityReportPopup")
 
         # Data storage
         self.metrics_data = {}
