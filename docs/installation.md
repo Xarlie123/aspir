@@ -4,9 +4,18 @@ ASPIR can be installed locally or run via Docker. Docker is recommended for most
 
 ## Requirements
 
-- Python 3.10+
-- NVIDIA GPU with NVIDIA CUDA 12.4 (for GPU acceleration)
-- 8GB+ RAM recommended
+- Python 3.10+ (tested against 3.10, 3.11 and 3.12)
+- NVIDIA GPU with CUDA 12.4 runtime (optional — the project works on CPU
+  too; see the CPU-only instructions below)
+- 8 GB+ RAM recommended
+- Poppler (only needed by the "Preview Architecture" diagram renderer):
+  - Linux: `sudo apt install poppler-utils`
+  - Windows: download a Poppler build and add its `bin/` to `PATH`
+  - macOS: `brew install poppler`
+
+Dependencies are declared in `pyproject.toml` (PEP 621) as the single
+source of truth. Previous `requirements_*.txt` files have been
+removed — a `pip install -e .` picks everything up.
 
 ## Option 1: Docker (Recommended)
 
@@ -37,6 +46,11 @@ docker run --rm -it \
   -v "$(pwd)":/app \
   aspir
 ```
+
+> **RAPL CPU-energy note (Linux only)**: Intel RAPL registers are root
+> by default. If you want the Energy analysis to read CPU power, run
+> `sudo chmod -R a+r /sys/class/powercap/intel-rapl/` once per boot
+> before launching Docker.
 
 ### Run on Windows
 
@@ -80,9 +94,10 @@ source .venv/bin/activate
 # Install the project and its dependencies (editable)
 pip install -e .
 
-# Run (working directory MUST be src/)
-cd src
-python main.py
+# Run (either approach works after the editable install)
+cd src && python main.py       # historical workflow
+# or
+python -m main                 # from anywhere in the repo
 ```
 
 ### Windows (CUDA)
@@ -100,13 +115,17 @@ cd src
 python main.py
 ```
 
-### Windows (CPU-only)
+### CPU-only (Linux or Windows)
 
-For machines without an NVIDIA GPU:
+For machines without an NVIDIA GPU. Ask pip to look at PyTorch's
+CPU wheel index before PyPI so the CPU build of torch is selected:
 
-```powershell
+```bash
 pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
 ```
+
+The `[cpu]` extra exists only as a marker — the CPU wheel selection is
+driven by `--extra-index-url`.
 
 ### NVIDIA Jetson (JetPack 6.2 / CUDA 12.6)
 
@@ -134,23 +153,40 @@ pip install -e .[dev,docs]     # both
 
 ## Optional Tools
 
-These are pre-installed in Docker. For local installation, configure paths via **Settings → External Applications**:
+These are pre-installed in Docker. For local installation, configure
+paths via **Settings → External Applications…** in the menu bar.
 
-| Tool | Purpose | Installation |
-|------|---------|--------------|
-| pdflatex | DNN architecture diagrams | [TeX Live](https://www.tug.org/texlive/) or [MiKTeX](https://miktex.org/) |
-| nsys | NVIDIA profiling | [Nsight Systems](https://developer.nvidia.com/nsight-systems) |
-| kaggle | Dataset downloads | `pip install kaggle` |
+| Tool      | Purpose                          | Installation                                                              |
+|-----------|----------------------------------|---------------------------------------------------------------------------|
+| pdflatex  | DNN architecture diagrams         | [TeX Live](https://www.tug.org/texlive/) or [MiKTeX](https://miktex.org/) |
+| poppler   | Convert pdflatex output to PNG   | `apt install poppler-utils` / Poppler-windows / `brew install poppler`    |
+| nsys      | NVIDIA profiling                  | [Nsight Systems](https://developer.nvidia.com/nsight-systems)             |
+| kaggle    | Dataset downloads                 | included in the base install (`kaggle` is a core dependency)              |
 
 ## Verifying Installation
 
-After launching ASPIR, you should see the main window with three mode tabs:
+After launching ASPIR, the main window opens with a mode selector at
+the top offering three modes:
 
-1. **Single Test** - Interactive experimentation
-2. **Batch Test** - Automated parameter sweeps
-3. **Batch Reports** - Results analysis
+1. **Single Test** — interactive step-by-step experimentation (Dataset
+   → Masks → Test → DNN → Reports wizard).
+2. **Batch Test** — queue several test configurations and run them
+   sequentially or in parallel.
+3. **Batch Reports** — load one or more `.batch_analysis_report` files
+   and compare results (quality, timing, energy, training curves,
+   Samples Grid / Visual Comparison exports).
 
-Try loading a sample image from **Dataset → From Image** to verify everything works.
+Quick smoke-tests:
+
+- **Dataset**: stay in *Single Test*, pick **Load Single Image** on
+  the left menu of the *Dataset* step and point it at any PNG/JPG to
+  load a one-image dataset.
+- **GPU**: open **Settings → Log Settings…** and watch the first log
+  lines: the message `CUDA available: <device-name>` confirms PyTorch
+  sees your GPU.
+- **External tools**: open **Settings → External Applications…** to
+  see which optional tools (pdflatex, poppler, nsys, kaggle) were
+  auto-detected on your `PATH`.
 
 ## Troubleshooting
 
@@ -168,15 +204,20 @@ On Linux, ensure `xhost +local:` was executed before running the container.
 
 ### Import errors
 
-Make sure you're running from the `src/` directory:
+`python src/main.py` does **not** work — the codebase uses absolute
+imports like `from simulation_engine._1_dataset_gen…`, which only
+resolve when `src/` is on `sys.path`. Two ways to achieve that:
 
 ```bash
-cd src
-python main.py  # Correct
+cd src && python main.py      # historical workflow (no install needed)
+# OR after `pip install -e .`
+python -m main                # works from any directory
 ```
 
-Not from the repository root:
+### Architecture preview never finishes
 
-```bash
-python src/main.py  # Wrong - imports will fail
-```
+The "Preview Architecture" popup pipes LaTeX through `pdflatex` and
+then `pdf2image` (Poppler) to produce a PNG. If either is missing a
+warning appears in the log. Install the missing tool with the commands
+from the **Optional Tools** table above, or, in Docker, everything is
+already wired.
