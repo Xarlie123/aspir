@@ -127,21 +127,53 @@ pip install -e . --extra-index-url https://download.pytorch.org/whl/cpu
 The `[cpu]` extra exists only as a marker — the CPU wheel selection is
 driven by `--extra-index-url`.
 
-### NVIDIA Jetson (JetPack 6.2 / CUDA 12.6)
+### NVIDIA Jetson (JetPack 6.x / CUDA 12.6)
 
-PyTorch for aarch64 is not on PyPI; install it first from the Jetson AI Lab
-index, then the rest of the project:
+The stock PyTorch aarch64 wheels on PyPI are compiled against **CUDA 13**,
+which fails at runtime on JetPack 6.x (the driver is 12.6). Use the NVIDIA
+Jetson-AI-Lab index, pin torch to the 2.8 series, and keep NumPy on 1.x
+— the `[jetson]` extra already enforces these bounds, but you need to tell
+pip where to find the Jetson-specific wheel.
 
 ```bash
-# 1. Torch for Jetson (pick the wheel that matches your JetPack + Python)
-pip install --extra-index-url https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ torch
+# 1. System packages Jetson needs (PyQt5 + poppler for Architecture Preview).
+sudo apt install -y python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtopengl \
+                    poppler-utils
 
-# 2. The rest of the project plus the Jetson extras
-pip install -e .[jetson]
+# 2. Virtualenv that inherits the system site-packages (so PyQt5 is visible
+#    without rebuilding it from source — pip would otherwise try for ~40 min).
+python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+
+# 3. Torch + torchvision from Jetson-AI-Lab (compiled against CUDA 12.6).
+pip install --index-url       https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ \
+            --extra-index-url https://pypi.org/simple \
+            "torch==2.8.0" "torchvision>=0.23,<0.24"
+
+# 4. ASPIR plus the Jetson extras. ``--upgrade-strategy only-if-needed`` stops
+#    pip from "helpfully" pulling torch 2.11 (cu13) just because some other
+#    dependency accepts it.
+pip install -e .[jetson] --upgrade-strategy only-if-needed
+
+# 5. Smoke-test CUDA
+python -c "
+import torch
+print('Torch :', torch.__version__)
+print('CUDA? :', torch.cuda.is_available())
+if torch.cuda.is_available():
+    print('Device:', torch.cuda.get_device_name(0))
+"
 ```
 
-TensorRT comes pre-installed with JetPack — do not try to `pip install` it
-on the device.
+TensorRT comes pre-installed with JetPack — do not try to ``pip install`` it
+on the device. Likewise, do **not** install the x86 Docker image on Jetson;
+the CUDA layer is host-specific and the build will fail on the first
+``apt-get install``.
+
+Once NVIDIA ships a JetPack with the CUDA 13 driver and Jetson-AI-Lab
+publishes torch wheels compiled against NumPy 2, the `[jetson]` caps in
+`pyproject.toml` can be relaxed.
 
 ### Developer extras
 

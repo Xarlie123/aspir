@@ -108,15 +108,37 @@ cpu = [
     "torch>=2.2",
 ]
 
-# NVIDIA Jetson (L4T / JetPack 6.2). The aarch64 PyTorch wheel is NOT on PyPI;
-# install it first from the NVIDIA index, then:
+# NVIDIA Jetson (L4T / JetPack 6.x).
 #
-#     pip install --extra-index-url https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ torch
-#     pip install ".[jetson]"
+# Why the tight torch/torchvision pins?
+#   JetPack 6.x ships the CUDA 12.6 driver. PyTorch 2.9+ is compiled against
+#   CUDA 13 (``torch-2.11.0+cu130``) and fails at runtime with
+#   "The NVIDIA driver on your system is too old" on Jetson. The last series
+#   still compiled against CUDA 12.6 is 2.8.x / torchvision 0.23.x, served
+#   by the NVIDIA Jetson-AI-Lab index at ``jp6/cu126``.
 #
-# See docs/installation.md for the full Jetson setup.
+# Why pin numpy<2?
+#   The Jetson 2.8.x torch wheels were built against NumPy 1.x. Running
+#   them with NumPy 2.x raises "module compiled using NumPy 1.x cannot be
+#   run in NumPy 2.2.6" and the torch↔numpy bridge (``torch.from_numpy`` /
+#   ``tensor.numpy()``) silently breaks — which ASPIR uses on every
+#   dataset / reconstruction / metric path.
+#
+# Install recipe (run inside a venv with --system-site-packages so the
+# apt-provided PyQt5 is visible; see docs/installation.md for details):
+#
+#     pip install --index-url       https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ \
+#                 --extra-index-url https://pypi.org/simple \
+#                 "torch==2.8.0" "torchvision>=0.23,<0.24"
+#     pip install -e ".[jetson]" --upgrade-strategy only-if-needed
+#
+# Relax the bounds once NVIDIA ships a JetPack with CUDA 13 driver and the
+# matching Jetson-AI-Lab torch wheels no longer need NumPy 1.x.
 jetson = [
     "jetson-stats>=4.3",
+    "torch>=2.8,<2.9",
+    "torchvision>=0.23,<0.24",
+    "numpy>=1.24,<2",
 ]
 
 # Linting and architecture checks. Install with:
