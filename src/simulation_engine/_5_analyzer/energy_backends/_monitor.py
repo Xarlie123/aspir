@@ -14,6 +14,9 @@ from simulation_engine._5_analyzer.energy_backends._base import (
     EnergyReading,
 )
 from simulation_engine._5_analyzer.energy_backends._jetson import JetsonSysfsBackend
+from simulation_engine._5_analyzer.energy_backends._jtop_energy import (
+    JtopEnergyBackend,
+)
 from simulation_engine._5_analyzer.energy_backends._nvml import NVMLBackend
 from simulation_engine._5_analyzer.energy_backends._rapl import RAPLBackend
 
@@ -150,12 +153,19 @@ class EnergyMonitor:
         platform_info = self.detect_platform()
         self.logger.info(f"Detected platform: {platform_info}")
 
-        # Try Jetson first (pure Python sysfs backend)
+        # Try Jetson first. Prefer the jtop-based backend (handles every
+        # Orin / Xavier / Nano / TX2 variant via the jetson-stats daemon)
+        # and fall back to the pure-sysfs scanner only if jtop isn't
+        # available or its daemon isn't running.
         if self._enable_jetson and platform_info["is_jetson"]:
-            backend = JetsonSysfsBackend(logger=self.logger)
-            if backend.initialize():
-                self._backends.append(backend)
-                self.logger.info(f"Jetson energy monitoring enabled: {backend.device_name}")
+            for cls in (JtopEnergyBackend, JetsonSysfsBackend):
+                backend = cls(logger=self.logger)
+                if backend.initialize():
+                    self._backends.append(backend)
+                    self.logger.info(
+                        "Jetson energy monitoring enabled: %s", backend.device_name
+                    )
+                    break
 
         # Try NVIDIA GPU (NVML) - only if not on Jetson (to avoid conflicts)
         if self._enable_gpu and platform_info["has_nvidia_gpu"] and not platform_info["is_jetson"]:

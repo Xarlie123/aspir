@@ -15,6 +15,9 @@ from simulation_engine._5_analyzer.energy_backends._base import (
     EnergyReading,
 )
 from simulation_engine._5_analyzer.energy_backends._jetson import JetsonSysfsBackend
+from simulation_engine._5_analyzer.energy_backends._jtop_energy import (
+    JtopEnergyBackend,
+)
 from simulation_engine._5_analyzer.energy_backends._monitor import (
     EnergyMonitor,
     measure_energy,
@@ -29,6 +32,7 @@ __all__ = [
     "EnergyMonitor",
     "EnergyReading",
     "JetsonSysfsBackend",
+    "JtopEnergyBackend",
     "NVMLBackend",
     "RAPLBackend",
     "measure_energy",
