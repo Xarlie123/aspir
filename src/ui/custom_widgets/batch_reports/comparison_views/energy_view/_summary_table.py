@@ -73,6 +73,12 @@ def update_summary_table(view):
     has_gpu = gpu_e is not None and gpu_e > 0
     has_cpu = cpu_e is not None and cpu_e > 0
 
+    # Default column index — when no data is available for this test (the
+    # energy report wasn't enabled), none of the branches below populate
+    # the table, and the "Unit" column at the bottom must still have a
+    # valid col_idx to compare against.
+    col_idx = 1
+
     # If no per-backend data, fall back to combined data
     if not has_gpu and not has_cpu:
         combined_e = view._get_energy_value_combined(test)
