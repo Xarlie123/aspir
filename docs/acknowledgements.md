@@ -43,6 +43,10 @@ ASPIR is built on top of several open-source libraries. We gratefully acknowledg
 - **[OpenCV](https://opencv.org/)** — Image reading, writing, resizing, and color space conversion in dataset generators.
 - **[Pillow](https://python-pillow.org/)** — Image manipulation used in mask visualization and UI components.
 
+### Architecture Visualization
+
+- **[PlotNeuralNet](https://github.com/HarisIqbal88/PlotNeuralNet)** — TikZ/LaTeX style for rendering neural network architecture diagrams. ASPIR embeds the PlotNeuralNet macros to generate the "Preview Architecture" PDF for each registered model.
+
 ### GPU Monitoring and Profiling
 
 - **[pynvml](https://github.com/gpuopenanalytics/pynvml)** — Python bindings for the NVIDIA Management Library (NVML). Used for GPU power and energy measurement on NVIDIA desktop GPUs.
@@ -58,3 +62,7 @@ ASPIR is built on top of several open-source libraries. We gratefully acknowledg
 
 - **[Sphinx](https://www.sphinx-doc.org/)** with **[MyST Parser](https://myst-parser.readthedocs.io/)** — Documentation build system with Markdown support.
 - **[Read the Docs](https://readthedocs.org/)** — Documentation hosting platform.
+
+## UI Assets
+
+- **[Icons8](https://icons8.com)** — Toolbar and menu icons used throughout the ASPIR graphical interface.
