@@ -46,9 +46,10 @@ class QualityView(QWidget):
 
     # Chart type indices
     CHART_COMPARISON = 0
-    CHART_PER_IMAGE = 1
-    CHART_HISTOGRAM = 2
-    CHART_TABLE = 3
+    CHART_PSNR_VS_RATIO = 1
+    CHART_PER_IMAGE = 2
+    CHART_HISTOGRAM = 3
+    CHART_TABLE = 4
 
     def __init__(self, logger=None, parent=None):
         super().__init__(parent)
@@ -121,6 +122,7 @@ class QualityView(QWidget):
         self.chart_list.setMaximumWidth(220)
         self.chart_list.setMinimumWidth(180)
         self.chart_list.addItem("Quality Metrics Comparison")
+        self.chart_list.addItem("PSNR vs Sampling Ratio")
         self.chart_list.addItem("Metrics per Image")
         self.chart_list.addItem("Metrics Histogram")
         self.chart_list.addItem("Quality Metrics Table")
@@ -445,7 +447,10 @@ class QualityView(QWidget):
         show_ssim = self.ssim_checkbox.isChecked()
         show_lpips = self.lpips_checkbox.isChecked()
 
-        if not (show_psnr or show_ssim or show_lpips):
+        # PSNR-vs-Sampling-Ratio is PSNR-only by construction, so the
+        # metric checkboxes don't gate it.
+        if (chart_type != self.CHART_PSNR_VS_RATIO
+                and not (show_psnr or show_ssim or show_lpips)):
             ax = self.figure.add_subplot(111)
             ax.text(0.5, 0.5, "Select at least one metric",
                    ha='center', va='center', fontsize=14, color='#999')
@@ -457,6 +462,11 @@ class QualityView(QWidget):
 
         if chart_type == self.CHART_COMPARISON:
             self._draw_comparison_chart(show_psnr, show_ssim, show_lpips)
+        elif chart_type == self.CHART_PSNR_VS_RATIO:
+            # PSNR-only by design (the headline figure for the paper);
+            # the metric checkboxes are ignored on purpose, SSIM/LPIPS
+            # belong in the table.
+            self._draw_psnr_vs_sampling_chart()
         elif chart_type == self.CHART_PER_IMAGE:
             self._draw_per_image_chart(show_psnr, show_ssim, show_lpips)
         else:  # CHART_HISTOGRAM
@@ -910,6 +920,202 @@ class QualityView(QWidget):
             legend_kwargs['frameon'] = False  # No frame for below position
             ax.legend(legend_handles, legend_labels, loc='upper center',
                      bbox_to_anchor=(0.5, -0.15), ncol=n_metrics, **legend_kwargs)
+
+    # ------------------------------------------------------------------
+    # PSNR vs Sampling Ratio (paper-style figure)
+    # ------------------------------------------------------------------
+
+    # Markers/colours roughly mirror the user's hand-drawn spec:
+    # red for the raw linear reconstruction, green for the NN-denoised
+    # series. When several experiments are loaded the colours cycle
+    # through tab10 and the experiment name is appended to the legend.
+    _RECON_COLOR = '#d62728'
+    _DENOISED_COLOR = '#2ca02c'
+    # Used to colour-code experiments when several are loaded at once.
+    # Same hex tones as matplotlib's tab10 minus the red/green that
+    # already mean "recon" / "denoised" in the single-experiment case.
+    _MULTI_EXPERIMENT_PALETTE = (
+        '#1f77b4', '#9467bd', '#8c564b', '#e377c2',
+        '#7f7f7f', '#17becf', '#bcbd22', '#ff7f0e',
+    )
+
+    def _psnr_vs_sampling_rows(self) -> List[Dict[str, Any]]:
+        """Build per-test rows {experiment, beta, psnr_recons, psnr_denoised,
+        std_recons, std_denoised} using ``_n_patterns_for_test`` and
+        ``_n_pixels_for_test``. Tests missing either M or N (i.e. M/N can't
+        be computed) are dropped — the chart cannot place them on the axis.
+        """
+        rows: List[Dict[str, Any]] = []
+        for test in self._tests:
+            m = self._n_patterns_for_test(test)
+            n = self._n_pixels_for_test(test)
+            if not m or not n:
+                continue
+            beta = 100.0 * float(m) / float(n)
+
+            psnr_r = test.get("psnr_recons")
+            psnr_d = test.get("psnr_denoised")
+            if psnr_r is None and psnr_d is None:
+                continue
+
+            per_img = test.get("quality_per_image") or {}
+            std_r = std_d = None
+            try:
+                arr = per_img.get("psnr_noisy") or per_img.get("psnr_recons")
+                if arr:
+                    std_r = float(np.std(arr))
+            except Exception:
+                std_r = None
+            try:
+                arr = per_img.get("psnr_denoised")
+                if arr:
+                    std_d = float(np.std(arr))
+            except Exception:
+                std_d = None
+
+            rows.append({
+                "experiment": test.get("_experiment_name", ""),
+                "name": test.get("name", ""),
+                "beta": beta,
+                "psnr_recons": psnr_r,
+                "psnr_denoised": psnr_d,
+                "std_recons": std_r,
+                "std_denoised": std_d,
+            })
+        return rows
+
+    def _draw_psnr_vs_sampling_chart(self):
+        """Plot PSNR (dB) vs sampling ratio M/N (%) with one (recon,
+        denoised) pair per loaded experiment.
+
+        The headline figure for the paper: line + markers, real dB on Y,
+        true numeric M/N on X so the curvature is visible. Per-test
+        ±1σ shading is drawn when the experiment was exported with
+        ``quality_per_image`` arrays — otherwise we fall back to plain
+        markers without a band.
+        """
+        ax = self.figure.add_subplot(111)
+        rows = self._psnr_vs_sampling_rows()
+        if not rows:
+            ax.text(
+                0.5, 0.5,
+                "No tests with both M (num patterns) and N (img_size²)\n"
+                "available — re-run the batch with timing enabled or\n"
+                "make sure the report metadata carries dataset_info.",
+                ha='center', va='center', fontsize=12, color='#999',
+            )
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            ax.axis('off')
+            return
+
+        # Group rows by experiment so each experiment becomes one
+        # (recon, denoised) pair of lines.
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for row in rows:
+            grouped.setdefault(row["experiment"], []).append(row)
+
+        # Stable order: preserve the order experiments first appear.
+        exp_order: List[str] = []
+        for row in rows:
+            if row["experiment"] not in exp_order:
+                exp_order.append(row["experiment"])
+
+        single_exp = len(exp_order) == 1
+
+        for idx, exp_name in enumerate(exp_order):
+            exp_rows = sorted(grouped[exp_name], key=lambda r: r["beta"])
+            betas = [r["beta"] for r in exp_rows]
+            recon = [r["psnr_recons"] for r in exp_rows]
+            denoised = [r["psnr_denoised"] for r in exp_rows]
+            std_r = [r["std_recons"] for r in exp_rows]
+            std_d = [r["std_denoised"] for r in exp_rows]
+
+            if single_exp:
+                color_recon = self._RECON_COLOR
+                color_den = self._DENOISED_COLOR
+                lbl_recon = "Reconstructed (linear)"
+                lbl_den = "Denoised (NN post-processing)"
+            else:
+                base = self._MULTI_EXPERIMENT_PALETTE[
+                    idx % len(self._MULTI_EXPERIMENT_PALETTE)
+                ]
+                color_recon = base
+                color_den = base
+                short = exp_name[:18] + ("…" if len(exp_name) > 18 else "")
+                lbl_recon = f"{short} — Recon"
+                lbl_den = f"{short} — Denoised"
+
+            # Reconstructed series — dashed line, circle markers
+            valid_r = [(b, p, s) for b, p, s in zip(betas, recon, std_r)
+                       if p is not None]
+            if valid_r:
+                bs = [v[0] for v in valid_r]
+                ps = [v[1] for v in valid_r]
+                ss = [v[2] for v in valid_r]
+                ax.plot(bs, ps, marker='o', linestyle='--', linewidth=1.5,
+                        color=color_recon, label=lbl_recon, markersize=7,
+                        markerfacecolor=color_recon, markeredgecolor='white',
+                        markeredgewidth=1.0)
+                if all(s is not None for s in ss):
+                    lo = [p - s for p, s in zip(ps, ss)]
+                    hi = [p + s for p, s in zip(ps, ss)]
+                    ax.fill_between(bs, lo, hi, color=color_recon, alpha=0.15)
+
+            # Denoised series — solid line, square markers
+            valid_d = [(b, p, s) for b, p, s in zip(betas, denoised, std_d)
+                       if p is not None]
+            if valid_d:
+                bs = [v[0] for v in valid_d]
+                ps = [v[1] for v in valid_d]
+                ss = [v[2] for v in valid_d]
+                ax.plot(bs, ps, marker='s', linestyle='-', linewidth=2.0,
+                        color=color_den, label=lbl_den, markersize=7,
+                        markerfacecolor=color_den, markeredgecolor='white',
+                        markeredgewidth=1.0)
+                if all(s is not None for s in ss):
+                    lo = [p - s for p, s in zip(ps, ss)]
+                    hi = [p + s for p, s in zip(ps, ss)]
+                    ax.fill_between(bs, lo, hi, color=color_den, alpha=0.15)
+
+        # Axis cosmetics. Titles/labels run through ``_apply_axes_config``
+        # so the font-size + label-pad knobs from the chart config dialog
+        # affect this plot too.
+        self._apply_axes_config(
+            ax,
+            default_title="PSNR vs Sampling Ratio",
+            default_xlabel="Sampling ratio M/N (%)",
+            default_ylabel="PSNR (dB)",
+        )
+        ax.grid(True, alpha=0.3, linestyle=':')
+
+        # Legend lives inside the plot by default (the trend usually
+        # leaves room in the upper-left corner). Honour the global
+        # legend-position setting from the chart config so users can
+        # move it around if their data fills the axes.
+        legend_cfg = self._chart_config['legend']
+        legend_kwargs = {
+            'fontsize': legend_cfg['fontsize'],
+            'frameon': legend_cfg['frameon'],
+            'shadow': legend_cfg['shadow'],
+            'fancybox': legend_cfg['fancybox'],
+            'framealpha': legend_cfg['framealpha'],
+        }
+        loc_map = {
+            0: 'upper right', 1: 'upper left',
+            2: 'lower right', 3: 'lower left',
+        }
+        legend_pos = legend_cfg['position']
+        if legend_pos in loc_map:
+            ax.legend(loc=loc_map[legend_pos],
+                      ncol=legend_cfg['ncol'], **legend_kwargs)
+        elif legend_pos == 4:
+            ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5),
+                      ncol=legend_cfg['ncol'], **legend_kwargs)
+        else:
+            legend_kwargs['frameon'] = False
+            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
+                      ncol=2, **legend_kwargs)
 
     def _draw_per_image_chart(self, show_psnr: bool, show_ssim: bool, show_lpips: bool):
         """Draw Metrics per Image chart (line charts showing per-image values)."""
