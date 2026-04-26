@@ -14,7 +14,8 @@ from matplotlib.figure import Figure
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFileDialog, QMessageBox, QGroupBox, QGridLayout,
-    QSplitter, QListWidget, QDialog, QDialogButtonBox, QMenu, QComboBox
+    QSplitter, QListWidget, QDialog, QDialogButtonBox, QMenu, QComboBox,
+    QApplication,
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -340,6 +341,14 @@ class TimingView(QWidget):
             "font-weight: bold; color: #0078d7;"
         )
 
+        # Right-click → Copy table, mirroring the Energy Summary
+        # behaviour so the user has a consistent way to drop the
+        # numbers into a spreadsheet or LaTeX table.
+        self.summary_group.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.summary_group.customContextMenuRequested.connect(
+            self._show_summary_copy_menu
+        )
+
         right_layout.addWidget(self.summary_group)
 
         # Info label
@@ -389,6 +398,54 @@ class TimingView(QWidget):
     def _on_test_changed(self, index: int):
         """Handle test selection change for summary table."""
         self._update_summary_table()
+
+    def _show_summary_copy_menu(self, pos):
+        """Right-click handler for the Timing Summary group."""
+        menu = QMenu(self)
+        copy_action = menu.addAction("Copy table")
+        action = menu.exec_(self.summary_group.mapToGlobal(pos))
+        if action == copy_action:
+            self._copy_summary_table()
+
+    def _copy_summary_table(self) -> None:
+        """Copy the Timing Summary as TSV onto the clipboard.
+
+        The header row carries the active test's name (so the user
+        knows which row of the chart they pasted) and the column
+        labels match the on-screen ``CPU / GPU / Speedup`` triplet.
+        Data rows pull verbatim from ``_summary_labels`` so whatever
+        the UI shows — including ``-`` placeholders — is what lands
+        in the clipboard.
+        """
+        idx = self.test_combo.currentIndex()
+        test_name = (
+            self.test_combo.currentText() if idx >= 0 else "(no test)"
+        )
+
+        rows = [
+            ("T_mask_projection:", "t_acq"),
+            ("T_reconstruction:",  "t_recon"),
+            ("T_inference:",       "t_inf"),
+            ("T_total:",           "t_total"),
+        ]
+
+        lines = [
+            f"Timing Summary\t{test_name}",
+            "Metric\tCPU\tGPU\tSpeedup",
+        ]
+        for label_text, key in rows:
+            cpu = self._summary_labels.get(f"{key}_cpu")
+            gpu = self._summary_labels.get(f"{key}_gpu")
+            sp = self._summary_labels.get(f"{key}_speedup")
+            lines.append("\t".join([
+                label_text,
+                cpu.text() if cpu is not None else "-",
+                gpu.text() if gpu is not None else "-",
+                sp.text() if sp is not None else "-",
+            ]))
+
+        QApplication.clipboard().setText("\n".join(lines))
+        self.logger.info("Timing summary copied to clipboard")
 
     def _on_chart_type_changed(self, index: int):
         """Handle chart type selection change."""
