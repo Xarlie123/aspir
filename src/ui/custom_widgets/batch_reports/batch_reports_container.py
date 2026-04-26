@@ -9,13 +9,15 @@ from typing import Optional, List
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPushButton,
     QLabel, QListWidget, QListWidgetItem, QTabWidget, QGroupBox,
-    QFileDialog, QMessageBox, QSizePolicy, QFrame, QMenu, QInputDialog
+    QFileDialog, QMessageBox, QSizePolicy, QFrame, QMenu, QInputDialog,
+    QDialog,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCursor
 
 from ui.utils.file_formats import BATCH_TESTS_DIR, FileExtensions
 from ui.custom_widgets.batch_reports.batch_report_model import BatchReportModel, LoadedExperiment
+from ui.custom_widgets.batch_reports.remeasure import RemeasureDialog
 from ui.custom_widgets.batch_reports.comparison_views.summary_view import SummaryView
 from ui.custom_widgets.batch_reports.comparison_views.quality_view import QualityView
 from ui.custom_widgets.batch_reports.comparison_views.quality_preview_popup import QualityPreviewPopup
@@ -452,6 +454,23 @@ class BatchReportsContainer(QWidget):
 
         menu.addSeparator()
 
+        # Re-measure timing & energy (multi-select aware)
+        selected_indices = self._selected_experiment_indices_for_remeasure()
+        remeasure_action = menu.addAction(
+            f"Re-measure timing & energy… ({len(selected_indices)} selected)"
+            if selected_indices else
+            "Re-measure timing & energy…"
+        )
+        remeasure_action.setEnabled(bool(selected_indices))
+        if not selected_indices and has_item:
+            remeasure_action.setToolTip(
+                "Requires an experiment exported with models "
+                "(Reports + models or higher)."
+            )
+        remeasure_action.triggered.connect(self._on_remeasure_triggered)
+
+        menu.addSeparator()
+
         # Remove
         remove_action = menu.addAction("Remove")
         remove_action.setEnabled(has_item)
@@ -459,6 +478,62 @@ class BatchReportsContainer(QWidget):
 
         # Show menu at cursor position
         menu.exec_(self.experiment_list.mapToGlobal(position))
+
+    def _selected_experiment_indices_for_remeasure(self) -> List[int]:
+        """Selected experiments that have a ``models/`` sibling directory.
+
+        Re-measurement needs the trained weights, so we silently skip rows
+        exported as REPORTS_ONLY. Order matches the visual selection so the
+        dialog and toast messages line up with what the user clicked.
+        """
+        indices: List[int] = []
+        for item in self.experiment_list.selectedItems():
+            idx = item.data(Qt.UserRole)
+            if not isinstance(idx, int):
+                continue
+            exp = self.model.get_experiment(idx)
+            if exp is None:
+                continue
+            level = (exp.export_level or "").upper()
+            if "MODELS" not in level and "ALL_DATA" not in level:
+                continue
+            if not (exp.path.parent / "models").exists():
+                continue
+            indices.append(idx)
+        return indices
+
+    def _on_remeasure_triggered(self) -> None:
+        """Open the re-measurement dialog for the current selection."""
+        indices = self._selected_experiment_indices_for_remeasure()
+        if not indices:
+            QMessageBox.information(
+                self,
+                "Nothing to re-measure",
+                "Select at least one experiment exported with models "
+                "(Reports + models or higher)."
+            )
+            return
+
+        sources = []
+        for idx in indices:
+            exp = self.model.get_experiment(idx)
+            if exp is not None:
+                sources.append((idx, exp.path))
+
+        dialog = RemeasureDialog(sources, logger=self.logger, parent=self)
+        if dialog.exec_() != QDialog.Accepted:
+            # User closed without finishing — anything that did write has
+            # already been logged but won't be auto-loaded; that's fine.
+            written = dialog.written_paths()
+        else:
+            written = dialog.written_paths()
+
+        for path in written:
+            try:
+                self.model.load_experiment(path)
+                self.logger.info("Auto-loaded re-measured report: %s", path)
+            except Exception as exc:  # defensive — load_experiment also logs
+                self.logger.warning("Failed to auto-load %s: %s", path, exc)
 
     def _rename_experiment(self, index: int):
         """Rename an experiment at the given index."""
@@ -534,7 +609,16 @@ class BatchReportsContainer(QWidget):
                 data_type = "Reports + models"
             else:
                 data_type = "Reports only"
-            item.setText(f"{exp.name}\n  {exp.test_count} tests · {data_type}")
+            # Badge re-measured experiments so users don't mistake them for
+            # the originals when several copies of the same batch are loaded.
+            remeasured_device = (exp.metadata or {}).get("remeasured_device")
+            badge = f" · re-executed ({remeasured_device})" if remeasured_device else ""
+            item.setText(f"{exp.name}\n  {exp.test_count} tests · {data_type}{badge}")
+            if remeasured_device:
+                item.setToolTip(
+                    f"Re-measured on '{remeasured_device}' at "
+                    f"{(exp.metadata or {}).get('remeasured_at', '?')}"
+                )
             item.setData(Qt.UserRole, i)
             self.experiment_list.addItem(item)
 

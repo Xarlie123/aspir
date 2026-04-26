@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from ui.custom_widgets.batch_test.test_config_model import BatchTestConfig, ExportLevel
-from ui.utils.file_formats import BATCH_TESTS_DIR, BatchAnalysisReport, FileExtensions
+from ui.utils.file_formats import (
+    BATCH_TESTS_DIR,
+    BatchAnalysisReport,
+    FileExtensions,
+    safe_test_dirname,
+)
 
 
 def get_unique_output_dir(base_name: str) -> Path:
@@ -93,7 +98,7 @@ def export_models(
         config = model_data["config"]
 
         # Safe name for files
-        safe_name = config.name.replace(" ", "_").replace("/", "-")
+        safe_name = safe_test_dirname(config.name)
 
         # Export PyTorch model
         pt_path = os.path.join(models_dir, f"{safe_name}.pt")
@@ -164,7 +169,7 @@ def export_datasets(
     # Export per-test data
     for entry in test_data.values():
         config = entry["config"]
-        safe_name = config.name.replace(" ", "_").replace("/", "-")
+        safe_name = safe_test_dirname(config.name)
         test_dir = os.path.join(data_dir, safe_name)
         os.makedirs(test_dir, exist_ok=True)
 

@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
 
+from ui.utils.file_formats import safe_test_dirname
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
     ChartConfigPopup, CustomNavigationToolbar
 )
@@ -549,8 +550,7 @@ class QualityView(QWidget):
                     batch_dir = test.get("_batch_dir")
                     name = test.get("_original_name", test.get("name", ""))
                     if batch_dir and name:
-                        safe = "".join(c if c.isalnum() or c in "._-" else "_"
-                                       for c in name)
+                        safe = safe_test_dirname(name)
                         npz = Path(batch_dir) / "data" / safe / "test_images.npz"
                         if npz.exists():
                             with np.load(str(npz)) as data:

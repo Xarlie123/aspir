@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
+from ui.utils.file_formats import safe_test_dirname
 from ui.custom_widgets.batch_reports.comparison_views.figure_export_popups._base import (
     BaseFigureExportPopup,
 )
@@ -167,7 +168,7 @@ class VisualComparisonPopup(BaseFigureExportPopup):
             return None
 
         batch_dir = Path(batch_dir)
-        safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in original_name)
+        safe_name = safe_test_dirname(original_name)
         masks_path = batch_dir / "data" / safe_name / "masks.npz"
 
         if not masks_path.exists():

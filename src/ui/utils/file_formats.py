@@ -338,6 +338,23 @@ class ModelExport:
 # Utility Functions
 # =============================================================================
 
+def safe_test_dirname(name: str) -> str:
+    """Map a test display name to its on-disk folder name.
+
+    Both the batch exporter and the report viewers must agree on this
+    transformation, otherwise a test saved as ``Celeb - Cake Cutting 4%``
+    is written to ``Celeb_-_Cake_Cutting_4%/`` but looked up as
+    ``Celeb_-_Cake_Cutting_4_/`` and the data is "missing". Keeping the
+    rule here in one place prevents that drift.
+
+    The historical convention only collapses spaces and forward slashes,
+    so we preserve any other characters the user typed (``%``, ``[``,
+    ``+``, …). It works on Linux/macOS and on Windows for the characters
+    we have observed in real test names.
+    """
+    return name.replace(" ", "_").replace("/", "-")
+
+
 def ensure_output_dirs():
     """Ensure all output directories exist."""
     for dir_path in [OUTPUT_DIR, SINGLE_TESTS_DIR, BATCH_TESTS_DIR, MODELS_DIR]:

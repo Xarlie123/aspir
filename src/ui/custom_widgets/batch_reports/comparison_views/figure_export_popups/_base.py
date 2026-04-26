@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
 )
 
-from ui.utils.file_formats import BATCH_TESTS_DIR
+from ui.utils.file_formats import BATCH_TESTS_DIR, safe_test_dirname
 
 
 class BaseFigureExportPopup(QDialog):
@@ -100,8 +100,9 @@ class BaseFigureExportPopup(QDialog):
 
         batch_dir = Path(batch_dir)
 
-        # Sanitize test name for file path (use original name, not renamed)
-        safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in original_name)
+        # Sanitize test name for file path (use original name, not renamed).
+        # Must match the saver in batch_test_runner/_export.py.
+        safe_name = safe_test_dirname(original_name)
 
         # Try to load from NPZ file
         test_images_path = batch_dir / "data" / safe_name / "test_images.npz"
