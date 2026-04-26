@@ -748,8 +748,11 @@ class ChartConfigPopup(QDialog):
         self.logger = logger or logging.getLogger(__name__)
 
         self.setWindowTitle("Chart Configuration")
-        self.setMinimumSize(580, 360)
-        self.resize(620, 400)
+        # Taller defaults so the new Axes-tab rows (Label pad, Group label
+        # font, Data labels group) aren't cropped or forced into a scroll
+        # bar on first open.
+        self.setMinimumSize(580, 520)
+        self.resize(620, 600)
         self.setModal(True)
 
         self._setup_ui()
