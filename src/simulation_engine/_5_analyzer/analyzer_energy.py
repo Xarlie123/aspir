@@ -216,6 +216,13 @@ class EnergyAnalyzer:
         power_readings = []
         time_readings = []
         temp_readings = []
+        # Accumulate every backend reading across all images / sub-runs
+        # so the CPU/GPU component aggregation below sees the full set
+        # rather than just the final loop iteration. (Earlier code
+        # relied on ``result.readings`` from the last call and
+        # mis-attributed energy when callers passed multiple images
+        # for variance.)
+        all_readings = []
 
         # Define inference function
         def run_inference(tensor):
@@ -266,6 +273,7 @@ class EnergyAnalyzer:
             energy_readings.append(avg_energy)
             time_readings.append(avg_time)
             power_readings.append(avg_power)
+            all_readings.extend(result.readings)
 
             # Get temperature if available
             for reading in result.readings:
@@ -291,18 +299,22 @@ class EnergyAnalyzer:
         gpu_energy = None
         cpu_energy = None
 
-        if result.readings:
-            first_reading = result.readings[0]
+        if all_readings:
+            first_reading = all_readings[0]
             device_type = first_reading.device_type
             device_name = first_reading.device_name
 
-            # Sum up component energies
-            total_gpu = sum(r.gpu_energy_joules or 0 for r in result.readings)
-            total_cpu = sum(r.cpu_energy_joules or 0 for r in result.readings)
+            # Sum component energies across every sub-run / image and
+            # divide by the total number of inference iterations so the
+            # result is energy-per-iteration regardless of how the
+            # caller chose to slice the workload.
+            total_gpu = sum(r.gpu_energy_joules or 0 for r in all_readings)
+            total_cpu = sum(r.cpu_energy_joules or 0 for r in all_readings)
+            total_iterations = n_runs * len(input_tensors)
             if total_gpu > 0:
-                gpu_energy = total_gpu / n_runs
+                gpu_energy = total_gpu / total_iterations
             if total_cpu > 0:
-                cpu_energy = total_cpu / n_runs
+                cpu_energy = total_cpu / total_iterations
 
         analysis_result = EnergyAnalysisResult(
             energy_per_image_joules=energy_readings,

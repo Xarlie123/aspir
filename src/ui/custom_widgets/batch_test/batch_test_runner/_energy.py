@@ -51,11 +51,29 @@ def measure_energy(
 
         logger.info("Measuring energy with backends: %s", analyzer.available_backends)
 
+        # Split the measurement into ``n_blocks`` sub-runs so the
+        # analyzer collects multiple energy readings instead of a
+        # single integrated value — otherwise ``np.std`` of one point
+        # is trivially 0 and the report shows no spread. Each sub-run
+        # still benchmarks the same tensor; the warmup only happens
+        # once thanks to ``return_per_image=False``.
+        #
+        # Block count is capped so we don't end up with 1-iteration
+        # blocks at low measurement_runs (each block needs enough
+        # iterations to be measurable on jtop / RAPL latency).
+        n_blocks = max(1, min(10, measurement_runs))
+        runs_per_block = max(1, measurement_runs // n_blocks)
+        logger.debug(
+            "Energy measurement split: %d blocks x %d runs (=%d total)",
+            n_blocks, runs_per_block, n_blocks * runs_per_block,
+        )
+
         # Run energy analysis on the sample tensor
         result = analyzer.analyze_inference(
-            [sample],
-            n_runs=measurement_runs,
-            warmup_runs=warmup_runs
+            [sample] * n_blocks,
+            n_runs=runs_per_block,
+            warmup_runs=warmup_runs,
+            return_per_image=False,
         )
 
         # Build per-backend energy data

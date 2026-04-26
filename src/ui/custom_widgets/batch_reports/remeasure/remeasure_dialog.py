@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtCore import QThread, Qt
+from PyQt5.QtCore import QThread, QTimer, Qt
 from PyQt5.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -96,7 +96,10 @@ class RemeasureDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Re-measure timing & energy")
         self.setModal(True)
-        self.resize(540, 420)
+        # Slight bump from the original 540×420 to fit the new
+        # "Run both compute paths" toggle without cropping the
+        # measurement-parameters group.
+        self.resize(560, 480)
 
         self.logger = (logger or logging.getLogger("RemeasureDialog"))
         self._sources = sources
@@ -104,6 +107,20 @@ class RemeasureDialog(QDialog):
         self._worker: Optional[RemeasureWorker] = None
         self._outputs: list[Path] = []
         self._failures: list[str] = []
+        # Queue of (config, label_for_log) tuples that still need to run
+        # after the current worker finishes. The "Run both compute paths"
+        # checkbox fills this with two entries; otherwise it stays empty.
+        self._pending_passes: list[tuple[RemeasureConfig, str]] = []
+        # Cooldown timer between passes (Jetson rails get noisy if the
+        # SoC is hot from the previous run); set on demand and cleared
+        # on cancel/close.
+        self._cooldown_timer: Optional[QTimer] = None
+        self._cooldown_remaining: int = 0
+        # Seconds to wait between consecutive passes. Empirically enough
+        # for the Orin NX power rails to settle to a stable baseline
+        # after a heavy GPU run; users can shorten if they don't care
+        # about thermal drift.
+        self._cooldown_seconds: int = 30
 
         self._build_ui()
 
@@ -183,6 +200,26 @@ class RemeasureDialog(QDialog):
         self._chk_gpu.setChecked(True)
         knobs_form.addRow(self._chk_gpu)
 
+        # When enabled, the dialog runs the job twice: first with
+        # ``use_gpu=False`` (CPU run) and then with ``use_gpu=True`` (GPU
+        # run), with a thermal cooldown in between. Each pass writes its
+        # own report file with a ``-cpu`` / ``-gpu`` tag in the device
+        # label so the two are easy to tell apart in Batch Reports.
+        # The plain "Use GPU when available" toggle becomes irrelevant
+        # while this is checked — both states are exercised.
+        self._chk_both_paths = QCheckBox(
+            "Run both compute paths (CPU then GPU, with cooldown)"
+        )
+        self._chk_both_paths.setChecked(False)
+        self._chk_both_paths.setToolTip(
+            "Sequence two re-measurement passes — first force-CPU, then\n"
+            "force-GPU — with a 30 s thermal stabilisation between them.\n"
+            "Useful on Jetson where the rail is shared and a single pass\n"
+            "only fills one column of a CPU-vs-GPU comparison."
+        )
+        self._chk_both_paths.toggled.connect(self._on_both_paths_toggled)
+        knobs_form.addRow(self._chk_both_paths)
+
         self._txt_device = QLineEdit(_detect_device_label())
         self._txt_device.setToolTip(
             "Short tag added to the output filename "
@@ -193,6 +230,19 @@ class RemeasureDialog(QDialog):
         outer.addWidget(knobs_box)
         outer.addStretch(1)
         return page
+
+    def _on_both_paths_toggled(self, checked: bool) -> None:
+        """Disable the GPU toggle while two-pass mode is on (it's
+        forced to both states, so leaving the checkbox active would be
+        misleading)."""
+        self._chk_gpu.setEnabled(not checked)
+        if checked:
+            self._chk_gpu.setToolTip(
+                "Disabled — 'Run both compute paths' overrides this. "
+                "The dialog will run a CPU pass and a GPU pass."
+            )
+        else:
+            self._chk_gpu.setToolTip("")
 
     def _build_progress_page(self) -> QWidget:
         page = QWidget()
@@ -217,18 +267,59 @@ class RemeasureDialog(QDialog):
     # Worker lifecycle
     # ------------------------------------------------------------------
     def _on_start(self) -> None:
-        cfg = RemeasureConfig(
+        # Validate that there's at least one measurement to take.
+        if not (self._chk_timing.isChecked() or self._chk_energy.isChecked()):
+            self._append_log("Nothing to measure — pick at least one of timing/energy.")
+            return
+
+        base_label = (self._txt_device.text().strip() or "device")
+
+        # Build the queue of passes to run. In single-pass mode the
+        # queue has one entry honouring the GPU checkbox; in
+        # both-paths mode it has two entries (CPU first to avoid
+        # warming the rail before the GPU pass) with the device label
+        # tagged so the output filenames stay distinguishable.
+        queue: list[tuple[RemeasureConfig, str]] = []
+        common = dict(
             measure_timing=self._chk_timing.isChecked(),
             measure_energy=self._chk_energy.isChecked(),
-            use_gpu=self._chk_gpu.isChecked(),
             warmup_runs=int(self._spn_warmup.value()),
             measurement_runs=int(self._spn_runs.value()),
             sampling_rate_khz=float(self._spn_sampling.value()),
-            device_label=(self._txt_device.text().strip() or "device"),
         )
-        if not (cfg.measure_timing or cfg.measure_energy):
-            self._append_log("Nothing to measure — pick at least one of timing/energy.")
+        if self._chk_both_paths.isChecked():
+            queue.append((
+                RemeasureConfig(use_gpu=False,
+                                device_label=f"{base_label}-cpu",
+                                **common),
+                "CPU pass",
+            ))
+            queue.append((
+                RemeasureConfig(use_gpu=True,
+                                device_label=f"{base_label}-gpu",
+                                **common),
+                "GPU pass",
+            ))
+        else:
+            queue.append((
+                RemeasureConfig(use_gpu=self._chk_gpu.isChecked(),
+                                device_label=base_label,
+                                **common),
+                "single pass",
+            ))
+
+        self._pending_passes = queue
+        self._stack.setCurrentIndex(1)
+        self._start_btn.setEnabled(False)
+        self._cancel_btn.setText("Cancel")
+        self._launch_next_pass()
+
+    def _launch_next_pass(self) -> None:
+        """Pop the head of ``_pending_passes`` and start a worker for it."""
+        if not self._pending_passes:
+            self._show_completion_ui()
             return
+        cfg, label = self._pending_passes.pop(0)
 
         jobs = []
         for exp_idx, src in self._sources:
@@ -239,9 +330,9 @@ class RemeasureDialog(QDialog):
                 experiment_index=exp_idx,
             ))
 
-        self._stack.setCurrentIndex(1)
-        self._start_btn.setEnabled(False)
-        self._cancel_btn.setText("Cancel")
+        self._append_log(f"--- Starting {label} (device label: {cfg.device_label}) ---")
+        for job in jobs:
+            self._append_log(f"queued: {job.source_report.name} → {job.destination_report.name}")
 
         self._thread = QThread(self)
         self._worker = RemeasureWorker(jobs, cfg, logger=self.logger)
@@ -251,15 +342,26 @@ class RemeasureDialog(QDialog):
         self._worker.job_done.connect(self._on_job_done)
         self._worker.finished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)
-
-        for job in jobs:
-            self._append_log(f"queued: {job.source_report.name} → {job.destination_report.name}")
         self._thread.start()
 
     def _on_cancel(self) -> None:
+        # Cooldown wait between passes — stop the timer and skip the
+        # remaining passes; treat as "done" so the user can close the
+        # dialog and inspect what was already written.
+        if self._cooldown_timer is not None:
+            self._append_log("Cooldown cancelled — skipping remaining passes.")
+            self._cooldown_timer.stop()
+            self._cooldown_timer = None
+            self._pending_passes.clear()
+            self._show_completion_ui()
+            return
         if self._worker is not None and self._thread is not None and self._thread.isRunning():
-            self._append_log("Cancellation requested — current test will finish.")
+            self._append_log(
+                "Cancellation requested — current test will finish; "
+                "remaining passes will be skipped."
+            )
             self._worker.cancel()
+            self._pending_passes.clear()
             self._cancel_btn.setEnabled(False)
             return
         self.reject()
@@ -284,12 +386,54 @@ class RemeasureDialog(QDialog):
             self._append_log(f"FAIL {outcome.job.source_report.name}: {outcome.error}")
 
     def _on_finished(self) -> None:
+        # Worker for the current pass is done — tear it down and
+        # decide whether to start a thermal cooldown before the next
+        # pass or wrap up entirely.
+        self._teardown_worker()
+
+        if self._pending_passes:
+            self._start_cooldown()
+        else:
+            self._show_completion_ui()
+
+    def _teardown_worker(self) -> None:
         if self._thread is not None:
             self._thread.quit()
             self._thread.wait()
             self._thread = None
         self._worker = None
 
+    def _start_cooldown(self) -> None:
+        """Run a 1-Hz countdown timer between passes so the SoC can
+        settle before the next measurement. The countdown is shown in
+        the status label; the user can still hit Cancel to skip the
+        remaining passes."""
+        self._cooldown_remaining = self._cooldown_seconds
+        self._append_log(
+            f"--- Cooldown ({self._cooldown_seconds} s) before next pass ---"
+        )
+        self._status.setText(
+            f"Cooling down before next pass — {self._cooldown_remaining} s remaining…"
+        )
+        timer = QTimer(self)
+        timer.setInterval(1000)
+        timer.timeout.connect(self._tick_cooldown)
+        self._cooldown_timer = timer
+        timer.start()
+
+    def _tick_cooldown(self) -> None:
+        self._cooldown_remaining -= 1
+        if self._cooldown_remaining <= 0:
+            if self._cooldown_timer is not None:
+                self._cooldown_timer.stop()
+                self._cooldown_timer = None
+            self._launch_next_pass()
+        else:
+            self._status.setText(
+                f"Cooling down before next pass — {self._cooldown_remaining} s remaining…"
+            )
+
+    def _show_completion_ui(self) -> None:
         if self._failures:
             self._status.setText(
                 f"Done with {len(self._failures)} failure(s) — see log below."
@@ -318,9 +462,15 @@ class RemeasureDialog(QDialog):
         self._log.append(line)
 
     def closeEvent(self, event):  # noqa: N802 - Qt signature
+        # Stop any pending cooldown so it doesn't try to fire on a
+        # dead dialog.
+        if self._cooldown_timer is not None:
+            self._cooldown_timer.stop()
+            self._cooldown_timer = None
         # If the user closes the window while a run is in progress,
         # cancel cooperatively and wait for the thread to settle so we
         # don't leave a worker running on a dead QObject.
+        self._pending_passes.clear()
         if self._thread is not None and self._thread.isRunning():
             if self._worker is not None:
                 self._worker.cancel()
