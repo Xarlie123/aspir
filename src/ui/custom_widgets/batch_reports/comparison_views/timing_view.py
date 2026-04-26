@@ -46,6 +46,11 @@ class TimingView(QWidget):
     - Export charts to PNG/PDF
     """
 
+    # Chart type indices — must stay in sync with the order of items
+    # added to ``self.chart_list`` in ``_setup_ui``.
+    CHART_PIPELINE = 0
+    CHART_ENERGY_VS_RATIO = 1
+
     # Color palette for multiple tests
     COLORS = ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#F44336',
               '#00BCD4', '#8BC34A', '#FFC107', '#673AB7', '#E91E63']
@@ -55,6 +60,12 @@ class TimingView(QWidget):
     COLOR_RECONSTRUCTION = '#fdae61'  # Orange
     COLOR_INFERENCE_CPU = '#d7191c'   # Red
     COLOR_INFERENCE_GPU = '#2b83ba'   # Blue
+
+    # Energy-vs-Sampling-Ratio defaults — same Tableau pair as the
+    # PSNR-vs-Sampling-Ratio chart in Quality so the two figures of the
+    # paper share a colour vocabulary (blue first, orange second).
+    _ENERGY_CPU_COLOR = '#1f77b4'
+    _ENERGY_GPU_COLOR = '#ff7f0e'
 
     def __init__(self, logger=None, parent=None):
         super().__init__(parent)
@@ -129,6 +140,7 @@ class TimingView(QWidget):
         self.chart_list.setMaximumWidth(220)
         self.chart_list.setMinimumWidth(180)
         self.chart_list.addItem("Pipeline Latency Breakdown")
+        self.chart_list.addItem("Energy per Image vs Sampling Ratio")
         self.chart_list.setCurrentRow(0)
         self.chart_list.currentRowChanged.connect(self._on_chart_type_changed)
         self.chart_list.setStyleSheet("""
@@ -503,8 +515,10 @@ class TimingView(QWidget):
             self.canvas.draw()
             return
 
-        # Only Pipeline Latency Breakdown for now
-        self._draw_pipeline_breakdown()
+        if self.chart_list.currentRow() == self.CHART_ENERGY_VS_RATIO:
+            self._draw_energy_vs_sampling_chart()
+        else:
+            self._draw_pipeline_breakdown()
 
         # Adjust layout based on legend position
         legend_pos = self._chart_config['legend']['position']
@@ -516,6 +530,193 @@ class TimingView(QWidget):
             self.figure.tight_layout(rect=[0, 0.05, 1, 1])
 
         self.canvas.draw()
+
+    # ------------------------------------------------------------------
+    # Helpers shared by the Energy-vs-Sampling-Ratio chart
+    # ------------------------------------------------------------------
+
+    def _n_pixels_for_test(self, test: Dict[str, Any]) -> Optional[int]:
+        """Resolve N = img_size² for a test from its experiment metadata."""
+        meta = test.get("_experiment_metadata") or {}
+        if isinstance(meta, dict):
+            ds = meta.get("dataset_info", {}) or {}
+            img_size = ds.get("img_size")
+            if img_size:
+                try:
+                    s = int(img_size)
+                    return s * s
+                except (TypeError, ValueError):
+                    return None
+        return None
+
+    def _n_patterns_for_test(self, test: Dict[str, Any]) -> Optional[int]:
+        """Resolve M (number of mask patterns) for a test."""
+        n = test.get("timing_num_patterns")
+        if n is not None:
+            try:
+                return int(n)
+            except (TypeError, ValueError):
+                return None
+        mask_type = (test.get("mask_type") or "").lower()
+        if mask_type == "scatter":
+            return test.get("scatter_num_patterns")
+        if mask_type.startswith("hadamard") or mask_type == "cal_sal":
+            lo = test.get("hadamard_min_idx")
+            hi = test.get("hadamard_max_idx")
+            if lo is not None and hi is not None:
+                return max(0, int(hi) - int(lo))
+        return None
+
+    # ------------------------------------------------------------------
+    # Energy per image vs Sampling Ratio (paper-style figure)
+    # ------------------------------------------------------------------
+
+    def _draw_energy_vs_sampling_chart(self):
+        """Plot energy per image (mJ) vs M/N (%) — CPU run vs GPU run.
+
+        Companion to the PSNR-vs-Sampling-Ratio chart in Quality. Each
+        loaded test contributes one point at its sampling ratio, and we
+        split the points into two series by the test's ``use_gpu``
+        flag — so the user gets a CPU-pipeline curve and a GPU-pipeline
+        curve from one combined load. ±1σ shading uses
+        ``energy_std_mj`` from the report.
+
+        Data sources per test:
+            ``energy_mean_mj`` — total per-image energy (always present
+            when energy was measured).
+            ``energy_std_mj``  — standard deviation across the
+            measurement runs; absent → no shading for that point.
+            ``timing_num_patterns`` and ``_experiment_metadata`` for M
+            and N, same path used by the Quality view's Sampling-Ratio
+            chart.
+
+        On Jetson the rail is shared so the CPU and GPU lines reflect a
+        single physical reading (see ``JtopEnergyBackend`` notes); the
+        meaningful comparison there is "CPU run vs GPU run", which is
+        exactly what this chart plots — the difference is in
+        *which compute path runs* during the measurement, not in what
+        the sensor sees afterwards.
+        """
+        ax = self.figure.add_subplot(111)
+
+        rows: List[Dict[str, Any]] = []
+        for test in self._tests:
+            m = self._n_patterns_for_test(test)
+            n = self._n_pixels_for_test(test)
+            if not m or not n:
+                continue
+            energy = test.get("energy_mean_mj")
+            if energy is None:
+                continue
+            try:
+                energy = float(energy)
+            except (TypeError, ValueError):
+                continue
+            std = test.get("energy_std_mj")
+            try:
+                std = float(std) if std is not None else None
+            except (TypeError, ValueError):
+                std = None
+            rows.append({
+                "experiment": test.get("_experiment_name", ""),
+                "name": test.get("name", ""),
+                "beta": 100.0 * float(m) / float(n),
+                "energy_mj": energy,
+                "energy_std_mj": std,
+                "use_gpu": bool(test.get("use_gpu", False)),
+            })
+
+        if not rows:
+            ax.text(
+                0.5, 0.5,
+                "No tests with both energy and M/N metadata.\n"
+                "Run a batch with the energy report enabled, or use\n"
+                "Re-measure on a saved batch.",
+                ha='center', va='center', fontsize=12, color='#999',
+            )
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            ax.axis('off')
+            return
+
+        cpu_rows = sorted([r for r in rows if not r["use_gpu"]],
+                          key=lambda r: r["beta"])
+        gpu_rows = sorted([r for r in rows if r["use_gpu"]],
+                          key=lambda r: r["beta"])
+
+        def _series(rows_for_series, label, color, marker):
+            if not rows_for_series:
+                return None, None
+            xs = [r["beta"] for r in rows_for_series]
+            ys = [r["energy_mj"] for r in rows_for_series]
+            ss = [r["energy_std_mj"] for r in rows_for_series]
+            ax.plot(
+                xs, ys,
+                marker=marker, linestyle='-', linewidth=2.0,
+                color=color, label=label, markersize=8,
+                markerfacecolor=color, markeredgecolor='white',
+                markeredgewidth=1.0,
+            )
+            if all(s is not None for s in ss):
+                lo = [y - s for y, s in zip(ys, ss)]
+                hi = [y + s for y, s in zip(ys, ss)]
+                ax.fill_between(xs, lo, hi, color=color, alpha=0.15)
+            return ys, ss
+
+        cpu_ys, _ = _series(cpu_rows, "CPU run",
+                            self._ENERGY_CPU_COLOR, '^')
+        gpu_ys, _ = _series(gpu_rows, "GPU run",
+                            self._ENERGY_GPU_COLOR, 'D')
+
+        # If one series is way off scale relative to the other, switch
+        # to a log Y axis so both shapes stay legible. Threshold is the
+        # 5× rule in the spec — applied conservatively (only when *both*
+        # series have data, otherwise log on a single curve isn't useful).
+        if cpu_ys and gpu_ys:
+            cpu_max = max(cpu_ys) if cpu_ys else 0.0
+            gpu_max = max(gpu_ys) if gpu_ys else 0.0
+            cpu_min = min(cpu_ys) if cpu_ys else 0.0
+            gpu_min = min(gpu_ys) if gpu_ys else 0.0
+            big = max(cpu_max, gpu_max)
+            small = min(cpu_min, gpu_min)
+            if small > 0 and big / small > 5.0:
+                ax.set_yscale('log')
+
+        self._apply_axes_config(
+            ax,
+            default_title="Energy per Image vs Sampling Ratio",
+            default_xlabel="Sampling ratio M/N (%)",
+            default_ylabel="Energy per image (mJ)",
+        )
+        ax.grid(True, alpha=0.3, linestyle=':')
+
+        # Place the legend opposite the dominant data cluster — usually
+        # the CPU curve goes upward with M/N and dominates the upper
+        # range, so the upper-left corner stays free; otherwise let the
+        # global config decide.
+        legend_cfg = self._chart_config['legend']
+        legend_kwargs = {
+            'fontsize': legend_cfg['fontsize'],
+            'frameon': legend_cfg['frameon'],
+            'shadow': legend_cfg['shadow'],
+            'fancybox': legend_cfg['fancybox'],
+            'framealpha': legend_cfg['framealpha'],
+        }
+        loc_map = {
+            0: 'upper right', 1: 'upper left',
+            2: 'lower right', 3: 'lower left',
+        }
+        legend_pos = legend_cfg['position']
+        if legend_pos in loc_map:
+            ax.legend(loc=loc_map[legend_pos],
+                      ncol=legend_cfg['ncol'], **legend_kwargs)
+        elif legend_pos == 4:
+            ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5),
+                      ncol=legend_cfg['ncol'], **legend_kwargs)
+        else:
+            legend_kwargs['frameon'] = False
+            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15),
+                      ncol=2, **legend_kwargs)
 
     def _draw_pipeline_breakdown(self):
         """Draw stacked bar chart of pipeline latency breakdown for all tests.
