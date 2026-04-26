@@ -8,7 +8,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial documentation with Read the Docs
+- **Re-measure timing & energy on already-executed batches.** Right-click any
+  loaded experiment in Batch Reports → *Re-measure timing & energy…* opens a
+  dialog that re-runs inference on the saved model checkpoints to refresh
+  timing and energy on the current host (typical use: train on a workstation,
+  measure on a Jetson Orin NX). A copy of the report is written with a
+  `_reexecuted_<device>_<timestamp>` suffix and auto-loaded next to the
+  original — never overwrites the source data.
+- **Run both compute paths** toggle in the re-measure dialog. Sequences a
+  CPU pass (`use_gpu=False`) and a GPU pass (`use_gpu=True`) with a 30 s
+  thermal cooldown between them and tags each output report with `-cpu` /
+  `-gpu`. Designed around the Jetson shared-rail constraint where the only
+  honest CPU vs GPU energy comparison is two separate runs.
+- **PSNR vs Sampling Ratio** chart in Batch Reports → Quality. Line +
+  markers, real dB on Y, real `M/N` (%) on X, ±1σ shading from per-image
+  data when available — the headline figure for compressive-sensing
+  ablations. Defaults to matplotlib's classic `tab:blue` (reconstruction)
+  + `tab:orange` (denoised); both colours are user-overridable from the
+  chart-settings dialog.
+- **Energy per Image vs Sampling Ratio** chart in Batch Reports → Timing.
+  Companion to the PSNR chart with the same X axis, two lines per
+  experiment (CPU run vs GPU run), automatic switch to a log Y when one
+  series is more than 5× the other.
+- **Quality Metrics Table** mode with right-click *Export CSV* / *Export
+  LaTeX* for the per-test summary.
+- **Right-click "Copy table"** on the Timing Summary and Energy Summary
+  panels, producing TSV pasteable into spreadsheets.
+- **Chart configuration knobs** for bar value font size, secondary X-tier
+  label font size, X / Y label padding (range 0–120 pt), and per-series
+  colours of the new line charts. Dialog grows automatically when more
+  fields are added.
+- Jetson installation instructions for the `jetson-stats` (`jtop`) daemon
+  and CUPTI privileges; a `[jetson]` extra in `pyproject.toml` pins
+  `torch == 2.8` and `numpy < 2` for JetPack 6.x.
+- Initial documentation with Read the Docs.
+
+### Changed
+- **Batch Reports → Energy** *Backend* selector renamed to *Compute path*.
+  Options are now `CPU run + GPU run`, `CPU run only`, `GPU run only`;
+  bars are bucketed by the test's `use_gpu` flag rather than by
+  `energy_cpu_mj` vs `energy_gpu_mj` — the previous bucketing showed two
+  identical-height bars per test on Jetson because the rail is shared.
+- **Pipeline Latency Breakdown** chart legend renames *Acquisition* →
+  *Mask projection* (and the Timing Summary row to match). The on-disk
+  field name `timing_acquisition_ms` is preserved for backward
+  compatibility.
+- **Quality Metrics Comparison** bar chart switches from per-metric
+  global min-max normalisation to absolute references (PSNR / 40 dB,
+  SSIM raw, 1 − LPIPS). The lowest-quality bars are no longer pushed
+  to height 0 and disappear.
+- Energy reports on Jetson now populate both `energy_cpu_mj` and
+  `energy_gpu_mj` with the shared-rail total instead of leaving the
+  CPU column blank during CPU-only runs.
+
+### Fixed
+- File-name lookup mismatch in figure-export popups: tests with `%`
+  (or other non-alphanumeric characters) in their name now resolve to
+  the correct directory under `data/<test>/` for `test_images.npz` and
+  `masks.npz` lookups.
+- `EnergyAnalyzer` no longer reports `energy_std_mj = 0` for every test:
+  measurement runs are split into 10 sub-blocks so `np.std` has more
+  than one sample to work with, and the CPU/GPU component aggregation
+  accumulates across all sub-runs instead of only the last.
+- Re-measurement on Jetson stays responsive: per-block progress
+  surfaces at INFO level, the `EnergyAnalyzer` is shared across all
+  tests of a pass (one `jtop()` connection instead of N), and
+  reconstruction timing samples are capped at 3 per test to bound the
+  CPU NumPy cost at high `M/N`.
 
 ## [1.0.0] - 2025-XX-XX
 

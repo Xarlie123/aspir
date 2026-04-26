@@ -42,9 +42,9 @@ Measures inference performance on CPU and GPU.
 
 | Stage | Description |
 |-------|-------------|
-| Acquisition | Simulated measurement time |
-| Reconstruction | Classical algorithm time |
-| Inference | Neural network forward pass |
+| Mask projection | Simulated single-pixel acquisition time, derived from the number of patterns and the configured DMD sampling rate (kHz). The Pipeline Latency Breakdown chart in Batch Reports labels this column "Mask projection"; the underlying field name in the report (`timing_acquisition_ms`) is preserved for backward compatibility. |
+| Reconstruction | Classical algorithm time (Ghost Imaging, Hadamard linear, FISTA, …). On Jetson with NumPy this scales roughly linearly with pattern count and can dominate wall time at high `M/N`. |
+| Inference | Neural network forward pass. Measured separately on CPU and GPU when both devices are available. |
 
 ### Configuration
 
@@ -71,12 +71,24 @@ Measures power consumption during inference. The energy backend is auto-detected
 
 | Platform | Backend | Measurements |
 |----------|---------|--------------|
-| NVIDIA Desktop GPUs | NVML | GPU power, temperature |
-| NVIDIA Jetson | Sysfs | GPU + CPU power |
-| Intel CPUs | RAPL | Package, core power |
+| NVIDIA Desktop GPUs | NVML (`pynvml`) | GPU package power, temperature |
+| NVIDIA Jetson | jtop (`jetson-stats` daemon), with sysfs INA3221 as fallback | Module total power on the shared `VDD_IN` / `POM_5V_IN` rail |
+| Intel CPUs | RAPL (`/sys/class/powercap/intel-rapl`) | Package, core power |
 
 ```{note}
 Intel RAPL energy profiling requires read access to the powercap interface: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`
+```
+
+```{note}
+**Jetson shared rail.** Tegra modules expose a single combined power rail
+that feeds CPU + GPU + RAM + the rest of the SoC together. jtop reports
+the total; ASPIR populates both `energy_cpu_mj` and `energy_gpu_mj` with
+that total so any downstream view that gates on either field stays
+non-empty. The honest comparison on Jetson is therefore *CPU run vs GPU
+run* — i.e. two separate measurement passes with `use_gpu=False` and
+`use_gpu=True` — rather than a per-rail breakdown of a single pass. The
+Energy view's *Compute path* selector and the **Run both compute paths**
+toggle in Batch Reports → Re-measure are designed around this.
 ```
 
 ### Metrics
