@@ -288,8 +288,12 @@ class EnergyAnalyzer:
                     temp_readings.append(reading.temperature_celsius)
                     break
 
-            self.logger.debug(
-                f"Image {idx + 1}/{len(input_tensors)}: "
+            # INFO instead of DEBUG so the user sees the loop is alive
+            # on slow hosts (Jetson CPU does ~120 ms per inference and
+            # n_runs=20 sub-blocks easily takes minutes — silence here
+            # used to look like a hang).
+            self.logger.info(
+                f"  block {idx + 1}/{len(input_tensors)}: "
                 f"energy={avg_energy * 1000:.3f} mJ, "
                 f"power={avg_power:.2f} W, "
                 f"time={avg_time:.2f} ms"

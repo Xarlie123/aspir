@@ -32,6 +32,7 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
     MODEL_REGISTRY,
     resolve_model_name,
 )
+from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
 from ui.custom_widgets.batch_test.batch_test_runner._energy import measure_energy
 from ui.custom_widgets.batch_test.batch_test_runner._pipeline import create_applicator
 from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
@@ -314,20 +315,52 @@ class RemeasureWorker(QObject):
         return max(steps, 1)
 
     def run(self) -> None:
+        # Build a single EnergyAnalyzer up-front and reuse it for every
+        # test of every job in this pass. On Jetson the jtop daemon
+        # gets flaky after several open/close cycles (silent freezes
+        # in start_measurement) — sharing one connection eliminates
+        # that source of churn entirely. The analyzer is initialised
+        # lazily so we don't pay the cost when ``measure_energy`` is
+        # disabled.
+        shared_analyzer: Optional[EnergyAnalyzer] = None
         try:
             total = self._total_steps()
             done = 0
+            if self.cfg.measure_energy:
+                shared_analyzer = EnergyAnalyzer(
+                    model=None,                 # set per-test inside measure_energy
+                    device="cpu",               # ditto
+                    warmup_runs=self.cfg.warmup_runs,
+                    measurement_runs=self.cfg.measurement_runs,
+                    enable_gpu_energy=self.cfg.use_gpu,
+                    enable_cpu_energy=True,
+                    logger=self.logger,
+                )
+                if not shared_analyzer.initialize():
+                    self.logger.warning(
+                        "Shared energy analyzer could not be initialised — "
+                        "falling back to per-test analyzers."
+                    )
+                    shared_analyzer = None
+
             for job in self.jobs:
                 if self._cancel:
                     break
-                done = self._run_job(job, done, total)
+                done = self._run_job(job, done, total, shared_analyzer)
             self.finished.emit()
         except Exception as exc:
             self.logger.exception("Re-measurement worker crashed")
             self.error.emit(str(exc))
             self.finished.emit()
+        finally:
+            if shared_analyzer is not None:
+                try:
+                    shared_analyzer.shutdown()
+                except Exception:
+                    self.logger.debug("Shared analyzer shutdown raised", exc_info=True)
 
-    def _run_job(self, job: RemeasureJob, done: int, total: int) -> int:
+    def _run_job(self, job: RemeasureJob, done: int, total: int,
+                 shared_analyzer: Optional[EnergyAnalyzer] = None) -> int:
         outcome = RemeasureOutcome(job=job, success=False)
         try:
             with open(job.source_report, "r", encoding="utf-8") as fh:
@@ -384,6 +417,14 @@ class RemeasureWorker(QObject):
                         warmup_runs=self.cfg.warmup_runs,
                         measurement_runs=self.cfg.measurement_runs,
                         sampling_rate_khz=self.cfg.sampling_rate_khz,
+                        # Reconstruction with NumPy on Jetson CPU is
+                        # roughly linear in pattern count and dominates
+                        # the wall-clock of a re-measurement run when
+                        # a test has 1000+ patterns. Cap the loop at
+                        # 3 samples — enough for a stable mean, fast
+                        # enough that the user doesn't think the dialog
+                        # has hung.
+                        max_recon_samples=3,
                     )
                     # When the export had no data/ folder we couldn't pass
                     # a mask, so num_patterns defaulted to 1 and acquisition
@@ -411,6 +452,7 @@ class RemeasureWorker(QObject):
                         facade, test_config, self.logger,
                         warmup_runs=self.cfg.warmup_runs,
                         measurement_runs=self.cfg.measurement_runs,
+                        analyzer=shared_analyzer,
                     )
                     updated.update(energy)
                 except Exception as exc:

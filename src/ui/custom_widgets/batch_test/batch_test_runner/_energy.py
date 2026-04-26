@@ -1,7 +1,7 @@
 """Inference energy measurement for batch tests."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
@@ -14,8 +14,16 @@ def measure_energy(
     logger,
     warmup_runs: int = 5,
     measurement_runs: int = 10,
+    analyzer: Optional[EnergyAnalyzer] = None,
 ) -> dict[str, Any]:
-    """Measure inference energy with configurable parameters."""
+    """Measure inference energy with configurable parameters.
+
+    When ``analyzer`` is provided, the function reuses it and only
+    swaps the model for the current ``postprocessor``; the caller is
+    responsible for the analyzer lifecycle (initialize / shutdown).
+    This avoids spinning up a new ``jtop`` connection per test in
+    re-measurement runs, which on Jetson can flake out after several
+    init/shutdown cycles."""
     import torch
 
     model = postprocessor.model
@@ -31,23 +39,37 @@ def measure_energy(
     else:
         sample = torch.randn(1, img_size * img_size, device=device)
 
-    # Create energy analyzer
-    analyzer = EnergyAnalyzer(
-        model=model,
-        device=str(device),
-        warmup_runs=warmup_runs,
-        measurement_runs=measurement_runs,
-        enable_gpu_energy=config.use_gpu,
-        enable_cpu_energy=True,
-        logger=logger
-    )
+    owns_analyzer = analyzer is None
+    if analyzer is None:
+        analyzer = EnergyAnalyzer(
+            model=model,
+            device=str(device),
+            warmup_runs=warmup_runs,
+            measurement_runs=measurement_runs,
+            enable_gpu_energy=config.use_gpu,
+            enable_cpu_energy=True,
+            logger=logger
+        )
+    else:
+        # Reuse: re-aim the analyzer at this test's model + device
+        # without restarting the jtop connection.
+        analyzer.model = model
+        analyzer.device = str(device)
+        analyzer.warmup_runs = warmup_runs
+        analyzer.measurement_runs = measurement_runs
 
     try:
-        if not analyzer.initialize():
+        if owns_analyzer and not analyzer.initialize():
             logger.warning("Energy analyzer could not be initialized - no backends available")
             return {
                 "energy_error": "No energy measurement backends available"
             }
+        if not owns_analyzer and not analyzer.is_initialized:
+            # Caller forgot to initialize — fail loud instead of
+            # silently producing a no-backend result.
+            raise RuntimeError(
+                "Reused EnergyAnalyzer was not initialized by the caller"
+            )
 
         logger.info("Measuring energy with backends: %s", analyzer.available_backends)
 
@@ -113,4 +135,5 @@ def measure_energy(
             "energy_error": str(e)
         }
     finally:
-        analyzer.shutdown()
+        if owns_analyzer:
+            analyzer.shutdown()

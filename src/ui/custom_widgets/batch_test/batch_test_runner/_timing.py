@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
@@ -17,6 +17,7 @@ def measure_timing(
     warmup_runs: int = 5,
     measurement_runs: int = 20,
     sampling_rate_khz: float = 10.752,
+    max_recon_samples: Optional[int] = None,
 ) -> dict[str, Any]:
     """
     Measure inference timing with configurable parameters.
@@ -63,6 +64,12 @@ def measure_timing(
             # Use same number of samples as test set (from config split)
             test_ratio = config.test_split / 100.0
             n_recon_samples = max(1, min(dataset_size, int(dataset_size * test_ratio)))
+            # Optional cap from the caller — reconstruction with NumPy
+            # on Jetson CPU costs ~1 s per image at 1000+ patterns,
+            # which dominates the entire re-measurement run; for the
+            # re-measure worker we only need a 2-3 sample estimate.
+            if max_recon_samples is not None and max_recon_samples > 0:
+                n_recon_samples = min(n_recon_samples, int(max_recon_samples))
 
             # Warmup runs to ensure fair comparison (like inference warmup)
             warmup_recon = min(2, n_recon_samples)
