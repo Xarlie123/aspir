@@ -53,10 +53,16 @@ class EnergyView(QWidget):
     COLOR_GPU = '#FF9800'  # Orange for GPU
     COLOR_CPU = '#2196F3'  # Blue for CPU
 
-    # Backend filter options
-    BACKEND_ALL = "CPU + GPU"
-    BACKEND_CPU = "CPU Only"
-    BACKEND_GPU = "GPU Only"
+    # Compute-path filter options. The constant names keep the old
+    # ``BACKEND_*`` spelling so existing call sites don't churn, but the
+    # display labels — and the semantics — are about which compute path
+    # the test ran on (use_gpu=False vs use_gpu=True), not about which
+    # energy backend produced the reading. On Jetson the rail is shared
+    # and the per-rail breakdown is meaningless; "compute path" is the
+    # comparison that actually matters.
+    BACKEND_ALL = "CPU run + GPU run"
+    BACKEND_CPU = "CPU run only"
+    BACKEND_GPU = "GPU run only"
 
     def __init__(self, logger=None, parent=None):
         super().__init__(parent)

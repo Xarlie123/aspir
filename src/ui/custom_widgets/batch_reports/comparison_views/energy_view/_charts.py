@@ -16,41 +16,106 @@ from ui.custom_widgets.batch_reports.comparison_views.energy_view._helpers impor
 )
 
 
-def collect_backend_data(view, gpu_key: str, cpu_key: str, combined_keys: list | None = None):
-    """
-    Collect GPU and CPU data for all tests.
+def collect_compute_path_data(view, value_keys: list[str]):
+    """Bucket test values by compute path (``use_gpu`` flag).
 
-    Returns:
-        tuple: (test_names, gpu_values, cpu_values, has_gpu, has_cpu)
-    """
-    test_names = []
-    gpu_values = []
-    cpu_values = []
+    For every distinct ``test["name"]`` in ``view._tests``, look for one
+    entry that ran on the CPU (``use_gpu=False``) and one that ran on
+    the GPU (``use_gpu=True``); pull each entry's value from the first
+    key in ``value_keys`` that resolves to a number. The result is a
+    pair of aligned lists ``(gpu_values, cpu_values)`` indexed by the
+    deduplicated test names — exactly the shape the existing
+    ``draw_grouped_bar_chart`` consumes, so no downstream change is
+    needed.
 
+    The ``BACKEND_*`` filter is applied here: in CPU-only mode we drop
+    tests with no CPU-pass data, and conversely for GPU-only.
+
+    Tests with the same name *and* the same ``use_gpu`` (e.g. the user
+    re-measured twice) collapse into the first occurrence; the value
+    from the second pass is silently ignored. Loading two complete
+    passes — one with ``use_gpu=False`` and one with ``use_gpu=True``,
+    which is exactly what "Run both compute paths" produces — fills
+    every group.
+    """
+    def _value_for(test):
+        for key in value_keys:
+            val = get_nested_value(test, key)
+            if val is not None:
+                return val
+        return None
+
+    grouped: dict[str, dict[str, float]] = {}
+    name_order: list[str] = []
     for test in view._tests:
-        test_name = test.get("name", "Unknown")
-        if len(test_name) > 15:
-            test_name = test_name[:12] + "..."
-        test_names.append(test_name)
+        name = test.get("name", "Unknown")
+        if name not in grouped:
+            grouped[name] = {}
+            name_order.append(name)
+        bucket = "gpu" if bool(test.get("use_gpu")) else "cpu"
+        if bucket in grouped[name]:
+            continue  # keep first occurrence per (name, path)
+        val = _value_for(test)
+        if val is not None:
+            grouped[name][bucket] = float(val)
 
-        gpu_val = get_nested_value(test, gpu_key)
-        cpu_val = get_nested_value(test, cpu_key)
+    test_names: list[str] = []
+    gpu_values: list[float] = []
+    cpu_values: list[float] = []
+    show_gpu = view._backend_filter in (view.BACKEND_ALL, view.BACKEND_GPU)
+    show_cpu = view._backend_filter in (view.BACKEND_ALL, view.BACKEND_CPU)
 
-        # Fallback to combined if no per-backend data
-        if gpu_val is None and cpu_val is None and combined_keys:
-            for key in combined_keys:
-                combined = get_nested_value(test, key)
-                if combined is not None:
-                    gpu_val = combined
-                    break
-
-        gpu_values.append(gpu_val if gpu_val else 0)
-        cpu_values.append(cpu_val if cpu_val else 0)
+    for name in name_order:
+        entry = grouped[name]
+        gpu_v = entry.get("gpu") if show_gpu else None
+        cpu_v = entry.get("cpu") if show_cpu else None
+        # Skip tests that contribute nothing under the active filter
+        # (e.g. CPU-only filter applied to a GPU-only experiment).
+        if gpu_v is None and cpu_v is None:
+            continue
+        display = name if len(name) <= 15 else name[:12] + "..."
+        test_names.append(display)
+        gpu_values.append(gpu_v if gpu_v is not None else 0)
+        cpu_values.append(cpu_v if cpu_v is not None else 0)
 
     has_gpu = any(v > 0 for v in gpu_values)
     has_cpu = any(v > 0 for v in cpu_values)
-
     return test_names, gpu_values, cpu_values, has_gpu, has_cpu
+
+
+def collect_backend_data(view, gpu_key: str, cpu_key: str,
+                         combined_keys: list | None = None):
+    """Backwards-compatible wrapper.
+
+    The old API took separate GPU / CPU field keys (e.g.
+    ``energy_gpu_mj`` / ``energy_cpu_mj``) and read both from a single
+    test entry. Under the new compute-path semantics both bars come
+    from the same total field on different test entries; collapse the
+    arguments to ``collect_compute_path_data`` so the call sites in
+    this file don't need to change.
+    """
+    # The "gpu_key" is conventionally the per-rail GPU field; we
+    # promote the matching combined fields ("energy_mean_mj" /
+    # "mean_energy_mj" / "energy_mean_watts" / "mean_power_watts") to
+    # the primary lookup, and keep the per-rail keys + any legacy
+    # ``combined_keys`` as fallbacks for old reports.
+    primary_keys = {
+        "energy_gpu_mj":   ["energy_mean_mj", "mean_energy_mj"],
+        "energy_gpu_watts":["energy_mean_watts", "mean_power_watts"],
+    }
+    value_keys: list[str] = []
+    for k in primary_keys.get(gpu_key, []):
+        if k not in value_keys:
+            value_keys.append(k)
+    for k in (combined_keys or []):
+        if k not in value_keys:
+            value_keys.append(k)
+    # Per-rail keys remain as last-ditch fallbacks for ancient reports
+    # that only stored ``energy_gpu_mj`` / ``energy_cpu_mj``.
+    for k in (gpu_key, cpu_key):
+        if k and k not in value_keys:
+            value_keys.append(k)
+    return collect_compute_path_data(view, value_keys)
 
 
 def draw_grouped_bar_chart(view, ax, test_names, gpu_values, cpu_values,
@@ -83,10 +148,12 @@ def draw_grouped_bar_chart(view, ax, test_names, gpu_values, cpu_values,
     for i, test_name in enumerate(test_names):
         group_start_idx = bar_idx
 
-        # GPU bar (if data available for this backend)
+        # GPU run bar (test had use_gpu=True). Labels read "GPU run"
+        # rather than just "GPU" so the user reads the chart as
+        # "compute path = GPU" instead of "energy backend = GPU".
         if has_gpu:
             x_positions.append(pos)
-            x_labels.append("GPU")
+            x_labels.append("GPU run")
             bar_values.append(gpu_values[i])
             bar_colors.append(view.COLOR_GPU)
             if gpu_first_idx < 0:
@@ -94,10 +161,10 @@ def draw_grouped_bar_chart(view, ax, test_names, gpu_values, cpu_values,
             pos += 1
             bar_idx += 1
 
-        # CPU bar (if data available for this backend)
+        # CPU run bar (test had use_gpu=False)
         if has_cpu:
             x_positions.append(pos)
-            x_labels.append("CPU")
+            x_labels.append("CPU run")
             bar_values.append(cpu_values[i])
             bar_colors.append(view.COLOR_CPU)
             if cpu_first_idx < 0:
@@ -119,9 +186,9 @@ def draw_grouped_bar_chart(view, ax, test_names, gpu_values, cpu_values,
         # Set label only for first occurrence of each color (for legend)
         label = None
         if bar_colors[idx] == view.COLOR_GPU and idx == gpu_first_idx:
-            label = 'GPU'
+            label = 'GPU run'
         elif bar_colors[idx] == view.COLOR_CPU and idx == cpu_first_idx:
-            label = 'CPU'
+            label = 'CPU run'
 
         ax.bar(x[idx], bar_values[idx], width, label=label,
                color=bar_colors[idx], alpha=0.8)
@@ -156,10 +223,10 @@ def draw_grouped_bar_chart(view, ax, test_names, gpu_values, cpu_values,
 
 def draw_single_backend_chart(view, ax, test_names, values, is_gpu: bool,
                               value_format=".1f", annotation_text=None):
-    """Draw a chart for a single backend with test names on X-axis."""
+    """Draw a chart for a single compute path with test names on X-axis."""
     if not any(v > 0 for v in values):
-        backend_name = "GPU" if is_gpu else "CPU"
-        ax.text(0.5, 0.5, f"No {backend_name} data available",
+        path_name = "GPU run" if is_gpu else "CPU run"
+        ax.text(0.5, 0.5, f"No {path_name} data available",
                 ha='center', va='center', fontsize=12, color='#999')
         ax.axis('off')
         return False
@@ -167,7 +234,7 @@ def draw_single_backend_chart(view, ax, test_names, values, is_gpu: bool,
     x = np.arange(len(test_names))
     width = 0.6
     color = view.COLOR_GPU if is_gpu else view.COLOR_CPU
-    label = 'GPU' if is_gpu else 'CPU'
+    label = 'GPU run' if is_gpu else 'CPU run'
 
     bars = ax.bar(x, values, width, label=label, color=color, alpha=0.8)
 

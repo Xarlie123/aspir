@@ -75,8 +75,12 @@ def build_ui(view):
     """)
     left_layout.addWidget(view.chart_list)
 
-    # Backend selector
-    backend_label = QLabel("Backend:")
+    # Compute-path selector: "which device ran the inference?", not
+    # "which energy sensor produced the reading". The per-rail
+    # breakdown (RAPL / NVML / jtop) is determined by the host and the
+    # user has no useful choice there; what they want to compare is
+    # the cost of running on CPU vs GPU.
+    backend_label = QLabel("Compute path:")
     backend_label.setStyleSheet("font-weight: bold; color: #333;")
     left_layout.addWidget(backend_label)
 
@@ -87,10 +91,14 @@ def build_ui(view):
     view.backend_combo.setCurrentText(view.BACKEND_ALL)
     view.backend_combo.currentTextChanged.connect(view._on_backend_changed)
     view.backend_combo.setToolTip(
-        "Select which energy backend data to display:\n"
-        "- CPU + GPU: Shows separate bars for each backend\n"
-        "- CPU Only: Energy from CPU (Intel RAPL)\n"
-        "- GPU Only: Energy from GPU (NVIDIA NVML)"
+        "Group bars by which compute path ran the inference:\n"
+        "- CPU run + GPU run: side-by-side bars per test\n"
+        "- CPU run only: hide tests measured on GPU\n"
+        "- GPU run only: hide tests measured on CPU\n"
+        "\n"
+        "Tests are paired by name; load the CPU and GPU re-measurement\n"
+        "reports together (or use 'Run both compute paths' on Re-measure)\n"
+        "to populate both bars."
     )
     left_layout.addWidget(view.backend_combo)
 
