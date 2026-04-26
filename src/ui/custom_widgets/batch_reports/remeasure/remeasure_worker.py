@@ -7,10 +7,12 @@ existing :func:`measure_timing` / :func:`measure_energy` primitives. The
 output is written to a *copy* of the report (the suffix is decided by the
 caller); the originals are left untouched.
 
-We only need the model weights and ``img_size``; the random-tensor
-benchmark inside ``measure_timing``/``measure_energy`` does not require
-the original test dataset, so re-measurement also works for experiments
-exported with ``REPORTS_AND_MODELS`` (no ``data/`` directory).
+The full timing breakdown (acquisition + reconstruction + inference)
+needs the saved masks and test images, so it only works on
+``ALL_DATA`` exports. On ``REPORTS_AND_MODELS`` exports we still
+re-measure inference timing and energy; acquisition time is
+back-filled from the original ``timing_num_patterns`` so the table
+isn't blank, and reconstruction is left at zero with a log warning.
 """
 from __future__ import annotations
 
@@ -31,6 +33,7 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
     resolve_model_name,
 )
 from ui.custom_widgets.batch_test.batch_test_runner._energy import measure_energy
+from ui.custom_widgets.batch_test.batch_test_runner._pipeline import create_applicator
 from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
 from ui.utils.file_formats import safe_test_dirname
@@ -136,15 +139,130 @@ def _build_model_facade(
 def _make_test_config(test_entry: dict, cfg: RemeasureConfig) -> TestConfiguration:
     """Build a :class:`TestConfiguration` with only the fields the
     measurement primitives read; everything else stays at the dataclass
-    default and is harmless."""
+    default and is harmless.
+
+    ``test_split`` is forced to 100 because the data we have on disk
+    *is* the original test set — there is nothing else to split off,
+    and reconstruction timing should average across every available
+    image instead of just the 10 % that originally fed the loss.
+    """
     return TestConfiguration(
         name=test_entry.get("name", "test"),
+        mask_type=test_entry.get("mask_type", "scatter"),
+        reconstruction_method=test_entry.get("reconstruction_method", "conventional"),
         use_gpu=cfg.use_gpu,
         timing_warmup_runs=cfg.warmup_runs,
         timing_measurement_runs=cfg.measurement_runs,
         timing_sampling_rate_khz=cfg.sampling_rate_khz,
-        test_split=int(test_entry.get("test_split", 10)),
+        test_split=100,
     )
+
+
+# Map saved ``mask_type`` strings → the concrete class we instantiate so the
+# isinstance() checks in :func:`create_applicator` (and its native dispatch)
+# pick the correct algorithm. Imported lazily inside the helper to keep this
+# module's startup cost small.
+_MASK_TYPE_CLASSES: dict[str, str] = {
+    "scatter":              "simulation_engine._2_mask_gen.mask_scatter:MaskScatter",
+    "sweep":                "simulation_engine._2_mask_gen.mask_sweep:MaskSweep",
+    "hadamard_natural":     "simulation_engine._2_mask_gen.mask_hadamard:MaskHadamard",
+    "hadamard_cake_cutting":"simulation_engine._2_mask_gen.mask_hadamard_cake_cutting:MaskHadamardCakeCutting",
+    "hadamard_walsh_paley": "simulation_engine._2_mask_gen.mask_hadamard_walsh_paley:MaskHadamardWalshPaley",
+    "cal_sal":              "simulation_engine._2_mask_gen.mask_cal_sal:MaskCalSal",
+}
+
+
+def _instantiate_mask_facade(mask_type: str, img_size: int, n_patterns: int,
+                             logger: logging.Logger):
+    """Instantiate the right :class:`MaskABC` subclass with throwaway init
+    parameters. The caller overwrites ``masks`` / ``num_patterns`` after,
+    so the values we pass here only need to keep the constructor happy."""
+    spec = _MASK_TYPE_CLASSES.get(mask_type)
+    if spec is None:
+        raise ValueError(f"Unsupported mask_type for re-measure: {mask_type!r}")
+    module_name, _, class_name = spec.partition(":")
+    import importlib
+    module = importlib.import_module(module_name)
+    cls = getattr(module, class_name)
+
+    if mask_type == "scatter":
+        return cls(img_size=img_size, point_density=10.0,
+                   num_patterns=n_patterns, seed=0, logger=logger)
+    if mask_type == "sweep":
+        # parametros structure must match what MaskSweep expects, even
+        # though we replace ``masks`` immediately afterwards.
+        dummy = [{"angle": 0.0, "bar_width": 2, "stride": 4}]
+        return cls(img_size=img_size, parametros=dummy, logger=logger)
+    if mask_type in ("hadamard_natural", "hadamard_cake_cutting",
+                     "hadamard_walsh_paley"):
+        return cls(img_size=img_size, min_idx=0, max_idx=n_patterns,
+                   logger=logger)
+    # cal_sal: only needs img_size
+    return cls(img_size=img_size, logger=logger)
+
+
+def _build_remeasure_pipeline(test_entry: dict, batch_dir: Path, img_size: int,
+                              test_config: TestConfiguration,
+                              logger: logging.Logger):
+    """Reload the test set + mask from disk and assemble an applicator.
+
+    Only works for ``ALL_DATA`` exports — we need both
+    ``data/<test>/masks.npz`` and ``data/<test>/test_images.npz`` to be
+    present. Returns ``(dataset_facade, applicator)`` on success or
+    ``(None, None)`` if anything is missing; the caller falls back to a
+    timing run without reconstruction.
+    """
+    import numpy as np
+
+    safe = safe_test_dirname(test_entry.get("name", ""))
+    test_dir = batch_dir / "data" / safe
+    masks_path = test_dir / "masks.npz"
+    images_path = test_dir / "test_images.npz"
+    if not (masks_path.exists() and images_path.exists()):
+        logger.debug("No saved masks/images for '%s' — skipping reconstruction "
+                     "timing (export level was not ALL_DATA?)", safe)
+        return None, None
+
+    masks_arr = np.load(str(masks_path))["masks"]
+    with np.load(str(images_path)) as data:
+        if "originals" not in data.files:
+            logger.warning("test_images.npz for '%s' has no 'originals' key", safe)
+            return None, None
+        originals = np.array(data["originals"])
+
+    # Dataset facade: applicators only read ``.data`` (indexable list of
+    # 2-D arrays) and ``.img_size``.
+    dataset = SimpleNamespace(
+        data=[np.asarray(originals[i]) for i in range(originals.shape[0])],
+        img_size=int(img_size),
+        name="remeasure",
+    )
+
+    mask_type = test_entry.get("mask_type", "")
+    n_patterns = int(masks_arr.shape[0])
+    try:
+        mask = _instantiate_mask_facade(mask_type, int(img_size), n_patterns, logger)
+    except Exception as exc:
+        logger.warning("Cannot instantiate mask facade for '%s' (%s): %s",
+                       test_entry.get("name", ""), mask_type, exc)
+        return dataset, None
+
+    # Replace whatever the constructor pre-computed with the saved patterns
+    # and disable regeneration — ``create_applicator`` would otherwise call
+    # ``mask.generate_masks()`` and overwrite our loaded array with a fresh
+    # synthesis (potentially in a different ordering).
+    mask.masks = masks_arr
+    mask.num_patterns = n_patterns
+    mask.generate_masks = lambda *args, **kwargs: None  # noqa: E731
+
+    try:
+        applicator = create_applicator(test_config, mask, dataset)
+    except Exception as exc:
+        logger.warning("Cannot build applicator for '%s' (method=%s): %s",
+                       test_entry.get("name", ""),
+                       test_config.reconstruction_method, exc)
+        return dataset, None
+    return dataset, applicator
 
 
 def _strip_old_metrics(test_entry: dict, kill_timing: bool, kill_energy: bool) -> None:
@@ -251,14 +369,34 @@ class RemeasureWorker(QObject):
             test_config = _make_test_config(test_entry, self.cfg)
 
             if self.cfg.measure_timing:
+                # Try to rebuild the dataset + applicator so measure_timing
+                # can populate acquisition + reconstruction times. Falls
+                # back to inference-only timing if the export didn't include
+                # masks/images.
+                dataset_facade, applicator = _build_remeasure_pipeline(
+                    test_entry, batch_dir, img_size, test_config, self.logger,
+                )
                 try:
                     timing = measure_timing(
-                        facade, test_config, dataset=None, logger=self.logger,
-                        applicator=None,
+                        facade, test_config, dataset=dataset_facade,
+                        logger=self.logger,
+                        applicator=applicator,
                         warmup_runs=self.cfg.warmup_runs,
                         measurement_runs=self.cfg.measurement_runs,
                         sampling_rate_khz=self.cfg.sampling_rate_khz,
                     )
+                    # When the export had no data/ folder we couldn't pass
+                    # a mask, so num_patterns defaulted to 1 and acquisition
+                    # came out wrong (1 / sampling_rate_khz). Carry forward
+                    # the pattern count from the original report so the
+                    # acquisition column at least matches reality.
+                    if applicator is None:
+                        prev = test_entry.get("timing_num_patterns")
+                        if prev and self.cfg.sampling_rate_khz > 0:
+                            timing["timing_num_patterns"] = int(prev)
+                            timing["timing_acquisition_ms"] = (
+                                float(prev) / self.cfg.sampling_rate_khz
+                            )
                     updated.update(timing)
                     timing_metrics = updated.get("timing_metrics") or {}
                     timing_metrics["inference_time_ms"] = timing.get("timing_mean_ms", 0.0)
