@@ -448,7 +448,10 @@ class AxesConfigTab(QWidget):
         xaxis_layout.addWidget(QLabel("Label pad:"), 3, 0)
         self.xlabel_pad_spin = QSpinBox()
         self.xlabel_pad_spin.setMinimum(0)
-        self.xlabel_pad_spin.setMaximum(60)
+        # 120 pt of headroom — charts that draw a secondary X tier
+        # (e.g. Pipeline Latency Breakdown's "4%, 8%…" group labels)
+        # need ~30 pt to clear; leave plenty of margin above that.
+        self.xlabel_pad_spin.setMaximum(120)
         self.xlabel_pad_spin.setValue(4)
         self.xlabel_pad_spin.setSuffix(" pt")
         self.xlabel_pad_spin.setToolTip(
@@ -528,7 +531,7 @@ class AxesConfigTab(QWidget):
         yaxis_layout.addWidget(QLabel("Label pad:"), 3, 0)
         self.ylabel_pad_spin = QSpinBox()
         self.ylabel_pad_spin.setMinimum(0)
-        self.ylabel_pad_spin.setMaximum(60)
+        self.ylabel_pad_spin.setMaximum(120)
         self.ylabel_pad_spin.setValue(4)
         self.ylabel_pad_spin.setSuffix(" pt")
         self.ylabel_pad_spin.setToolTip(

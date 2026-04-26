@@ -84,12 +84,19 @@ class TimingView(QWidget):
                 'title_fontsize': 13,
                 'xlabel': '',
                 'xlabel_fontsize': 11,
-                'xlabel_pad': 4,
+                # The Pipeline Latency Breakdown chart draws a secondary
+                # row of "4 % / 8 % / …" group labels at axes-fraction
+                # y=-0.12 (see ``_draw_pipeline_breakdown``). With the
+                # generic 4 pt default the X axis title overlaps that
+                # row; ~30 pt is enough to drop the title below it.
+                # Users can still override from the chart-config dialog
+                # (range 0–120 pt).
+                'xlabel_pad': 30,
                 'xtick_fontsize': 9,
                 'group_label_fontsize': 9,
                 'ylabel': '',
                 'ylabel_fontsize': 11,
-                'ylabel_pad': 4,
+                'ylabel_pad': 8,
                 'ytick_fontsize': 9,
                 'bar_label_fontsize': 8,
                 'auto_scale': True,
@@ -889,11 +896,15 @@ class TimingView(QWidget):
             ax.set_xticks(x)
             ax.set_xticklabels(labels, fontsize=xtick_fs)
 
-        # Apply axes configuration
+        # Apply axes configuration. The default_xlabel is set to the
+        # paper convention because the X axis shows the sampling ratio
+        # tier ("4 % / 8 % / …") — without a title the chart looks
+        # untidy in screenshots.
         self._apply_axes_config(
             ax,
             default_title="Pipeline Latency Breakdown",
-            default_ylabel="Time (ms)"
+            default_xlabel="Sampling ratio M/N (%)",
+            default_ylabel="Time (ms)",
         )
 
         ax.grid(axis='y', alpha=0.3)
