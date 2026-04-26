@@ -297,7 +297,7 @@ class TimingView(QWidget):
         # Create summary labels
         self._summary_labels = {}
         rows = [
-            ("T_acquisition:", "t_acq"),
+            ("T_mask_projection:", "t_acq"),
             ("T_reconstruction:", "t_recon"),
             ("T_inference:", "t_inf"),
             ("T_total:", "t_total"),
@@ -817,7 +817,7 @@ class TimingView(QWidget):
             inf = [d[2] for d in bar_data]
 
             # Acquisition and Reconstruction (same color for all)
-            ax.bar(x, acq, width, label='Acquisition', color=self.COLOR_ACQUISITION, edgecolor='white')
+            ax.bar(x, acq, width, label='Mask projection', color=self.COLOR_ACQUISITION, edgecolor='white')
             ax.bar(x, recon, width, bottom=acq, label='Reconstruction', color=self.COLOR_RECONSTRUCTION, edgecolor='white')
 
             # Inference - different colors for CPU vs GPU
@@ -871,7 +871,7 @@ class TimingView(QWidget):
             recon = [d[1] for d in cpu_data]
             inf = [d[2] for d in cpu_data]
 
-            ax.bar(x, acq, width, label='Acquisition', color=self.COLOR_ACQUISITION, edgecolor='white')
+            ax.bar(x, acq, width, label='Mask projection', color=self.COLOR_ACQUISITION, edgecolor='white')
             ax.bar(x, recon, width, bottom=acq, label='Reconstruction', color=self.COLOR_RECONSTRUCTION, edgecolor='white')
             ax.bar(x, inf, width, bottom=np.array(acq) + np.array(recon),
                    label='Inference (CPU)', color=self.COLOR_INFERENCE_CPU, edgecolor='white')
