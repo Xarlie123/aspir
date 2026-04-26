@@ -123,10 +123,17 @@ class EnergyAnalyzer:
         self.warmup_runs = warmup_runs
         self.measurement_runs = measurement_runs
 
+        # The Jetson backend (jtop) reads a single shared module power
+        # rail that feeds CPU + GPU + RAM + SoC together — there's no
+        # way to ask jtop for "only CPU" or "only GPU" energy. So the
+        # backend has to be enabled whenever the caller wants *any*
+        # energy reading, not only when the GPU is in use; gating it
+        # on enable_gpu_energy was the bug behind "no energy backend"
+        # warnings on CPU re-measurement passes (use_gpu=False).
         self._energy_monitor = EnergyMonitor(
             enable_gpu=enable_gpu_energy,
             enable_cpu=enable_cpu_energy,
-            enable_jetson=enable_gpu_energy,  # Jetson uses GPU measurement path
+            enable_jetson=(enable_gpu_energy or enable_cpu_energy),
             pmlib_server_ip=pmlib_server_ip,
             pmlib_server_port=pmlib_server_port,
             logger=self.logger
