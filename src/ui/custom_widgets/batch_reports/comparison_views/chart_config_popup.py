@@ -410,7 +410,57 @@ class AxesConfigTab(QWidget):
         self.xtick_fontsize_spin.setSuffix(" pt")
         xaxis_layout.addWidget(self.xtick_fontsize_spin, 2, 1)
 
+        # Padding between the X label ("Sampling Ratio", "Time (ms)" …)
+        # and the axis itself. matplotlib calls this ``labelpad`` and
+        # measures it in points; sensible range 0–40.
+        xaxis_layout.addWidget(QLabel("Label pad:"), 3, 0)
+        self.xlabel_pad_spin = QSpinBox()
+        self.xlabel_pad_spin.setMinimum(0)
+        self.xlabel_pad_spin.setMaximum(60)
+        self.xlabel_pad_spin.setValue(4)
+        self.xlabel_pad_spin.setSuffix(" pt")
+        self.xlabel_pad_spin.setToolTip(
+            "Distance between the X-axis title and the axis."
+        )
+        xaxis_layout.addWidget(self.xlabel_pad_spin, 3, 1)
+
+        # Some charts (e.g. Pipeline Latency Breakdown) draw a second
+        # tier of X labels below the tick labels — the sampling ratio
+        # group names ("4%", "8%" …). Charts without that second tier
+        # ignore this value, so it's safe to keep here.
+        xaxis_layout.addWidget(QLabel("Group label font:"), 4, 0)
+        self.group_label_fontsize_spin = QSpinBox()
+        self.group_label_fontsize_spin.setMinimum(6)
+        self.group_label_fontsize_spin.setMaximum(18)
+        self.group_label_fontsize_spin.setValue(9)
+        self.group_label_fontsize_spin.setSuffix(" pt")
+        self.group_label_fontsize_spin.setToolTip(
+            "Font size for the secondary X tier (test/group names "
+            "below the tick labels). Only used by charts that draw it."
+        )
+        xaxis_layout.addWidget(self.group_label_fontsize_spin, 4, 1)
+
         left_column.addWidget(xaxis_group)
+
+        # Data labels group — controls the numeric labels drawn on top
+        # of bars / data points. Lives in the left column below the
+        # X-Axis group so the dialog height stays roughly even.
+        bar_group = QGroupBox("Data labels")
+        bar_layout = QGridLayout(bar_group)
+        bar_layout.setSpacing(8)
+
+        bar_layout.addWidget(QLabel("Value font:"), 0, 0)
+        self.bar_label_fontsize_spin = QSpinBox()
+        self.bar_label_fontsize_spin.setMinimum(6)
+        self.bar_label_fontsize_spin.setMaximum(18)
+        self.bar_label_fontsize_spin.setValue(8)
+        self.bar_label_fontsize_spin.setSuffix(" pt")
+        self.bar_label_fontsize_spin.setToolTip(
+            "Font size of the numeric labels drawn above bars / points."
+        )
+        bar_layout.addWidget(self.bar_label_fontsize_spin, 0, 1)
+
+        left_column.addWidget(bar_group)
         left_column.addStretch()
 
         # === RIGHT COLUMN ===
@@ -442,6 +492,17 @@ class AxesConfigTab(QWidget):
         self.ytick_fontsize_spin.setValue(8)
         self.ytick_fontsize_spin.setSuffix(" pt")
         yaxis_layout.addWidget(self.ytick_fontsize_spin, 2, 1)
+
+        yaxis_layout.addWidget(QLabel("Label pad:"), 3, 0)
+        self.ylabel_pad_spin = QSpinBox()
+        self.ylabel_pad_spin.setMinimum(0)
+        self.ylabel_pad_spin.setMaximum(60)
+        self.ylabel_pad_spin.setValue(4)
+        self.ylabel_pad_spin.setSuffix(" pt")
+        self.ylabel_pad_spin.setToolTip(
+            "Distance between the Y-axis title and the axis."
+        )
+        yaxis_layout.addWidget(self.ylabel_pad_spin, 3, 1)
 
         right_column.addWidget(yaxis_group)
 
@@ -494,10 +555,14 @@ class AxesConfigTab(QWidget):
             'title_fontsize': self.title_fontsize_spin.value(),
             'xlabel': self.xlabel_edit.text(),
             'xlabel_fontsize': self.xlabel_fontsize_spin.value(),
+            'xlabel_pad': self.xlabel_pad_spin.value(),
             'xtick_fontsize': self.xtick_fontsize_spin.value(),
+            'group_label_fontsize': self.group_label_fontsize_spin.value(),
             'ylabel': self.ylabel_edit.text(),
             'ylabel_fontsize': self.ylabel_fontsize_spin.value(),
+            'ylabel_pad': self.ylabel_pad_spin.value(),
             'ytick_fontsize': self.ytick_fontsize_spin.value(),
+            'bar_label_fontsize': self.bar_label_fontsize_spin.value(),
             'auto_scale': self.auto_scale_check.isChecked(),
             'ymin': self.ymin_spin.value(),
             'ymax': self.ymax_spin.value(),
@@ -513,14 +578,22 @@ class AxesConfigTab(QWidget):
             self.xlabel_edit.setText(config['xlabel'])
         if 'xlabel_fontsize' in config:
             self.xlabel_fontsize_spin.setValue(config['xlabel_fontsize'])
+        if 'xlabel_pad' in config:
+            self.xlabel_pad_spin.setValue(config['xlabel_pad'])
         if 'xtick_fontsize' in config:
             self.xtick_fontsize_spin.setValue(config['xtick_fontsize'])
+        if 'group_label_fontsize' in config:
+            self.group_label_fontsize_spin.setValue(config['group_label_fontsize'])
         if 'ylabel' in config:
             self.ylabel_edit.setText(config['ylabel'])
         if 'ylabel_fontsize' in config:
             self.ylabel_fontsize_spin.setValue(config['ylabel_fontsize'])
+        if 'ylabel_pad' in config:
+            self.ylabel_pad_spin.setValue(config['ylabel_pad'])
         if 'ytick_fontsize' in config:
             self.ytick_fontsize_spin.setValue(config['ytick_fontsize'])
+        if 'bar_label_fontsize' in config:
+            self.bar_label_fontsize_spin.setValue(config['bar_label_fontsize'])
         if 'auto_scale' in config:
             self.auto_scale_check.setChecked(config['auto_scale'])
             self._on_auto_scale_changed(None)

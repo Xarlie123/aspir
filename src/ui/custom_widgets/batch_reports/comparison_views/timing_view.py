@@ -73,10 +73,14 @@ class TimingView(QWidget):
                 'title_fontsize': 13,
                 'xlabel': '',
                 'xlabel_fontsize': 11,
+                'xlabel_pad': 4,
                 'xtick_fontsize': 9,
+                'group_label_fontsize': 9,
                 'ylabel': '',
                 'ylabel_fontsize': 11,
+                'ylabel_pad': 4,
                 'ytick_fontsize': 9,
+                'bar_label_fontsize': 8,
                 'auto_scale': True,
                 'ymin': 0.0,
                 'ymax': 100.0,
@@ -393,13 +397,15 @@ class TimingView(QWidget):
 
         xlabel = axes_cfg.get('xlabel', '') or default_xlabel
         xlabel_fontsize = axes_cfg.get('xlabel_fontsize', 11)
+        xlabel_pad = axes_cfg.get('xlabel_pad', 4)
         if xlabel:
-            ax.set_xlabel(xlabel, fontsize=xlabel_fontsize)
+            ax.set_xlabel(xlabel, fontsize=xlabel_fontsize, labelpad=xlabel_pad)
 
         ylabel = axes_cfg.get('ylabel', '') or default_ylabel
         ylabel_fontsize = axes_cfg.get('ylabel_fontsize', 11)
+        ylabel_pad = axes_cfg.get('ylabel_pad', 4)
         if ylabel:
-            ax.set_ylabel(ylabel, fontsize=ylabel_fontsize)
+            ax.set_ylabel(ylabel, fontsize=ylabel_fontsize, labelpad=ylabel_pad)
 
         xtick_fontsize = axes_cfg.get('xtick_fontsize', 9)
         ytick_fontsize = axes_cfg.get('ytick_fontsize', 9)
@@ -522,6 +528,13 @@ class TimingView(QWidget):
         if not self._tests:
             return
 
+        # Read user-tunable font sizes from the shared chart config so the
+        # ``Configure chart settings`` dialog actually reaches every label.
+        axes_cfg = self._chart_config.get('axes', {})
+        bar_label_fs = axes_cfg.get('bar_label_fontsize', 8)
+        group_label_fs = axes_cfg.get('group_label_fontsize', 9)
+        xtick_fs = axes_cfg.get('xtick_fontsize', 9)
+
         # Collect data for all tests
         test_names = []
         cpu_data = []  # List of (t_acq, t_recon, t_inf_cpu)
@@ -629,18 +642,20 @@ class TimingView(QWidget):
                 total = acq[idx] + recon[idx] + inf[idx]
                 if total > 0:
                     ax.text(x[idx], total + 0.3, f'{total:.1f}',
-                           ha='center', va='bottom', fontsize=8, fontweight='bold')
+                           ha='center', va='bottom',
+                           fontsize=bar_label_fs, fontweight='bold')
 
             # Set X-axis labels (CPU/GPU)
             ax.set_xticks(x)
-            ax.set_xticklabels(x_labels, fontsize=9)
+            ax.set_xticklabels(x_labels, fontsize=xtick_fs)
 
             # Add test name labels below the CPU/GPU labels
             for group_start, group_end, test_name in group_positions:
                 group_center = (x_positions[group_start] + x_positions[group_end]) / 2
                 # Use axes fraction for y (-0.12 places it below the tick labels)
                 ax.text(group_center, -0.12, test_name,
-                       ha='center', va='top', fontsize=9, fontweight='bold',
+                       ha='center', va='top',
+                       fontsize=group_label_fs, fontweight='bold',
                        transform=ax.get_xaxis_transform())
 
             # Add extra bottom margin for test names
@@ -665,12 +680,13 @@ class TimingView(QWidget):
                 total = cd[0] + cd[1] + cd[2]
                 if total > 0:
                     ax.text(x[i], total + 0.5, f'{total:.1f}',
-                           ha='center', va='bottom', fontsize=8, fontweight='bold')
+                           ha='center', va='bottom',
+                           fontsize=bar_label_fs, fontweight='bold')
 
             # Two-line labels: test name + "CPU"
             labels = [f"{name}\nCPU" for name in test_names]
             ax.set_xticks(x)
-            ax.set_xticklabels(labels, fontsize=9)
+            ax.set_xticklabels(labels, fontsize=xtick_fs)
 
         # Apply axes configuration
         self._apply_axes_config(
