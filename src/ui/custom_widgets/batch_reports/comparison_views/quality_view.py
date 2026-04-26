@@ -91,6 +91,12 @@ class QualityView(QWidget):
                 'lpips': '#d62728',
                 'noisy': '#1f77b4',
                 'denoised': '#2ca02c',
+                # PSNR-vs-Sampling-Ratio line series — classic
+                # matplotlib tab:blue / tab:orange so the figure ships
+                # with the Tableau look. User-overrideable from
+                # Configure chart settings → Colors → "Lines (PSNR vs M/N)".
+                'recon_line': '#1f77b4',
+                'denoised_line': '#ff7f0e',
                 'bar_alpha': 0.8,
                 'hist_alpha': 0.7,
             }
@@ -925,18 +931,15 @@ class QualityView(QWidget):
     # PSNR vs Sampling Ratio (paper-style figure)
     # ------------------------------------------------------------------
 
-    # Markers/colours roughly mirror the user's hand-drawn spec:
-    # red for the raw linear reconstruction, green for the NN-denoised
-    # series. When several experiments are loaded the colours cycle
-    # through tab10 and the experiment name is appended to the legend.
-    _RECON_COLOR = '#d62728'
-    _DENOISED_COLOR = '#2ca02c'
-    # Used to colour-code experiments when several are loaded at once.
-    # Same hex tones as matplotlib's tab10 minus the red/green that
-    # already mean "recon" / "denoised" in the single-experiment case.
+    # Single-experiment colours come from the chart-config dialog
+    # (Colors tab → "Lines (PSNR vs M/N)") so the user can override
+    # them; the defaults live in ``_chart_config['colors']`` above.
+    # When several experiments are loaded we cycle this palette to
+    # colour-code each one — kept hard-coded because exposing N pickers
+    # would clutter the dialog and these are decent fallbacks.
     _MULTI_EXPERIMENT_PALETTE = (
-        '#1f77b4', '#9467bd', '#8c564b', '#e377c2',
-        '#7f7f7f', '#17becf', '#bcbd22', '#ff7f0e',
+        '#9467bd', '#8c564b', '#e377c2',
+        '#7f7f7f', '#17becf', '#bcbd22',
     )
 
     def _psnr_vs_sampling_rows(self) -> List[Dict[str, Any]]:
@@ -1022,6 +1025,9 @@ class QualityView(QWidget):
                 exp_order.append(row["experiment"])
 
         single_exp = len(exp_order) == 1
+        colors_cfg = self._chart_config['colors']
+        recon_default = colors_cfg.get('recon_line', '#1f77b4')
+        denoised_default = colors_cfg.get('denoised_line', '#ff7f0e')
 
         for idx, exp_name in enumerate(exp_order):
             exp_rows = sorted(grouped[exp_name], key=lambda r: r["beta"])
@@ -1032,8 +1038,8 @@ class QualityView(QWidget):
             std_d = [r["std_denoised"] for r in exp_rows]
 
             if single_exp:
-                color_recon = self._RECON_COLOR
-                color_den = self._DENOISED_COLOR
+                color_recon = recon_default
+                color_den = denoised_default
                 lbl_recon = "Reconstructed (linear)"
                 lbl_den = "Denoised (NN post-processing)"
             else:

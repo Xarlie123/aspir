@@ -294,6 +294,27 @@ class ColorsConfigTab(QWidget):
         histogram_layout.addWidget(reset_hist_btn, 2, 0, 1, 2)
 
         right_column.addWidget(histogram_group)
+
+        # Line-chart series colors — used by "PSNR vs Sampling Ratio".
+        # Defaults are matplotlib's classic tab:blue / tab:orange so the
+        # plot ships with the Tableau look out of the box.
+        lines_group = QGroupBox("Lines (PSNR vs M/N)")
+        lines_layout = QGridLayout(lines_group)
+        lines_layout.setSpacing(8)
+
+        lines_layout.addWidget(QLabel("Reconstructed:"), 0, 0)
+        self.recon_line_color = ColorButton("#1f77b4")
+        lines_layout.addWidget(self.recon_line_color, 0, 1)
+
+        lines_layout.addWidget(QLabel("Denoised:"), 1, 0)
+        self.denoised_line_color = ColorButton("#ff7f0e")
+        lines_layout.addWidget(self.denoised_line_color, 1, 1)
+
+        reset_lines_btn = QPushButton("Reset")
+        reset_lines_btn.clicked.connect(self._reset_line_colors)
+        lines_layout.addWidget(reset_lines_btn, 2, 0, 1, 2)
+
+        right_column.addWidget(lines_group)
         right_column.addStretch()
 
         # Add columns to main layout
@@ -312,6 +333,11 @@ class ColorsConfigTab(QWidget):
         self.noisy_color.set_color("#1f77b4")
         self.denoised_color.set_color("#2ca02c")
 
+    def _reset_line_colors(self):
+        """Reset line-chart series colors to the Tableau-style defaults."""
+        self.recon_line_color.set_color("#1f77b4")
+        self.denoised_line_color.set_color("#ff7f0e")
+
     def get_config(self) -> Dict[str, Any]:
         """Return the colors configuration."""
         return {
@@ -320,6 +346,8 @@ class ColorsConfigTab(QWidget):
             'lpips': self.lpips_color.get_color(),
             'noisy': self.noisy_color.get_color(),
             'denoised': self.denoised_color.get_color(),
+            'recon_line': self.recon_line_color.get_color(),
+            'denoised_line': self.denoised_line_color.get_color(),
             'bar_alpha': self.bar_alpha_spin.value() / 100.0,
             'hist_alpha': self.hist_alpha_spin.value() / 100.0,
         }
@@ -336,6 +364,10 @@ class ColorsConfigTab(QWidget):
             self.noisy_color.set_color(config['noisy'])
         if 'denoised' in config:
             self.denoised_color.set_color(config['denoised'])
+        if 'recon_line' in config:
+            self.recon_line_color.set_color(config['recon_line'])
+        if 'denoised_line' in config:
+            self.denoised_line_color.set_color(config['denoised_line'])
         if 'bar_alpha' in config:
             self.bar_alpha_spin.setValue(int(config['bar_alpha'] * 100))
         if 'hist_alpha' in config:
