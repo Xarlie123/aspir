@@ -5,6 +5,15 @@ specific and shifts between JetPack releases; jtop normalises all of it
 into a single dict, so this backend just reads instantaneous power from
 jtop on start/stop and integrates trapezoidally — same idea as
 :class:`JetsonSysfsBackend`, but without the per-rail label bookkeeping.
+
+Jetson modules expose a single combined power rail
+(``VDD_IN``/``POM_5V_IN``) that feeds CPU, GPU, RAM and the rest of the
+SoC together — there is no INA channel that splits CPU from GPU. The
+reading is therefore reported into **both** ``cpu_energy_joules`` and
+``gpu_energy_joules`` of :class:`EnergyReading`, with the same total
+value: it's the only physically truthful answer, and it lets the UI
+populate the CPU column when the user runs CPU-only inference (which
+otherwise stays blank because the backend used to fill GPU only).
 """
 from __future__ import annotations
 
@@ -165,13 +174,20 @@ class JtopEnergyBackend(EnergyBackend):
         duration = t_end - self._t_start
         avg_mw = (self._p_start_mw + p_end_mw) / 2.0
         energy_mj = avg_mw * duration
+        energy_j = energy_mj / 1000.0
+        # Jetson rails are shared — fill both component fields with the
+        # same total so whichever device the user actually exercised
+        # shows a non-zero value in the report. The summary table
+        # already labels the source as "Jetson (jtop)", which is the
+        # cue that the two columns reflect a single physical reading.
         return EnergyReading(
-            energy_joules=energy_mj / 1000.0,
+            energy_joules=energy_j,
             avg_power_watts=avg_mw / 1000.0,
             duration_seconds=duration,
             device_type=self._device_type,
             device_name=self._device_name,
-            gpu_energy_joules=energy_mj / 1000.0,  # Jetson GPU shares the rail
+            cpu_energy_joules=energy_j,
+            gpu_energy_joules=energy_j,
         )
 
     def shutdown(self) -> None:
