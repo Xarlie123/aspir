@@ -102,6 +102,24 @@ def build_ui(view):
     )
     left_layout.addWidget(view.backend_combo)
 
+    # Subtract-idle-baseline toggle. Enabled only when at least one
+    # loaded experiment has a captured baseline in metadata; otherwise
+    # the toggle stays disabled so the user doesn't get silent zeroes.
+    from PyQt5.QtWidgets import QCheckBox
+    view.baseline_check = QCheckBox("Subtract idle baseline")
+    view.baseline_check.setMaximumWidth(220)
+    view.baseline_check.setMinimumWidth(180)
+    view.baseline_check.setChecked(False)
+    view.baseline_check.setEnabled(False)
+    view.baseline_check.setToolTip(
+        "Plot dynamic power / energy = total − idle baseline.\n"
+        "Enabled only when at least one loaded experiment has a\n"
+        "baseline captured (run a Batch Test or Re-measure with\n"
+        "'Capture idle baseline' enabled to populate it)."
+    )
+    view.baseline_check.toggled.connect(view._on_baseline_toggle)
+    left_layout.addWidget(view.baseline_check)
+
     # Generate Energy Report button
     view.report_btn = QPushButton("Generate Energy Report")
     view.report_btn.setMaximumWidth(220)

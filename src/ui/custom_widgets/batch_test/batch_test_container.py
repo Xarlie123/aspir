@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPushButton,
     QLabel, QProgressBar, QFileDialog, QMessageBox, QGroupBox,
     QSizePolicy, QFrame, QComboBox, QLineEdit,
-    QRadioButton, QSpinBox, QButtonGroup
+    QRadioButton, QSpinBox, QButtonGroup, QCheckBox,
 )
 from PyQt5.QtCore import pyqtSignal, Qt, QTimer
 
@@ -192,6 +192,45 @@ class BatchTestContainer(QWidget):
         exec_layout.addStretch()
 
         layout.addLayout(exec_layout)
+
+        # Idle-baseline row — captures system idle power before the
+        # first test so each test row can be reported with a "dynamic
+        # power" column (= total − baseline). Disabled → totals only,
+        # dynamic columns blank in the report.
+        baseline_layout = QHBoxLayout()
+        baseline_layout.setSpacing(10)
+
+        self.baseline_check = QCheckBox("Capture idle baseline")
+        self.baseline_check.setChecked(True)
+        self.baseline_check.setToolTip(
+            "Sample the energy backend's instantaneous power for the\n"
+            "configured duration before the first test starts. The\n"
+            "mean is subtracted from each test's average power to\n"
+            "derive the dynamic-power / dynamic-energy / dynamic-\n"
+            "efficiency columns in the batch report."
+        )
+        baseline_layout.addWidget(self.baseline_check)
+
+        baseline_label = QLabel("Idle baseline duration:")
+        baseline_label.setStyleSheet("color: #666;")
+        baseline_layout.addWidget(baseline_label)
+
+        self.baseline_spin = QSpinBox()
+        self.baseline_spin.setRange(30, 300)
+        self.baseline_spin.setValue(60)
+        self.baseline_spin.setSuffix(" s")
+        self.baseline_spin.setFixedWidth(72)
+        self.baseline_spin.setToolTip(
+            "Seconds of idle sampling at the start of the batch."
+        )
+        baseline_layout.addWidget(self.baseline_spin)
+
+        self.baseline_check.toggled.connect(
+            lambda on: self.baseline_spin.setEnabled(on)
+        )
+
+        baseline_layout.addStretch()
+        layout.addLayout(baseline_layout)
 
         # Main content splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -581,6 +620,8 @@ class BatchTestContainer(QWidget):
         # Update batch config with execution settings
         self._batch_config.parallel_execution = self.parallel_radio.isChecked()
         self._batch_config.parallel_threads = self.threads_spin.value()
+        self._batch_config.capture_baseline = self.baseline_check.isChecked()
+        self._batch_config.baseline_duration_s = int(self.baseline_spin.value())
 
         # Get the selected export level and batch name
         export_level = self.get_export_level()

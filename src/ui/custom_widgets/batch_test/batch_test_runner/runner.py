@@ -70,6 +70,7 @@ class BatchTestRunner(QThread):
     phase_completed = pyqtSignal(int, str)      # Test index, Phase name completed
 
     # Phase names constants
+    PHASE_BASELINE = "Idle Baseline"
     PHASE_MASKS = "Masks"
     PHASE_RECONSTRUCTION = "Reconstruction"
     PHASE_MODEL_SETUP = "Model Setup"
@@ -103,6 +104,7 @@ class BatchTestRunner(QThread):
         self._trained_models: dict[int, Any] = {}  # Store models for export
         self._test_data: dict[int, dict] = {}  # Store test data for export
         self._results_lock = Lock()  # Thread safety for results
+        self._baseline = None  # set by _capture_baseline_phase if enabled
 
     def run(self):
         """Execute all tests in the batch (sequential or parallel based on config)."""
@@ -111,6 +113,14 @@ class BatchTestRunner(QThread):
         self._all_results = []
 
         try:
+            # Capture system idle power before any test starts so the
+            # serializer can derive dynamic-power columns. Skipped (and
+            # the report ends up with ``baseline = null``) when the
+            # batch config opts out, when no test in the batch enables
+            # the energy report, or when no energy backend is
+            # available on this host.
+            self._capture_baseline_phase()
+
             if self.batch_config.parallel_execution:
                 self._run_parallel()
             else:
@@ -125,6 +135,112 @@ class BatchTestRunner(QThread):
             self.logger.error("Batch run failed with exception: %s", e, exc_info=True)
             self.status_update.emit(f"Batch failed: {e}")
             self.batch_cancelled.emit()
+
+    def _merge_dynamic_metrics(self, results: dict, test_name: str) -> None:
+        """Add ``dynamic_power_W`` / ``dynamic_energy_mj`` /
+        ``dynamic_efficiency_imgs_per_J`` to ``results`` using the
+        baseline captured at the start of the batch.
+
+        No-op when the baseline is missing — those columns will be
+        absent from the report (consumers detect that and render `-`).
+        Negative dynamic power is *not* clipped: it's a real
+        diagnostic signal that the host warmed up between baseline and
+        test, so we surface a WARNING and persist the negative value.
+        """
+        if self._baseline is None:
+            return
+        from simulation_engine._5_analyzer.baseline_capture import (
+            derive_dynamic_metrics,
+        )
+        dyn = derive_dynamic_metrics(
+            energy_mean_mj=results.get("energy_mean_mj"),
+            energy_mean_watts=results.get("energy_mean_watts"),
+            baseline_power_W=self._baseline.total_power_W,
+        )
+        results.update(dyn)
+        if dyn.get("dynamic_power_W") is not None and dyn["dynamic_power_W"] < 0:
+            self.logger.warning(
+                "Dynamic power negative for '%s': baseline %.2f W > test "
+                "power %.2f W — check thermal state or sampling protocol.",
+                test_name, self._baseline.total_power_W,
+                float(results.get("energy_mean_watts") or 0.0),
+            )
+
+    def _capture_baseline_phase(self) -> None:
+        """Sample idle power before the first test, store on
+        ``self._baseline`` for the export step."""
+        if not getattr(self.batch_config, "capture_baseline", True):
+            self.logger.info("Idle-baseline capture disabled in batch config.")
+            return
+        # No point measuring idle power when no test even asks for the
+        # energy report — the dynamic columns wouldn't have a numerator.
+        any_energy = any(
+            "energy" in (t.reports or [])
+            for t in self.batch_config.tests
+        )
+        if not any_energy:
+            self.logger.info(
+                "Idle-baseline capture skipped: no test in this batch "
+                "has the energy report enabled."
+            )
+            return
+
+        from simulation_engine._5_analyzer.energy_backends._monitor import (
+            EnergyMonitor,
+        )
+        from simulation_engine._5_analyzer.baseline_capture import (
+            capture_idle_baseline,
+        )
+
+        duration = max(30, min(300, int(getattr(
+            self.batch_config, "baseline_duration_s", 60))))
+        # Decide GPU enable from the first test that wants energy —
+        # close enough for the baseline (we just want all available
+        # backends online for the same span as the test's own ones).
+        first_energy_test = next(
+            (t for t in self.batch_config.tests if "energy" in (t.reports or [])),
+            None,
+        )
+        use_gpu = bool(getattr(first_energy_test, "use_gpu", True))
+
+        monitor = EnergyMonitor(
+            enable_gpu=use_gpu,
+            enable_cpu=True,
+            enable_jetson=True,
+            logger=self.logger,
+        )
+        if not monitor.initialize():
+            self.logger.warning(
+                "No energy backend available — skipping idle-baseline capture."
+            )
+            return
+
+        self.phase_started.emit(-1, self.PHASE_BASELINE)
+        self.status_update.emit(
+            f"Capturing idle baseline ({duration} s)…"
+        )
+
+        def _tick(elapsed_s: float, total_s: float) -> None:
+            pct = int(min(100.0, 100.0 * elapsed_s / max(total_s, 1.0)))
+            self.phase_progress.emit(-1, self.PHASE_BASELINE, pct)
+            self.status_update.emit(
+                f"Capturing idle baseline ({int(elapsed_s)} / {int(total_s)} s)"
+            )
+
+        try:
+            self._baseline = capture_idle_baseline(
+                monitor,
+                duration_s=duration,
+                logger=self.logger,
+                progress_callback=_tick,
+                cancel_check=lambda: self._cancel_requested,
+            )
+        finally:
+            try:
+                monitor.shutdown()
+            except Exception:
+                self.logger.debug("Baseline monitor shutdown raised", exc_info=True)
+            self.phase_completed.emit(-1, self.PHASE_BASELINE)
 
     def _run_sequential(self):
         """Run all tests sequentially (original behavior)."""
@@ -480,6 +596,7 @@ class BatchTestRunner(QThread):
                     measurement_runs=config.timing_measurement_runs
                 )
                 results.update(energy_results)
+                self._merge_dynamic_metrics(results, config.name)
             except Exception as e:
                 self.logger.warning("Energy analysis failed: %s", e)
                 results["energy_error"] = str(e)
@@ -887,6 +1004,7 @@ class BatchTestRunner(QThread):
                     measurement_runs=config.timing_measurement_runs
                 )
                 results.update(energy_results)
+                self._merge_dynamic_metrics(results, config.name)
             except Exception as e:
                 self.logger.warning("Energy analysis failed: %s", e)
                 results["energy_error"] = str(e)
@@ -941,7 +1059,9 @@ class BatchTestRunner(QThread):
         # Always export JSON report with .batch_analysis_report extension
         report_path = export_results_json(
             self._all_results, self.dataset, self.batch_name,
-            self.batch_config, self.export_level, self.logger, results_dir
+            self.batch_config, self.export_level, self.logger, results_dir,
+            idle_baseline=(self._baseline.to_dict()
+                           if self._baseline is not None else None),
         )
         self.logger.info("Exported analysis report: %s", report_path)
         self.phase_progress.emit(-1, self.PHASE_EXPORT, 40)

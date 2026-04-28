@@ -215,6 +215,14 @@ class BatchTestConfig:
     parallel_threads: int = 2  # Number of parallel threads when parallel_execution is True
     # Note: Timing and energy analysis always run sequentially for accurate measurements
 
+    # Idle-baseline capture (energy backend) — measures system idle
+    # power for ``baseline_duration_s`` before the first test, then
+    # subtracts that pedestal from each test's energy to derive
+    # "dynamic" power/energy/efficiency. Off → totals only, dynamic
+    # columns blank. See ``simulation_engine/_5_analyzer/baseline_capture.py``.
+    capture_baseline: bool = True
+    baseline_duration_s: int = 60
+
     # Available options for UI dropdowns
     MASK_TYPES = [
         "scatter",
@@ -270,6 +278,8 @@ class BatchTestConfig:
             "created_at": self.created_at,
             "parallel_execution": self.parallel_execution,
             "parallel_threads": self.parallel_threads,
+            "capture_baseline": self.capture_baseline,
+            "baseline_duration_s": self.baseline_duration_s,
             "tests": [t.to_dict() for t in self.tests],
         }
 
@@ -282,6 +292,8 @@ class BatchTestConfig:
             created_at=data.get("created_at", datetime.now().isoformat()),
             parallel_execution=data.get("parallel_execution", False),
             parallel_threads=data.get("parallel_threads", 2),
+            capture_baseline=data.get("capture_baseline", True),
+            baseline_duration_s=int(data.get("baseline_duration_s", 60)),
         )
         for test_data in data.get("tests", []):
             config.tests.append(TestConfiguration.from_dict(test_data))

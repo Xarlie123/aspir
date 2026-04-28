@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Idle-baseline capture for energy measurements.** Both Batch Test
+  and Re-measure now sample system idle power for a configurable
+  window (default 60 s, range 30–300) before the first test starts.
+  The mean is persisted at report-metadata level under
+  `idle_baseline` (per-backend on hosts with multiple energy
+  backends) and used to derive three new per-test columns:
+  `dynamic_power_W`, `dynamic_energy_mj`, and
+  `dynamic_efficiency_imgs_per_J`. Negative dynamics are intentionally
+  *not* clipped to zero — they're a real diagnostic signal that the
+  rail warmed up between baseline and test, surfaced as a WARNING in
+  the log. The Energy view gains a "Subtract idle baseline" toggle
+  that swaps total power/energy for their dynamic equivalents in all
+  charts; the toggle stays disabled until at least one loaded
+  experiment carries a baseline. Capture is opt-in via a checkbox in
+  both the Batch Test panel and the Re-measure dialog — turning it
+  off only blanks the new dynamic columns; every existing
+  total-energy/total-power column in the report stays unchanged.
 - **Re-measure timing & energy on already-executed batches.** Right-click any
   loaded experiment in Batch Reports → *Re-measure timing & energy…* opens a
   dialog that re-runs inference on the saved model checkpoints to refresh

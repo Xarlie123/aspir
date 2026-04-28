@@ -96,10 +96,10 @@ class RemeasureDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Re-measure timing & energy")
         self.setModal(True)
-        # Slight bump from the original 540×420 to fit the new
-        # "Run both compute paths" toggle without cropping the
-        # measurement-parameters group.
-        self.resize(560, 480)
+        # Bumped from 560×480 → 580×560 to fit the new
+        # "Capture idle baseline" + "Idle baseline duration" rows
+        # without cropping the device-label / Start row at the bottom.
+        self.resize(580, 560)
 
         self.logger = (logger or logging.getLogger("RemeasureDialog"))
         self._sources = sources
@@ -220,6 +220,32 @@ class RemeasureDialog(QDialog):
         self._chk_both_paths.toggled.connect(self._on_both_paths_toggled)
         knobs_form.addRow(self._chk_both_paths)
 
+        # Idle-baseline capture: a short sleep+poll loop on the energy
+        # backend at the very start of the run, before any test
+        # touches the model. Subtracted from each test's average power
+        # to produce the dynamic-power column. Off → totals only,
+        # dynamic columns blank in the report — no other column changes.
+        self._chk_baseline = QCheckBox("Capture idle baseline before first test")
+        self._chk_baseline.setChecked(True)
+        self._chk_baseline.setToolTip(
+            "Samples system idle power for the configured duration\n"
+            "before the first test. The mean is subtracted from each\n"
+            "test's average power to derive 'dynamic power' / 'dynamic\n"
+            "energy' columns in the report. Disable to skip the wait\n"
+            "(report will only carry total power/energy)."
+        )
+        self._chk_baseline.toggled.connect(self._on_baseline_toggled)
+        knobs_form.addRow(self._chk_baseline)
+
+        self._spn_baseline = QSpinBox()
+        self._spn_baseline.setRange(30, 300)
+        self._spn_baseline.setValue(60)
+        self._spn_baseline.setSuffix(" s")
+        self._spn_baseline.setToolTip(
+            "Seconds of idle sampling at the start of the run."
+        )
+        knobs_form.addRow("Idle baseline duration:", self._spn_baseline)
+
         self._txt_device = QLineEdit(_detect_device_label())
         self._txt_device.setToolTip(
             "Short tag added to the output filename "
@@ -230,6 +256,12 @@ class RemeasureDialog(QDialog):
         outer.addWidget(knobs_box)
         outer.addStretch(1)
         return page
+
+    def _on_baseline_toggled(self, checked: bool) -> None:
+        """Disable the duration spinbox when the user opts out of the
+        baseline phase, so it's visually obvious the value is moot.
+        """
+        self._spn_baseline.setEnabled(checked)
 
     def _on_both_paths_toggled(self, checked: bool) -> None:
         """Disable the GPU toggle while two-pass mode is on (it's
@@ -286,6 +318,8 @@ class RemeasureDialog(QDialog):
             warmup_runs=int(self._spn_warmup.value()),
             measurement_runs=int(self._spn_runs.value()),
             sampling_rate_khz=float(self._spn_sampling.value()),
+            capture_baseline=self._chk_baseline.isChecked(),
+            baseline_duration_s=int(self._spn_baseline.value()),
         )
         if self._chk_both_paths.isChecked():
             queue.append((

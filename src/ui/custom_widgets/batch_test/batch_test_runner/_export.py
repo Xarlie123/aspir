@@ -5,7 +5,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from ui.custom_widgets.batch_test.test_config_model import BatchTestConfig, ExportLevel
 from ui.utils.file_formats import (
@@ -48,8 +48,17 @@ def export_results_json(
     export_level: ExportLevel,
     logger,
     output_dir: Path,
+    idle_baseline: Optional[dict[str, Any]] = None,
 ) -> str:
-    """Export all results to JSON file with .batch_analysis_report extension."""
+    """Export all results to JSON file with .batch_analysis_report extension.
+
+    ``idle_baseline`` is the dict produced by
+    :meth:`BaselineResult.to_dict` (or ``None`` if the baseline phase
+    was skipped or its backend failed). It lands at the top level of
+    the report metadata under ``idle_baseline``; absent keys mean
+    "no baseline captured" and the per-test ``dynamic_*`` columns
+    will be ``None`` on every test.
+    """
     filename = f"results{FileExtensions.BATCH_ANALYSIS_REPORT}"
     filepath = output_dir / filename
 
@@ -70,6 +79,8 @@ def export_results_json(
             "num_images": len(dataset.data) if hasattr(dataset, 'data') else 0,
         },
     }
+    if idle_baseline is not None:
+        metadata["idle_baseline"] = idle_baseline
 
     # Use the BatchAnalysisReport handler
     BatchAnalysisReport.save(

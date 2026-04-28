@@ -74,6 +74,11 @@ class EnergyView(QWidget):
 
         self._tests: list[dict[str, Any]] = []
         self._backend_filter = self.BACKEND_ALL
+        # When True, the energy/power charts substitute the dynamic
+        # equivalents (total − idle baseline) for the totals. Driven by
+        # the "Subtract idle baseline" checkbox, which is only enabled
+        # when at least one loaded experiment carries a baseline.
+        self._subtract_baseline = False
 
         # Chart configuration with defaults
         self._chart_config = {
@@ -135,6 +140,19 @@ class EnergyView(QWidget):
         """Handle backend selection change."""
         self._backend_filter = backend
         self._refresh_chart()
+
+    def _on_baseline_toggle(self, checked: bool):
+        """Toggle handler for "Subtract idle baseline"."""
+        self._subtract_baseline = bool(checked)
+        self._refresh_chart()
+
+    def _any_test_has_baseline_dynamics(self) -> bool:
+        """True iff any loaded test carries a non-None ``dynamic_power_W``
+        — the cue we use to enable / disable the toggle."""
+        for t in self._tests:
+            if t.get("dynamic_power_W") is not None:
+                return True
+        return False
 
     def _on_generate_report(self):
         """Generate and show the energy report popup."""
@@ -205,6 +223,16 @@ class EnergyView(QWidget):
                 self.test_combo.addItem(f"{test_name} ({exp_name})")
             else:
                 self.test_combo.addItem(test_name)
+
+        # Enable the baseline toggle only when at least one loaded
+        # test carries a dynamic value. If the toggle was on but no
+        # baseline survives the new dataset, flip it back off so the
+        # chart doesn't quietly draw zeros.
+        has_dynamics = self._any_test_has_baseline_dynamics()
+        self.baseline_check.setEnabled(has_dynamics)
+        if not has_dynamics and self._subtract_baseline:
+            self.baseline_check.setChecked(False)
+            self._subtract_baseline = False
 
         update_summary_table(self)
         self._refresh_chart()

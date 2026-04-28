@@ -33,6 +33,11 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
     resolve_model_name,
 )
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
+from simulation_engine._5_analyzer.baseline_capture import (
+    BaselineResult,
+    capture_idle_baseline,
+    derive_dynamic_metrics,
+)
 from ui.custom_widgets.batch_test.batch_test_runner._energy import measure_energy
 from ui.custom_widgets.batch_test.batch_test_runner._pipeline import create_applicator
 from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
@@ -51,6 +56,13 @@ class RemeasureConfig:
     measurement_runs: int = 200
     sampling_rate_khz: float = 10.752
     device_label: str = "jetson"  # appears in the output filename
+    # Idle-baseline capture before the first job. When False the
+    # ``baseline_*`` fields stay blank in the output report and the
+    # per-test ``dynamic_*`` columns come back as None, but every
+    # other column is identical to a non-baseline run — the feature
+    # only adds information.
+    capture_baseline: bool = True
+    baseline_duration_s: int = 60
 
 
 @dataclass
@@ -323,6 +335,7 @@ class RemeasureWorker(QObject):
         # lazily so we don't pay the cost when ``measure_energy`` is
         # disabled.
         shared_analyzer: Optional[EnergyAnalyzer] = None
+        baseline: Optional[BaselineResult] = None
         try:
             total = self._total_steps()
             done = 0
@@ -343,10 +356,25 @@ class RemeasureWorker(QObject):
                     )
                     shared_analyzer = None
 
+                # Capture the idle baseline before the first test so
+                # the dynamic-energy column can subtract the system
+                # pedestal from each test's measurement. Reuses the
+                # already-initialised monitor — no extra jtop spin-up.
+                if (self.cfg.capture_baseline
+                        and shared_analyzer is not None
+                        and shared_analyzer.is_initialized):
+                    baseline = capture_idle_baseline(
+                        shared_analyzer._energy_monitor,
+                        duration_s=self.cfg.baseline_duration_s,
+                        logger=self.logger,
+                        progress_callback=self._on_baseline_tick,
+                        cancel_check=lambda: self._cancel,
+                    )
+
             for job in self.jobs:
                 if self._cancel:
                     break
-                done = self._run_job(job, done, total, shared_analyzer)
+                done = self._run_job(job, done, total, shared_analyzer, baseline)
             self.finished.emit()
         except Exception as exc:
             self.logger.exception("Re-measurement worker crashed")
@@ -359,8 +387,18 @@ class RemeasureWorker(QObject):
                 except Exception:
                     self.logger.debug("Shared analyzer shutdown raised", exc_info=True)
 
+    def _on_baseline_tick(self, elapsed_s: float, total_s: float) -> None:
+        """Surface the baseline countdown through the existing progress
+        signal. ``current=0, total=0`` is a sentinel the dialog
+        recognises as "we're in the baseline phase, show a cooldown-
+        style message instead of the per-test ratio".
+        """
+        msg = f"Capturing idle baseline ({int(elapsed_s)} / {int(total_s)} s)"
+        self.progress.emit(0, 0, msg)
+
     def _run_job(self, job: RemeasureJob, done: int, total: int,
-                 shared_analyzer: Optional[EnergyAnalyzer] = None) -> int:
+                 shared_analyzer: Optional[EnergyAnalyzer] = None,
+                 baseline: Optional[BaselineResult] = None) -> int:
         outcome = RemeasureOutcome(job=job, success=False)
         try:
             with open(job.source_report, "r", encoding="utf-8") as fh:
@@ -459,6 +497,28 @@ class RemeasureWorker(QObject):
                     self.logger.warning("Energy failed for '%s': %s", test_name, exc)
                     updated["energy_error"] = str(exc)
 
+                # Derive dynamic-power columns from the just-measured
+                # energy plus the shared baseline. The helper keeps
+                # the timing-window assumption consistent (energy and
+                # the inference time used to subtract the pedestal
+                # both come from the same energy phase, see
+                # ``derive_dynamic_metrics``).
+                if baseline is not None:
+                    dyn = derive_dynamic_metrics(
+                        energy_mean_mj=updated.get("energy_mean_mj"),
+                        energy_mean_watts=updated.get("energy_mean_watts"),
+                        baseline_power_W=baseline.total_power_W,
+                    )
+                    updated.update(dyn)
+                    if dyn.get("dynamic_power_W") is not None and dyn["dynamic_power_W"] < 0:
+                        self.logger.warning(
+                            "Dynamic power negative for '%s': baseline %.2f W "
+                            "> test power %.2f W — check thermal state or "
+                            "sampling protocol.",
+                            test_name, baseline.total_power_W,
+                            float(updated.get("energy_mean_watts") or 0.0),
+                        )
+
             updated["_remeasured"] = True
             updated["_remeasured_at"] = datetime.now().isoformat()
             updated["_remeasured_device"] = self.cfg.device_label
@@ -482,6 +542,12 @@ class RemeasureWorker(QObject):
             f"{report['metadata'].get('batch_name', job.source_report.stem)} "
             f"(re-executed on {self.cfg.device_label})"
         )
+        # Stash the baseline at metadata level (once per report). When
+        # ``capture_baseline`` was off this stays absent, which is the
+        # cue the Energy view uses to disable the "Subtract idle
+        # baseline" toggle for that experiment.
+        if baseline is not None:
+            report["metadata"]["idle_baseline"] = baseline.to_dict()
 
         try:
             self._write_report(job.destination_report, job.source_report, report)

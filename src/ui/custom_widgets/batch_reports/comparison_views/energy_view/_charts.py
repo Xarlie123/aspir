@@ -93,6 +93,12 @@ def collect_backend_data(view, gpu_key: str, cpu_key: str,
     from the same total field on different test entries; collapse the
     arguments to ``collect_compute_path_data`` so the call sites in
     this file don't need to change.
+
+    When the view's "Subtract idle baseline" toggle is on, the
+    energy / power lookups are swapped for their dynamic equivalents
+    (``dynamic_energy_mj`` / ``dynamic_power_W``). Tests without a
+    dynamic value drop out — the toggle is gated upstream so this
+    only happens when at least one experiment carries a baseline.
     """
     # The "gpu_key" is conventionally the per-rail GPU field; we
     # promote the matching combined fields ("energy_mean_mj" /
@@ -103,18 +109,29 @@ def collect_backend_data(view, gpu_key: str, cpu_key: str,
         "energy_gpu_mj":   ["energy_mean_mj", "mean_energy_mj"],
         "energy_gpu_watts":["energy_mean_watts", "mean_power_watts"],
     }
+    # Map total → dynamic for the baseline-subtracted view.
+    dynamic_keys = {
+        "energy_gpu_mj":    ["dynamic_energy_mj"],
+        "energy_gpu_watts": ["dynamic_power_W"],
+    }
+    use_dynamic = bool(getattr(view, "_subtract_baseline", False))
     value_keys: list[str] = []
-    for k in primary_keys.get(gpu_key, []):
-        if k not in value_keys:
-            value_keys.append(k)
-    for k in (combined_keys or []):
-        if k not in value_keys:
-            value_keys.append(k)
-    # Per-rail keys remain as last-ditch fallbacks for ancient reports
-    # that only stored ``energy_gpu_mj`` / ``energy_cpu_mj``.
-    for k in (gpu_key, cpu_key):
-        if k and k not in value_keys:
-            value_keys.append(k)
+    if use_dynamic:
+        for k in dynamic_keys.get(gpu_key, []):
+            if k not in value_keys:
+                value_keys.append(k)
+    else:
+        for k in primary_keys.get(gpu_key, []):
+            if k not in value_keys:
+                value_keys.append(k)
+        for k in (combined_keys or []):
+            if k not in value_keys:
+                value_keys.append(k)
+        # Per-rail keys remain as last-ditch fallbacks for ancient reports
+        # that only stored ``energy_gpu_mj`` / ``energy_cpu_mj``.
+        for k in (gpu_key, cpu_key):
+            if k and k not in value_keys:
+                value_keys.append(k)
     return collect_compute_path_data(view, value_keys)
 
 
