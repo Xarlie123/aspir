@@ -16,18 +16,19 @@ def create_summary_table_structure(view):
     header_font.setBold(True)
 
     # Row definitions: (row_index, label_text, metric_key, unit, value_style)
-    # Start from row 1 since row 0 has the test selector
+    # Layout (rows): 0 = baseline banner, 1 = test selector,
+    # 2 = headers, 3..5 = data rows.
     view._summary_rows = [
-        (2, "Energy/image:", "energy", "mJ", "font-weight: bold; color: #FF9800;"),
-        (3, "Avg Power:", "power", "W", "font-weight: bold; color: #4CAF50;"),
-        (4, "Efficiency:", "efficiency", "img/J", "font-weight: bold; color: #2196F3;"),
+        (3, "Energy/image:", "energy", "mJ", "font-weight: bold; color: #FF9800;"),
+        (4, "Avg Power:", "power", "W", "font-weight: bold; color: #4CAF50;"),
+        (5, "Efficiency:", "efficiency", "img/J", "font-weight: bold; color: #2196F3;"),
     ]
 
-    # Column 0: Metric names header (row 1)
+    # Column 0: Metric names header (row 2 — see layout note above)
     metric_header = QLabel("Metric")
     metric_header.setFont(header_font)
     metric_header.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-    view.summary_layout.addWidget(metric_header, 1, 0)
+    view.summary_layout.addWidget(metric_header, 2, 0)
 
     for row_idx, label_text, _, _, _ in view._summary_rows:
         row_label = QLabel(label_text)
@@ -89,7 +90,7 @@ def update_summary_table(view):
             header_label = QLabel("Combined")
             header_label.setFont(header_font)
             header_label.setAlignment(Qt.AlignCenter)
-            view.summary_layout.addWidget(header_label, 1, col_idx)
+            view.summary_layout.addWidget(header_label, 2, col_idx)
             view._summary_header_labels.append(header_label)
 
             backend_labels = {}
@@ -118,7 +119,7 @@ def update_summary_table(view):
             header_label.setFont(header_font)
             header_label.setAlignment(Qt.AlignCenter)
             header_label.setStyleSheet("color: #FF9800;")
-            view.summary_layout.addWidget(header_label, 1, col_idx)
+            view.summary_layout.addWidget(header_label, 2, col_idx)
             view._summary_header_labels.append(header_label)
 
             backend_labels = {}
@@ -145,7 +146,7 @@ def update_summary_table(view):
             header_label.setFont(header_font)
             header_label.setAlignment(Qt.AlignCenter)
             header_label.setStyleSheet("color: #2196F3;")
-            view.summary_layout.addWidget(header_label, 1, col_idx)
+            view.summary_layout.addWidget(header_label, 2, col_idx)
             view._summary_header_labels.append(header_label)
 
             backend_labels = {}
@@ -171,7 +172,7 @@ def update_summary_table(view):
         unit_header = QLabel("Unit")
         unit_header.setFont(header_font)
         unit_header.setAlignment(Qt.AlignCenter)
-        view.summary_layout.addWidget(unit_header, 1, col_idx)
+        view.summary_layout.addWidget(unit_header, 2, col_idx)
         view._summary_header_labels.append(unit_header)
 
         for row_idx, _, _, unit, _ in view._summary_rows:

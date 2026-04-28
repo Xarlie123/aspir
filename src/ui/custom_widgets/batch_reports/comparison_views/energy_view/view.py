@@ -154,6 +154,62 @@ class EnergyView(QWidget):
                 return True
         return False
 
+    def _refresh_baseline_banner(self) -> None:
+        """Update the "Idle baseline: …" line at the top of the
+        summary group from the loaded experiments' metadata.
+
+        One experiment with a baseline → single line with mean ± std,
+        duration and backend label. Multiple experiments with
+        different baselines → one line each, prefixed by the
+        experiment name so the user notices when reports came from
+        runs against different idle pedestals. No baseline anywhere →
+        muted "(no idle baseline captured)".
+        """
+        # Walk loaded tests, dedup by experiment name so we don't
+        # repeat the same metadata 5 times for a 5-test batch.
+        seen_experiments: dict[str, dict] = {}
+        for t in self._tests:
+            exp_name = t.get("_experiment_name", "")
+            if exp_name in seen_experiments:
+                continue
+            meta = t.get("_experiment_metadata") or {}
+            baseline = meta.get("idle_baseline") if isinstance(meta, dict) else None
+            seen_experiments[exp_name] = baseline
+
+        baselines = [(name, b) for name, b in seen_experiments.items()
+                     if b is not None]
+        if not baselines:
+            if not self._tests:
+                self.baseline_label.setText(
+                    "Idle baseline: (no experiments loaded)")
+            else:
+                self.baseline_label.setText(
+                    "<i>Idle baseline: not captured for any loaded experiment.</i>"
+                )
+            return
+
+        def _fmt_one(b: dict) -> str:
+            mean = b.get("total_power_W", 0.0)
+            std  = b.get("total_power_std_W", 0.0)
+            dur  = b.get("duration_s", 0.0)
+            # Backend label — single backend on Jetson, list when more.
+            per = b.get("per_backend") or []
+            backend_lbl = (per[0].get("backend") if len(per) == 1
+                           else f"{len(per)} backends")
+            return (f"<b>{mean:.2f} W</b> ± {std:.2f} W "
+                    f"({dur:.0f}s · {backend_lbl})")
+
+        if len(baselines) == 1:
+            self.baseline_label.setText(
+                f"Idle baseline: {_fmt_one(baselines[0][1])}"
+            )
+        else:
+            parts = [f"<b>{name or '(unnamed)'}</b>: {_fmt_one(b)}"
+                     for name, b in baselines]
+            self.baseline_label.setText(
+                "Idle baseline — " + " &nbsp;|&nbsp; ".join(parts)
+            )
+
     def _on_generate_report(self):
         """Generate and show the energy report popup."""
         if not self._tests:
@@ -234,6 +290,7 @@ class EnergyView(QWidget):
             self.baseline_check.setChecked(False)
             self._subtract_baseline = False
 
+        self._refresh_baseline_banner()
         update_summary_table(self)
         self._refresh_chart()
 

@@ -196,6 +196,25 @@ def build_ui(view):
     view.summary_layout = QGridLayout(view.summary_group)
     view.summary_layout.setSpacing(8)
 
+    # Idle-baseline banner — sits at the top of the summary so the
+    # actual number being subtracted by the toggle on the left panel
+    # is visible at all times. Refreshed from ``set_tests`` via
+    # ``view._refresh_baseline_banner`` and adapts to multi-experiment
+    # loads (lists each baseline separately so the user notices when
+    # two reports were measured against different idle pedestals).
+    view.baseline_label = QLabel("Idle baseline: (no experiments loaded)")
+    view.baseline_label.setStyleSheet(
+        "color: #555; font-size: 11px; padding: 2px 6px;"
+    )
+    view.baseline_label.setWordWrap(True)
+    view.baseline_label.setToolTip(
+        "Idle power captured before the first test of each loaded "
+        "experiment. The 'Subtract idle baseline' toggle on the left "
+        "subtracts this from each test's average power to derive the "
+        "dynamic columns."
+    )
+    view.summary_layout.addWidget(view.baseline_label, 0, 0, 1, 4)
+
     # Test selector for summary table (like Timing view)
     selector_layout = QHBoxLayout()
     test_label = QLabel("Show details for:")
@@ -207,7 +226,8 @@ def build_ui(view):
     view.test_combo.currentIndexChanged.connect(view._on_test_changed)
     selector_layout.addWidget(view.test_combo)
     selector_layout.addStretch()
-    view.summary_layout.addLayout(selector_layout, 0, 0, 1, 4)
+    # Push the test selector down one row so the baseline banner has its own.
+    view.summary_layout.addLayout(selector_layout, 1, 0, 1, 4)
 
     # Storage for dynamic labels
     view._summary_backend_labels = {}
