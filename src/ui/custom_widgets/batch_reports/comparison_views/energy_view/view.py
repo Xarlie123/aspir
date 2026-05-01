@@ -270,15 +270,28 @@ class EnergyView(QWidget):
         """Set the tests to display in the charts."""
         self._tests = tests
 
-        # Update test combo for summary table (like Timing view)
+        # Update test combo for summary table. Dedup strictly by test
+        # name so a CPU pass + GPU pass of the same logical test (which
+        # arrive as two entries — same ``name``, different
+        # ``_experiment_name`` because each pass wrote its own
+        # ``-cpu`` / ``-gpu`` report — and differ only in ``use_gpu``)
+        # collapse to one combo item. The summary table then walks
+        # ``view._tests`` for that name and pairs the two ``use_gpu``
+        # values into the CPU run / GPU run columns.
+        #
+        # Edge case: the same ``name`` appearing in two genuinely
+        # unrelated batches (rare). We accept the cost of "first match
+        # wins" in that scenario rather than re-introduce the
+        # disambiguation that would split the much more common
+        # paired-pass workflow back into two combo rows.
         self.test_combo.clear()
+        seen_order: list[str] = []
         for test in tests:
-            test_name = test.get("name", "Unknown")
-            exp_name = test.get("_experiment_name", "")
-            if exp_name:
-                self.test_combo.addItem(f"{test_name} ({exp_name})")
-            else:
-                self.test_combo.addItem(test_name)
+            name = test.get("name", "Unknown")
+            if name not in seen_order:
+                seen_order.append(name)
+        for name in seen_order:
+            self.test_combo.addItem(name, userData=(name, None))
 
         # Enable the baseline toggle only when at least one loaded
         # test carries a dynamic value. If the toggle was on but no
