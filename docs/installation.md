@@ -19,7 +19,7 @@ removed — a `pip install -e .` picks everything up.
 
 ## Option 1: Docker (Recommended)
 
-Docker provides a pre-configured environment with all dependencies and optional tools (pdflatex, Nsight Systems, Kaggle CLI).
+Docker provides a pre-configured environment with all dependencies and optional tools (pdflatex, Nsight Systems). The ``kaggle`` Python package is also installed (it lives in the core requirements), but the Kaggle CLI still needs the user's ``~/.kaggle/kaggle.json`` credentials before any dataset download will work.
 
 ### Prerequisites
 
@@ -182,8 +182,11 @@ sudo systemctl enable --now jtop        # starts the background daemon
 ```
 
 Without this service the batch-test Resource Monitor shows GPU "--" and
-the Energy report comes back as 0 mJ / 0 W — the ina3221 sysfs paths
-differ per board and our fallback scanner can miss them.
+the Energy report comes back as 0 mJ / 0 W. ``jetson-stats`` is the
+**primary** energy backend on Jetson; the pure-sysfs INA3221 reader
+exists only as a fallback for hosts where the daemon isn't running, and
+its sensor paths differ per board so it isn't always able to discover
+the right rails on its own.
 
 ```{important}
 **Jetson shared rail.** The Orin / Xavier / Nano / TX2 modules expose a
