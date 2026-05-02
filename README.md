@@ -67,7 +67,7 @@ python main.py
 
 ### Option 2: Docker (Recommended)
 
-Pre-configured environment with all dependencies and tools included (pdflatex, NVIDIA Nsight Systems, Kaggle CLI). Code is mounted from host, so changes are reflected immediately without rebuilding.
+Pre-configured environment with all dependencies and tools included (pdflatex, NVIDIA Nsight Systems). Code is mounted from host, so changes are reflected immediately without rebuilding.
 
 **Prerequisites:**
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) with WSL2 backend (Windows) or Docker Engine (Linux)
