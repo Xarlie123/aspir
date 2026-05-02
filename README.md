@@ -9,6 +9,12 @@
   Implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
 </p>
 
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.19864089"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19864089.svg" alt="DOI"></a>
+  <a href="https://creativecommons.org/licenses/by/4.0/"><img src="https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg" alt="License: CC BY 4.0"></a>
+  <a href="https://aspir.readthedocs.io/en/latest/"><img src="https://readthedocs.org/projects/aspir/badge/?version=latest" alt="Documentation Status"></a>
+</p>
+
 ---
  
 ## Quick Start
