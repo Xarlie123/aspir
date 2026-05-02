@@ -429,6 +429,24 @@ class RemeasureWorker(QObject):
             done += 1
             test_name = test_entry.get("name", "test")
             self.progress.emit(done, total, f"{job.source_report.stem} · {test_name}")
+            # Banner line at the start of every test so the log is
+            # self-contained — the reader can see at a glance which
+            # compute path, batch size, sub-block layout and baseline
+            # state were in effect for the numbers that follow.
+            self.logger.info(
+                "Starting measurement: test=%r compute_path=%s "
+                "device_label=%s batch_size=%d warmup=%d measurements=%d "
+                "(blocks of %d) baseline=%s",
+                test_name,
+                "GPU run" if self.cfg.use_gpu else "CPU run",
+                self.cfg.device_label,
+                int(self.cfg.inference_batch_size),
+                int(self.cfg.warmup_runs),
+                int(self.cfg.measurement_runs),
+                max(1, int(self.cfg.measurement_runs)
+                    // max(1, min(10, self.cfg.measurement_runs))),
+                ("ON" if self.cfg.capture_baseline else "OFF"),
+            )
 
             try:
                 facade = _build_model_facade(
