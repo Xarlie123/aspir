@@ -91,7 +91,17 @@ class MaskSweep(MaskABC):
                 # Only add non-empty masks
                 pixel_count = mask.sum()
                 if pixel_count >= min_pixels:
-                    masks.append(mask.astype(np.uint8) * 255)
+                    # Store as a binary indicator in {0, 1} (uint8) — same
+                    # convention as MaskScatter / MaskHadamard so the
+                    # bucket math (B_i = Σ I·M) and the saved
+                    # ``masks.npz`` payload are consistent across mask
+                    # families. The ×255 scaling that used to live here
+                    # was a leftover for direct grayscale visualisation;
+                    # the visual_mask widget min-max normalises any
+                    # storage range now, so the multiplication is no
+                    # longer needed and was producing 255× larger
+                    # bucket signals than the other mask types.
+                    masks.append(mask.astype(np.uint8))
                     self.logger.debug(
                         "Mask generated at angle=%.1f°, offset=%.1f, pixels=%d",
                         angle_deg, offset, pixel_count

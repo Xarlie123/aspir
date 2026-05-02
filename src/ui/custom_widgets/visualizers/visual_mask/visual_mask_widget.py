@@ -124,15 +124,19 @@ class VisualMaskWidget(QtWidgets.QWidget, Ui_Visual_Mask):
         try:
             mask = self._masks[idx]
 
-            # Normalize to uint8 if float (handles float16, float32, float64)
-            if isinstance(mask, np.ndarray) and np.issubdtype(mask.dtype, np.floating):
+            # Min-max stretch to uint8 [0, 255] regardless of input
+            # dtype — covers float {-1,+1} (Hadamard), float {0,1}
+            # (Scatter), uint8 {0,1} (Sweep) and any future mask
+            # family with a different native range. A passthrough
+            # branch for "uint8 → uint8" used to live here, but it
+            # rendered Sweep masks as nearly black after their
+            # storage switched to {0, 1}.
+            if isinstance(mask, np.ndarray):
                 mn, mx = float(mask.min()), float(mask.max())
                 denom = (mx - mn) if (mx - mn) > 0 else 1.0
                 arr = ((mask.astype(np.float32) - mn) / denom * 255).astype(np.uint8)
-            elif isinstance(mask, np.ndarray) and mask.dtype == np.uint8:
-                arr = mask
             else:
-                arr = mask.astype(np.uint8) if isinstance(mask, np.ndarray) else mask
+                arr = mask
 
             h, w = arr.shape[:2]
             qimg = QImage(arr.data, w, h, w, QImage.Format_Grayscale8)
@@ -230,15 +234,19 @@ class VisualMaskWidget(QtWidgets.QWidget, Ui_Visual_Mask):
                 break
 
             mask = self._masks[mask_idx]
-            # Normalize to uint8 if float (handles float16, float32, float64)
-            if isinstance(mask, np.ndarray) and np.issubdtype(mask.dtype, np.floating):
+            # Min-max stretch to uint8 [0, 255] regardless of input
+            # dtype — covers float {-1,+1} (Hadamard), float {0,1}
+            # (Scatter), uint8 {0,1} (Sweep) and any future mask
+            # family with a different native range. A passthrough
+            # branch for "uint8 → uint8" used to live here, but it
+            # rendered Sweep masks as nearly black after their
+            # storage switched to {0, 1}.
+            if isinstance(mask, np.ndarray):
                 mn, mx = float(mask.min()), float(mask.max())
                 denom = (mx - mn) if (mx - mn) > 0 else 1.0
                 arr = ((mask.astype(np.float32) - mn) / denom * 255).astype(np.uint8)
-            elif isinstance(mask, np.ndarray) and mask.dtype == np.uint8:
-                arr = mask
             else:
-                arr = mask.astype(np.uint8) if isinstance(mask, np.ndarray) else mask
+                arr = mask
 
             h, w = arr.shape[:2]
             qimg = QImage(arr.data, w, h, w, QImage.Format_Grayscale8)
