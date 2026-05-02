@@ -52,8 +52,10 @@ class RemeasureConfig:
     measure_timing: bool = True
     measure_energy: bool = True
     use_gpu: bool = True
-    warmup_runs: int = 5
-    measurement_runs: int = 200
+    # Unified app-wide defaults (Single Test → Timing, Batch Test
+    # and the Re-measure dialog all start from these).
+    warmup_runs: int = 20
+    measurement_runs: int = 800
     sampling_rate_khz: float = 10.752
     device_label: str = "jetson"  # appears in the output filename
     # Idle-baseline capture before the first job. When False the

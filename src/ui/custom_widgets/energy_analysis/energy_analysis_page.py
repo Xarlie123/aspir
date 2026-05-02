@@ -170,11 +170,12 @@ class EnergyAnalysisPage(QWidget):
         params_layout = QFormLayout(params_group)
         params_layout.setSpacing(10)
 
-        # Warmup runs
+        # Warmup runs — 20 to match the unified default across
+        # Single Test → Timing, Batch Test, and Re-measure.
         self.warmup_spinbox = QSpinBox()
         self.warmup_spinbox.setMinimum(0)
         self.warmup_spinbox.setMaximum(200)
-        self.warmup_spinbox.setValue(10)
+        self.warmup_spinbox.setValue(20)
         self.warmup_spinbox.setToolTip(
             "Number of warmup iterations before measurement.\n"
             "Ensures CUDA kernels are compiled and GPU is at operating temperature."

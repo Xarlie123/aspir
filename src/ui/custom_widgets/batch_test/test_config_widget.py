@@ -314,7 +314,7 @@ class TestConfigWidget(QWidget):
         timing_params_layout.addWidget(QLabel("Warmup runs:"), 0, 0)
         self.timing_warmup_spin = QSpinBox()
         self.timing_warmup_spin.setRange(0, 100)
-        self.timing_warmup_spin.setValue(5)
+        self.timing_warmup_spin.setValue(20)
         self.timing_warmup_spin.setToolTip("Number of warmup runs before timing measurements")
         self.timing_warmup_spin.valueChanged.connect(self._on_value_changed)
         timing_params_layout.addWidget(self.timing_warmup_spin, 0, 1)

@@ -12,7 +12,7 @@ class TimingAnalyzer:
     """
     Benchmarks inference time of a PyTorch model, returning mean ± std.
     """
-    def __init__(self, model, device='cpu', warmup_runs=5):
+    def __init__(self, model, device='cpu', warmup_runs=20):
         if torch is None:
             raise ImportError("PyTorch is required for TimingAnalyzer")
 

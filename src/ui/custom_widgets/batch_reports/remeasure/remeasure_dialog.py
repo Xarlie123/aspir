@@ -177,15 +177,17 @@ class RemeasureDialog(QDialog):
 
         self._spn_warmup = QSpinBox()
         self._spn_warmup.setRange(0, 1000)
-        self._spn_warmup.setValue(5)
+        self._spn_warmup.setValue(20)
         knobs_form.addRow("Warmup runs:", self._spn_warmup)
 
         self._spn_runs = QSpinBox()
         self._spn_runs.setRange(1, 10000)
-        self._spn_runs.setValue(200)
+        self._spn_runs.setValue(800)
         self._spn_runs.setToolTip(
-            "Higher values give more stable energy and timing estimates "
-            "(the original batch test default is 800)."
+            "Higher values give more stable energy and timing estimates. "
+            "800 is the app-wide default (matches Single Test → Timing "
+            "and Batch Test) and gives the energy backend enough window "
+            "to escape counter quantisation."
         )
         knobs_form.addRow("Measurement runs:", self._spn_runs)
 

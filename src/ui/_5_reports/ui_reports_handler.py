@@ -312,7 +312,7 @@ class UIReportsHandler(QObject):
 
         return True
 
-    def _measure_per_image_times(self, device, test_images, warmup_runs=5, measurement_runs=20):
+    def _measure_per_image_times(self, device, test_images, warmup_runs=20, measurement_runs=800):
         """
         Per-image measurement using the TEST/VALIDATION dataset:
           - Reconstruction on CPU (no GPU syncs)

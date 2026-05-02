@@ -88,9 +88,14 @@ class TestConfiguration:
     # Whether to include datasets (training, validation, test images) in export
     include_datasets: bool = True
 
-    # Timing analysis parameters
-    timing_warmup_runs: int = 5
-    timing_measurement_runs: int = 800  # High value for accurate energy measurement
+    # Timing analysis parameters — 20 / 800 is the unified default
+    # used across Single Test → Timing, Batch Test, and Re-measure.
+    # Both numbers are deliberately on the high side: 20 warmup
+    # iterations cover CUDA kernel JIT and cache warming, and 800
+    # measurement runs give the energy backend a long enough window
+    # to escape jtop / RAPL / NVML counter quantisation.
+    timing_warmup_runs: int = 20
+    timing_measurement_runs: int = 800
     timing_sampling_rate_khz: float = 10.752
 
     # Runtime state (not saved to config)

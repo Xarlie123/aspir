@@ -12,8 +12,8 @@ def measure_energy(
     postprocessor: PostprocessorNN,
     config: TestConfiguration,
     logger,
-    warmup_runs: int = 5,
-    measurement_runs: int = 10,
+    warmup_runs: int = 20,
+    measurement_runs: int = 800,
     analyzer: Optional[EnergyAnalyzer] = None,
     inference_batch_size: int = 1,
 ) -> dict[str, Any]:

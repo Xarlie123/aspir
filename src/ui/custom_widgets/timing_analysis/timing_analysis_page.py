@@ -134,18 +134,23 @@ class TimingAnalysisPage(QWidget):
         self.sampling_rate_spinbox.setSuffix(" kHz")
         params_layout.addRow("Sampling rate:", self.sampling_rate_spinbox)
 
-        # Warmup runs
+        # Warmup runs — 20 to match the unified app default
+        # (Batch Test, Re-measure dialog and the energy analysis page
+        # all default to the same number for cross-comparable runs).
         self.warmup_spinbox = QSpinBox()
         self.warmup_spinbox.setMinimum(0)
         self.warmup_spinbox.setMaximum(100)
-        self.warmup_spinbox.setValue(5)
+        self.warmup_spinbox.setValue(20)
         params_layout.addRow("Warmup runs:", self.warmup_spinbox)
 
-        # Measurement runs
+        # Measurement runs — 800 by default. The 500 ceiling that
+        # used to live here predated the unified energy-measurement
+        # convention; raised to 2000 so the user can also push past
+        # the default for paper-quality numbers.
         self.measurement_spinbox = QSpinBox()
         self.measurement_spinbox.setMinimum(1)
-        self.measurement_spinbox.setMaximum(500)
-        self.measurement_spinbox.setValue(20)
+        self.measurement_spinbox.setMaximum(2000)
+        self.measurement_spinbox.setValue(800)
         params_layout.addRow("Measurement runs:", self.measurement_spinbox)
 
         layout.addWidget(params_group)
