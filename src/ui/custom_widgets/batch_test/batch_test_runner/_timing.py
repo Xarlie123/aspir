@@ -18,6 +18,7 @@ def measure_timing(
     measurement_runs: int = 20,
     sampling_rate_khz: float = 10.752,
     max_recon_samples: Optional[int] = None,
+    inference_batch_size: int = 1,
 ) -> dict[str, Any]:
     """
     Measure inference timing with configurable parameters.
@@ -91,13 +92,18 @@ def measure_timing(
         except Exception as e:
             logger.warning("Reconstruction timing failed: %s", e)
 
-    # Helper function to measure timing on a specific device
+    # Helper function to measure timing on a specific device.
+    # ``inference_batch_size`` controls how many images the model
+    # processes per forward pass; per-call timings are divided by B
+    # at the end of this helper so the returned ``_mean_ms`` columns
+    # stay per-image regardless of the chosen batch.
+    B = max(1, int(inference_batch_size))
     def measure_on_device(device: torch.device) -> list[float]:
         model.to(device)
         if is_conv:
-            sample = torch.randn(1, 1, img_size, img_size, device=device)
+            sample = torch.randn(B, 1, img_size, img_size, device=device)
         else:
-            sample = torch.randn(1, img_size * img_size, device=device)
+            sample = torch.randn(B, img_size * img_size, device=device)
 
         # Warmup
         with torch.no_grad():
@@ -125,7 +131,9 @@ def measure_timing(
     logger.debug("Measuring CPU inference timing...")
     cpu_device = torch.device('cpu')
     cpu_times = measure_on_device(cpu_device)
-    cpu_times_np = np.array(cpu_times)
+    # Per-call → per-image (each call processed B images, so dividing
+    # by B yields the mean latency per image at this batch size).
+    cpu_times_np = np.array(cpu_times) / B
 
     results = {
         "timing_cpu_mean_ms": float(cpu_times_np.mean()),
@@ -138,6 +146,7 @@ def measure_timing(
         "timing_acquisition_ms": float(t_acquisition_ms),
         "timing_reconstruction_ms": float(t_reconstruction_ms),
         "timing_num_patterns": num_patterns,
+        "timing_batch_size": B,
         "use_gpu": config.use_gpu,
     }
 
@@ -147,7 +156,7 @@ def measure_timing(
         try:
             gpu_device = torch.device('cuda')
             gpu_times = measure_on_device(gpu_device)
-            gpu_times_np = np.array(gpu_times)
+            gpu_times_np = np.array(gpu_times) / B  # per-image
 
             results["timing_gpu_mean_ms"] = float(gpu_times_np.mean())
             results["timing_gpu_std_ms"] = float(gpu_times_np.std())

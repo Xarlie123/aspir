@@ -63,6 +63,12 @@ class RemeasureConfig:
     # only adds information.
     capture_baseline: bool = True
     baseline_duration_s: int = 60
+    # Inference batch size for the timing / energy lazo. Default 1
+    # mirrors the historical "single-image latency" measurement; B>1
+    # is closer to a throughput-oriented deployment. The measurement
+    # primitives divide per-call results by B internally so the
+    # ``_mean_ms`` / ``_mean_mj`` columns stay per-image regardless.
+    inference_batch_size: int = 1
 
 
 @dataclass
@@ -455,6 +461,7 @@ class RemeasureWorker(QObject):
                         warmup_runs=self.cfg.warmup_runs,
                         measurement_runs=self.cfg.measurement_runs,
                         sampling_rate_khz=self.cfg.sampling_rate_khz,
+                        inference_batch_size=self.cfg.inference_batch_size,
                         # Reconstruction with NumPy on Jetson CPU is
                         # roughly linear in pattern count and dominates
                         # the wall-clock of a re-measurement run when
@@ -491,6 +498,7 @@ class RemeasureWorker(QObject):
                         warmup_runs=self.cfg.warmup_runs,
                         measurement_runs=self.cfg.measurement_runs,
                         analyzer=shared_analyzer,
+                        inference_batch_size=self.cfg.inference_batch_size,
                     )
                     updated.update(energy)
                 except Exception as exc:

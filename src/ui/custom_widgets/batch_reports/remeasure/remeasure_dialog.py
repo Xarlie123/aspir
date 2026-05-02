@@ -96,10 +96,10 @@ class RemeasureDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Re-measure timing & energy")
         self.setModal(True)
-        # Bumped from 560×480 → 580×560 to fit the new
-        # "Capture idle baseline" + "Idle baseline duration" rows
-        # without cropping the device-label / Start row at the bottom.
-        self.resize(580, 560)
+        # Bumped to 580×600 so the new "Inference batch size" row fits
+        # alongside the existing "Capture idle baseline" + duration
+        # rows without cropping the device-label / Start row.
+        self.resize(580, 600)
 
         self.logger = (logger or logging.getLogger("RemeasureDialog"))
         self._sources = sources
@@ -195,6 +195,22 @@ class RemeasureDialog(QDialog):
         self._spn_sampling.setValue(10.752)
         self._spn_sampling.setToolTip("Pattern sampling rate; only affects acquisition-time math.")
         knobs_form.addRow("Sampling rate (kHz):", self._spn_sampling)
+
+        # Inference batch size for the timing / energy loop. Default 1
+        # gives the classic "single-image latency"; bigger values are
+        # closer to a throughput-oriented deployment and trade off
+        # GPU utilisation vs per-image latency. The reported
+        # ``_mean_ms`` / ``_mean_mj`` columns stay per-image regardless
+        # — the divider lives inside the measurement primitives.
+        self._spn_batch = QSpinBox()
+        self._spn_batch.setRange(1, 128)
+        self._spn_batch.setValue(1)
+        self._spn_batch.setToolTip(
+            "Number of images packed into each forward pass.\n"
+            "Reported energy / timing remain per-image; this knob\n"
+            "controls how much work the model does per call."
+        )
+        knobs_form.addRow("Inference batch size:", self._spn_batch)
 
         self._chk_gpu = QCheckBox("Use GPU when available")
         self._chk_gpu.setChecked(True)
@@ -320,6 +336,7 @@ class RemeasureDialog(QDialog):
             sampling_rate_khz=float(self._spn_sampling.value()),
             capture_baseline=self._chk_baseline.isChecked(),
             baseline_duration_s=int(self._spn_baseline.value()),
+            inference_batch_size=int(self._spn_batch.value()),
         )
         if self._chk_both_paths.isChecked():
             queue.append((
