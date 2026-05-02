@@ -51,7 +51,11 @@ class DatasetFromIRBeam(DatasetABC):
         self.num_images = num_images
         self.seed = seed
         self.size = 15 * lp.mm
-        self.wavelength = 410 * lp.nm
+        # 10.6 μm — CO₂ laser line, the canonical "thermal IR" working
+        # wavelength for the single-pixel imaging setup ASPIR targets.
+        # The previous 410 nm default was visible (violet), which made
+        # any "IR beam" dataset a misnomer.
+        self.wavelength = 10.6 * lp.um
         self.N = img_size
         self.R = 3 * lp.mm
         self.w0 = 3 * lp.mm  # Default beam waist
