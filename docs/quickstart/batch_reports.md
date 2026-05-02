@@ -40,7 +40,10 @@ You can also load multiple report files to compare results across different batc
   - *Energy per Image vs Sampling Ratio* — line + markers chart of energy (mJ/image) vs M/N (%), one line per compute path (CPU run vs GPU run); auto-switches to log Y when CPU/GPU energies differ by more than 5×.
 
   Below the chart, the **Timing Summary** table shows acquisition / reconstruction / inference / total times for the selected test. Right-click the panel for **Copy table** (TSV pasteable into spreadsheets).
-- **Energy**: charts with a *Compute path* selector on the left (`CPU run + GPU run`, `CPU run only`, `GPU run only`). Tests are paired by name and split by their `use_gpu` flag, so loading the two outputs of a "Run both compute paths" re-measurement (see below) populates both bars per test. Right-click the **Energy Summary** panel for **Copy table**.
+- **Energy**: charts with a *Compute path* selector on the left (`CPU run + GPU run`, `CPU run only`, `GPU run only`). Tests are paired by name and split by their `use_gpu` flag, so loading the two outputs of a "Run both compute paths" re-measurement (see below) populates both bars per test.
+  - A *Subtract idle baseline* toggle on the same panel switches the charts to plot `dynamic_*` columns (= total − idle pedestal, see {doc}`../user_guide/analysis`); the toggle is only enabled when at least one loaded experiment has a baseline captured.
+  - The **Energy Summary** table at the bottom shows two columns (CPU run / GPU run, paired by test name) and an "Idle baseline: X.X W ± …" banner above. When dynamic data is present three extra rows appear underneath (`Dynamic E/image`, `Dynamic Power`, `Dynamic Eff.`).
+  - Right-click the panel for **Copy table** — TSV pasteable into spreadsheets, includes the dynamic rows when they are visible.
 - **Training**: loss curves and convergence analysis for each neural network model.
 
 ## Re-measure Timing & Energy on Different Hardware
@@ -48,7 +51,9 @@ You can also load multiple report files to compare results across different batc
 Useful workflow: train a batch on a workstation (slow) and only measure latency / energy on a target device like a Jetson Orin NX (fast). Right-click an experiment in the list → **Re-measure timing & energy…** opens a dialog with:
 
 - Toggles for what to re-measure (timing, energy, or both).
-- Warmup and measurement-run counts; the energy phase is automatically split into 10 sub-blocks so you get a real `energy_std_mj` per test.
+- Warmup and measurement-run counts (defaults: 20 / 800 — same across Single Test, Batch Test and Re-measure). The energy phase is split into 10 sub-blocks internally so you get a real `energy_std_mj` per test.
+- An **Inference batch size** spin box (1–128, default 1) controlling the per-call workload. Reported `_mean_ms` / `_mean_mj` stay per-image regardless of B; the report carries `timing_batch_size` / `energy_batch_size` so the reader knows which point of the curve the numbers came from.
+- A **Capture idle baseline** checkbox (default ON) with a duration spin box (30–300 s, default 60). The baseline is sampled once before the first test of the run and used to derive `dynamic_*` columns per test (see {doc}`../user_guide/analysis`). Off → totals only, no `dynamic_*` columns.
 - A **Run both compute paths** checkbox that executes the entire job twice — once with `use_gpu=False` (CPU pass) and once with `use_gpu=True` (GPU pass) — with a 30 s thermal cooldown between passes. Each pass writes its own report file with a `-cpu` / `-gpu` tag and auto-loads next to the original.
 - A "Device label" field tagged into the output filename so several re-measurements on different hosts stay distinguishable.
 

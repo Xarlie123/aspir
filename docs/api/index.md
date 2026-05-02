@@ -129,9 +129,10 @@ noise_analyzer = NoiseAnalyzer(originals, noisy, reconstructions)
 noise_analyzer.analyze()
 summary = noise_analyzer.get_metrics_summary()
 
-# Timing analysis
-timing = TimingAnalyzer(model, device='cuda', warmup_runs=5)
-mean_time, std_time = timing.time_inference(input_tensor, n_runs=20)
+# Timing analysis (defaults are warmup=20 / measurement=800 — same
+# numbers used by the Single Test, Batch Test and Re-measure GUIs)
+timing = TimingAnalyzer(model, device='cuda', warmup_runs=20)
+mean_time, std_time = timing.time_inference(input_tensor, n_runs=800)
 ```
 
 ## Data Structures

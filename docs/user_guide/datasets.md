@@ -27,7 +27,9 @@ Load multiple images from a directory.
 
 Generate synthetic infrared beam profiles using LightPipes optical simulation. This is particularly useful for testing the SPI pipeline with realistic beam data.
 
-- **Use case**: Realistic IR beam datasets for beam profiling research
+The diffraction physics is parameterised on a **10.6 μm CO₂ laser line** — the canonical thermal-IR working wavelength of the single-pixel imaging hardware ASPIR is designed around. The wavelength is fixed in `DatasetFromIRBeam.__init__` and not surfaced to the GUI; if you need a different IR line you can override it before calling `load_data()`.
+
+- **Use case**: Realistic IR beam datasets for beam profiling research at 10.6 μm
 - **Parameters**:
   - **Image dimension** (pixels): Resolution of each beam profile (e.g., 32, 64, 128)
   - **Number of dataset images**: Total images to generate

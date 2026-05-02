@@ -185,6 +185,18 @@ Without this service the batch-test Resource Monitor shows GPU "--" and
 the Energy report comes back as 0 mJ / 0 W — the ina3221 sysfs paths
 differ per board and our fallback scanner can miss them.
 
+```{important}
+**Jetson shared rail.** The Orin / Xavier / Nano / TX2 modules expose a
+single combined power rail (``VDD_IN`` / ``POM_5V_IN``) that feeds CPU,
+GPU, RAM and the rest of the SoC together. ``jtop`` reports the total;
+ASPIR populates both ``energy_cpu_mj`` and ``energy_gpu_mj`` with that
+same number. The honest CPU vs GPU comparison on Jetson is therefore
+two separate measurement passes (with ``use_gpu=False`` and
+``use_gpu=True``), which is what *Run both compute paths* in
+Batch Reports → Re-measure produces. See
+{doc}`user_guide/analysis` for the math.
+```
+
 #### Enable CUDA profiling (optional)
 
 PyTorch's CUDA profiler relies on CUPTI, which JetPack 6.x gates to

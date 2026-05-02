@@ -98,6 +98,22 @@ toggle in Batch Reports → Re-measure are designed around this.
 - **Efficiency** (images/J): Throughput per energy unit
 - **Temperature** (°C): GPU temperature (if available)
 
+### Idle Baseline & Dynamic Energy
+
+Both Batch Test and Re-measure can optionally sample **system idle power** for a configurable window (30–300 s, default 60 s) before the first test. The mean of that window is persisted at report metadata level under `idle_baseline` and used to derive three additional per-test columns:
+
+- `dynamic_power_W` = `energy_mean_watts` − `baseline_power_W`
+- `dynamic_energy_mj` = `energy_mean_mj` − `baseline_power_W` · *t* · 1000  (where *t* is the per-image inference time from the same energy phase, so the subtraction is consistent with the integration window)
+- `dynamic_efficiency_imgs_per_J` = 1000 / `dynamic_energy_mj` (or `None` when the dynamic energy is non-positive)
+
+The intent is to remove the constant pedestal (GUI, background services, idle GPU, RAM refresh) from each measurement so the reported number reflects the actual cost of running inference. The Energy view exposes a *Subtract idle baseline* toggle that switches charts to the dynamic equivalents at display time; the summary panel shows the totals and the dynamic rows side by side when both are available.
+
+Negative dynamic values are intentionally not clipped to zero — a negative number means the SoC was warmer during the test than during the baseline window, and that's a real diagnostic signal worth surfacing.
+
+### Inference Batch Size
+
+The Re-measure dialog exposes an **Inference batch size** spin box (range 1–128, default 1). It controls the shape of the sample tensor fed into the model on each forward pass: `(B, 1, H, W)` on conv models, `(B, H·W)` otherwise. The reported `*_mean_ms` and `*_mean_mj` columns stay **per-image** regardless of B (the measurement primitives divide by the batch internally), and a `timing_batch_size` / `energy_batch_size` field is added to the report so the reader can tell which point of the curve the numbers came from. Use B = 1 for single-image latency, B ≥ 8 to characterise throughput-oriented deployment.
+
 ## PyTorch Profiler
 
 Deep analysis of neural network operations using the [PyTorch Profiler](https://pytorch.org/docs/stable/profiler.html).

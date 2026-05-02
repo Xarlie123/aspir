@@ -24,19 +24,9 @@ Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain
 
 ## Related Publications
 
-<!-- Add your publications here -->
-
-```bibtex
-@article{chabert2025spi,
-  author = {Chabert Ull, Carlos and ...},
-  title = {Title of your paper},
-  journal = {Journal Name},
-  year = {2025},
-  volume = {},
-  pages = {},
-  doi = {}
-}
-```
+This section will be filled in once the accompanying papers are
+published. The repository's Zenodo entry (concept DOI above) is the
+canonical software citation in the meantime.
 
 ## DOI
 
