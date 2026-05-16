@@ -48,7 +48,7 @@ pipeline for testing denoising algorithms.</p>
 <li>Dataset generation: IR Beam (LightPipes), images, folders, CelebA, SVHN</li>
 <li>Mask patterns: Scatter, Hadamard (4 variants), Sweep, Cal-Sal</li>
 <li>Reconstruction: Ghost Imaging, Pseudoinverse, FISTA, TV-Norm</li>
-<li>Neural network denoising: 9 architectures (U-Net, DnCNN, cGAN, etc.)</li>
+<li>Neural network denoising: 10 architectures (U-Net, DnCNN, cGAN, etc.)</li>
 <li>Analysis: quality metrics (PSNR, SSIM, LPIPS), timing, energy profiling</li>
 <li>Batch experiments with comparative reports</li>
 </ul>

@@ -14,6 +14,14 @@ Encoder-decoder architecture with skip connections. The skip connections help pr
 - **Configurable parameters**:
   - **Encoder Channels** (default: `[8, 16, 32, 64]`): Channel widths per encoder level
 
+### U-Net-Residual
+**Source:** `models/unet_res.py`
+
+ResUNet variant of U-Net (Zhang et al. 2018, *Road Extraction by Deep Residual U-Net*) where the encoder→decoder skip connections are combined with an **addition** instead of a channel-axis concatenation. Created for FINN deployment on FPGA: FINN v0.10.1 cannot map channel-axis Concat to HW (issue #329), so add-based skips are the only skip pattern with native HW support. The rest of the pipeline (encoder, bottleneck, Upsample+Conv decoder, BatchNorm/ReLU/MaxPool, final 1×1 conv) is byte-for-byte identical to U-Net, which makes the two directly comparable. At identical channel widths the parameter count is ≈10 % lower (the first decoder conv has half the input channels).
+
+- **Configurable parameters**:
+  - **Encoder Channels** (default: `[8, 16, 32, 64]`): Channel widths per encoder level
+
 ### U-Net with Residual Attention
 **Source:** `models/unet_res_att.py`
 

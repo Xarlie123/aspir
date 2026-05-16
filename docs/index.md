@@ -14,7 +14,7 @@ Once a dataset is loaded, ASPIR provides several **mask pattern generators** —
 
 The acquired measurements are then passed through **classical reconstruction algorithms** including Ghost Imaging, Pseudoinverse, FISTA, and TV-Norm, each offering different trade-offs between speed, noise robustness, and compression tolerance.
 
-To further improve image quality, ASPIR integrates a **neural network post-processing** stage with nine architectures ready to use: U-Net, U-Net with Residual Attention, DnCNN, Autoencoder, Residual CNN, MobileNet Denoising, Dilated CNN, cGAN, and Noise2Void. Models can be trained, evaluated, and exported directly from the GUI.
+To further improve image quality, ASPIR integrates a **neural network post-processing** stage with ten architectures ready to use: U-Net, U-Net-Residual, U-Net with Residual Attention, DnCNN, Autoencoder, Residual CNN, MobileNet Denoising, Dilated CNN, cGAN, and Noise2Void. Models can be trained, evaluated, and exported directly from the GUI.
 
 Finally, a comprehensive **analysis module** computes quality metrics (PSNR, SSIM, LPIPS), timing breakdowns per pipeline stage, and energy consumption profiling on NVIDIA GPUs (desktop and Jetson) and Intel CPUs via RAPL.
 

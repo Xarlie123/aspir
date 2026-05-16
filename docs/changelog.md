@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **U-Net-Residual (ResUNet) post-processing model.** New `UNetRes` architecture
+  in `simulation_engine/_4_postprocessor/models/unet_res.py`, registered under
+  the canonical key `u-net-residual` (display name *U-Net-Residual*). Mirrors
+  the vanilla U-Net structurally but replaces the channel-axis concat skip
+  connections with residual additions (Zhang et al. 2018). Motivated by FINN
+  v0.10.1 FPGA deployment, which cannot map channel-axis Concat to HW
+  (FINN issue #329); add-based skips are the only skip pattern with native HW
+  support there. Available in both Single Test and Batch Test mode, and the
+  Architecture Configuration panel exposes the `features` (encoder channel
+  widths) parameter. At identical widths the parameter count is ≈10 % lower
+  than the vanilla U-Net.
 - **Idle-baseline capture for energy measurements.** Both Batch Test
   and Re-measure now sample system idle power for a configurable
   window (default 60 s, range 30–300) before the first test starts.

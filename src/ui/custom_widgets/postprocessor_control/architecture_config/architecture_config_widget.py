@@ -346,7 +346,7 @@ class ArchitectureConfigWidget(QWidget):
             dilation_rates = config.get("dilation_rates", [1, 2, 4, 8])
             return 1 * features * 9 + len(dilation_rates) * features * features * 9 + features * 1 * 9
 
-        elif model in ("u-net", "noise2void"):
+        elif model in ("u-net", "u-net-residual", "noise2void"):
             features = config.get("features", [8, 16, 32, 64])
             if isinstance(features, list) and len(features) > 0:
                 # Rough encoder + decoder estimate

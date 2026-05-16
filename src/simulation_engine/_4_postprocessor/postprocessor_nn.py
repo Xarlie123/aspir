@@ -143,6 +143,7 @@ from simulation_engine._4_postprocessor.postprocessor import Postprocessor
 from simulation_engine._4_postprocessor.models.autoencoder import Autoencoder
 from simulation_engine._4_postprocessor.models.dncnn import DnCNN
 from simulation_engine._4_postprocessor.models.unet import UNet
+from simulation_engine._4_postprocessor.models.unet_res import UNetRes
 from simulation_engine._4_postprocessor.models.unet_res_att import UNetResAttn
 from simulation_engine._4_postprocessor.models.residual_cnn import ResidualCNN
 from simulation_engine._4_postprocessor.models.noise2void import Noise2Void
@@ -183,6 +184,13 @@ MODEL_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
     "u-net": {
         "cls": UNet,
+        "defaults": {"in_channels": 1, "out_channels": 1, "features": [8, 16, 32, 64]},
+        "conv": True
+    },
+    "u-net-residual": {
+        # ResUNet variant: add-skips instead of concat-skips, for FINN HW.
+        # Defaults mirror "u-net" so val_psnr is directly comparable.
+        "cls": UNetRes,
         "defaults": {"in_channels": 1, "out_channels": 1, "features": [8, 16, 32, 64]},
         "conv": True
     },
@@ -245,6 +253,7 @@ MODEL_DISPLAY_NAMES: Dict[str, str] = {
     "cgan-denoising":           "cGAN Denoising",
     "dncnn":                    "DnCNN",
     "u-net":                    "U-Net",
+    "u-net-residual":           "U-Net-Residual",
     "u-net-residual-attention": "U-Net-Residual-Attention",
     "residual-cnn":             "Residual_CNN",
     "noise2void":               "Noise2Void",

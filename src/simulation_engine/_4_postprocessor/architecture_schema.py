@@ -119,6 +119,16 @@ ARCHITECTURE_SCHEMA: Dict[str, List[ParamSpec]] = {
         ),
     ],
 
+    "u-net-residual": [
+        ParamSpec(
+            name="features",
+            param_type="list_int",
+            default=[8, 16, 32, 64],
+            tooltip="Channel widths per encoder level (e.g., 8, 16, 32, 64)",
+            display_name="Encoder Channels"
+        ),
+    ],
+
     "u-net-residual-attention": [
         # Note: The actual model uses 'widths' but registry uses 'features'
         # We use 'widths' here as that's what the model expects
