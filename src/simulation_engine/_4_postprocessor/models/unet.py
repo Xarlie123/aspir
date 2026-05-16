@@ -5,6 +5,13 @@ class UNet(nn.Module):
     """
     U-Net: red de convoluciones con conexiones de salto para denoising.
     Arquitectura simétrica de encoder-decoder con skip connections.
+
+    Decoder usa Upsample(nearest, ×2) + Conv2d(3×3) en lugar de ConvTranspose2d
+    para ser compatible con todos los backends del paper (HLS4ML no soporta
+    Conv2DTranspose, FINN lo prefiere así; DPU / TensorRT / NEON aceptan los
+    dos sin diferencia). Suele empatar o mejorar la calidad respecto a
+    ConvTranspose porque elimina los "checkerboard artifacts" típicos del
+    stride-2 transpose.
     """
     def __init__(self, in_channels: int = 1, out_channels: int = 1, features: list = [4, 8, 16, 32]):
         super().__init__()
@@ -36,15 +43,18 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-        # Decoder: transposed conv + doble conv
+        # Decoder: Upsample(×2 nearest) + Conv2d(3×3) + doble conv.
+        # NOTA: si vuelves a ConvTranspose2d aquí, romperás Phase D (HLS4ML
+        # no lo soporta y FINN lo maneja peor que un Upsample-then-Conv).
         self.ups = nn.ModuleList()
         self.up_convs = nn.ModuleList()
         # Iniciar canales para el decoder
         in_decoder_channels = features[-1] * 2  # output del bottleneck
         for feature in reversed(features):
-            self.ups.append(
-                nn.ConvTranspose2d(in_decoder_channels, feature, kernel_size=2, stride=2)
-            )
+            self.ups.append(nn.Sequential(
+                nn.Upsample(scale_factor=2, mode='nearest'),
+                nn.Conv2d(in_decoder_channels, feature, kernel_size=3, padding=1, bias=True),
+            ))
             self.up_convs.append(nn.Sequential(
                 nn.Conv2d(feature * 2, feature, kernel_size=3, padding=1, bias=False),
                 nn.BatchNorm2d(feature),
