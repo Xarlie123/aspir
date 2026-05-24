@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-24
+
 ### Added
 - **U-Net-Residual (ResUNet) post-processing model.** New `UNetRes` architecture
   in `simulation_engine/_4_postprocessor/models/unet_res.py`, registered under
@@ -104,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reconstruction timing samples are capped at 3 per test to bound the
   CPU NumPy cost at high `M/N`.
 
-## [1.0.0] - 2025-XX-XX
+## [1.0.0] - 2026-04-26
 
 ### Added
 - Complete SPI simulation pipeline

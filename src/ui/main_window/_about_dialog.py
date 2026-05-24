@@ -37,7 +37,7 @@ def show_about_dialog(parent, assets_dir: str):
     # About text
     about_text = """<h2 style="text-align: center;">ASPIR</h2>
 <p style="text-align: center;"><b>A Single-Pixel Imaging Research Platform</b></p>
-<p style="text-align: center;">Version 1.0.0</p>
+<p style="text-align: center;">Version 1.0.1</p>
 <hr>
 <p>ASPIR is an open-source platform developed in Python designed to bring the world of
 Single-Pixel Imaging (SPI) and Artificial Intelligence (AI) closer to researchers and

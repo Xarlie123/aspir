@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 # =============================================================================
 [project]
 name = "aspir"
-version = "1.0.0"
+version = "1.0.1"
 description = "A Single-Pixel Imaging Research Platform — end-to-end pipeline for SPI with classical reconstruction and deep-learning post-processing."
 readme = "README.md"
 requires-python = ">=3.10"
