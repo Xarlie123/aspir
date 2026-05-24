@@ -6,7 +6,7 @@ abstract: >-
   ASPIR is an open-source desktop application that unifies the complete
   single-pixel imaging computational pipeline behind a graphical user
   interface. It covers dataset generation, mask-pattern design, reconstruction
-  with classical and iterative algorithms, post-processing with nine neural
+  with classical and iterative algorithms, post-processing with ten neural
   network architectures, and analysis of reconstruction quality, inference
   latency, and energy consumption. Built-in hardware-backend auto-detection
   enables cross-platform benchmarking across desktop NVIDIA GPUs, Intel CPUs
@@ -49,8 +49,8 @@ authors:
 # tagged on GitHub, so Zenodo archives them correctly into the CITATION.cff
 # of the version snapshot.
 # -----------------------------------------------------------------------------
-version: "1.0.0"              # TODO: bump per release (1.0.0, 1.1.0, ...)
-date-released: "2026-05-01"   # TODO: use the actual release date (YYYY-MM-DD)
+version: "1.0.1"              # TODO: bump per release (1.0.0, 1.1.0, ...)
+date-released: "2026-05-24"   # TODO: use the actual release date (YYYY-MM-DD)
 # Zenodo concept DOI (resolves to the latest archived version of the
 # software). Version-specific DOIs live alongside it on Zenodo and can
 # be cited from a paper when the bits used in the figures need to stay
