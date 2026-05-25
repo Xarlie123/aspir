@@ -1,7 +1,7 @@
 """Handler for the noise analysis tab."""
 import logging
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtCore    import pyqtSignal, QObject
+from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore    import Signal, QObject
 from ui.utils.widget_helpers import embed_widget
 
 from ui.custom_widgets.noise_analysis_metric.noise_analysis_metrics_widget import NoiseAnalysisMetricsWidget

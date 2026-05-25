@@ -18,7 +18,7 @@ ASPIR is built on top of several open-source libraries. We gratefully acknowledg
 ### Core Framework
 
 - **[PyTorch](https://pytorch.org/)** — Deep learning framework used for all neural network models, training, and inference.
-- **[PyQt5](https://www.riverbankcomputing.com/software/pyqt/)** — Python bindings for Qt, used for the graphical user interface.
+- **[PySide6](https://wiki.qt.io/Qt_for_Python)** — Official Qt-for-Python bindings (LGPLv3) used for the graphical user interface.
 - **[NumPy](https://numpy.org/)** — Fundamental package for numerical computing in Python.
 - **[Matplotlib](https://matplotlib.org/)** — Plotting library used for all charts and visualizations in the application.
 

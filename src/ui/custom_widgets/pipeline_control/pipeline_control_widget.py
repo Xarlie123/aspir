@@ -1,7 +1,7 @@
 # pipeline_control_widget.py
 
 import logging
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 from ui.custom_widgets.pipeline_control.pipeline_control import Ui_pipeline_control
 
 class PipelineControlWidget(QWidget):

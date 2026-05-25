@@ -6,19 +6,19 @@ from typing import List, Dict, Any, Optional
 
 import numpy as np
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QCheckBox, QFileDialog, QMessageBox, QComboBox, QMenu,
     QSplitter, QListWidget, QListWidgetItem, QGroupBox, QPushButton,
     QDialog, QStackedWidget, QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView
 )
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt, pyqtSignal
+from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, Signal
 
 from ui.utils.file_formats import safe_test_dirname
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
@@ -42,7 +42,7 @@ class QualityView(QWidget):
     """
 
     # Signal emitted when preview is requested
-    previewRequested = pyqtSignal()
+    previewRequested = Signal()
 
     # Chart type indices
     CHART_COMPARISON = 0
@@ -290,7 +290,7 @@ class QualityView(QWidget):
         menu = QMenu(self)
         save_action = menu.addAction("Save chart as...")
         save_action.triggered.connect(self._on_save_chart)
-        menu.exec_(self.canvas.mapToGlobal(pos))
+        menu.exec(self.canvas.mapToGlobal(pos))
 
     def _on_save_chart(self):
         """Save the chart to a file."""
@@ -367,7 +367,7 @@ class QualityView(QWidget):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._chart_config = popup.get_config()
             self.logger.debug("Chart config updated: %s", self._chart_config)
             self._refresh_chart()
@@ -670,7 +670,7 @@ class QualityView(QWidget):
         menu = QMenu(self.metrics_table)
         menu.addAction("Save as CSV…", self._export_table_csv)
         menu.addAction("Save as LaTeX…", self._export_table_latex)
-        menu.exec_(self.metrics_table.viewport().mapToGlobal(pos))
+        menu.exec(self.metrics_table.viewport().mapToGlobal(pos))
 
     def _export_table_csv(self):
         rows = self._table_rows()

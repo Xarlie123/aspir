@@ -1,9 +1,9 @@
 """Column configuration widgets for the Visual Comparison popup (Fig 9)."""
 from __future__ import annotations
 
-from PyQt5.QtCore import QMimeData, QPoint, Qt, pyqtSignal
-from PyQt5.QtGui import QDrag, QPainter, QPixmap
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QMimeData, QPoint, Qt, Signal
+from PySide6.QtGui import QDrag, QPainter, QPixmap
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
@@ -64,9 +64,9 @@ class ColumnConfig:
 class ColumnCardWidget(QFrame):
     """Draggable card widget representing a column configuration."""
 
-    double_clicked = pyqtSignal(object)  # Emits self when double-clicked
-    config_changed = pyqtSignal()
-    drag_started = pyqtSignal(object)  # Emits self when drag starts
+    double_clicked = Signal(object)  # Emits self when double-clicked
+    config_changed = Signal()
+    drag_started = Signal(object)  # Emits self when drag starts
 
     def __init__(self, config: ColumnConfig, index: int, parent=None):
         super().__init__(parent)
@@ -183,7 +183,7 @@ class ColumnCardWidget(QFrame):
         self.drag_started.emit(self)
 
         # Execute drag
-        drag.exec_(Qt.MoveAction)
+        drag.exec(Qt.MoveAction)
 
         # Restore card appearance
         self._update_style(dragging=False)
@@ -384,7 +384,7 @@ class ColumnConfigDialog(QDialog):
 class ColumnListWidget(QWidget):
     """Widget containing draggable column cards with visual drag & drop."""
 
-    columns_changed = pyqtSignal()
+    columns_changed = Signal()
 
     def __init__(self, tests: list[dict], parent=None):
         super().__init__(parent)
@@ -479,7 +479,7 @@ class ColumnListWidget(QWidget):
     def _on_card_double_clicked(self, card: ColumnCardWidget):
         """Open config dialog for card."""
         dialog = ColumnConfigDialog(card.config, self)
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.Accepted:
             card.update_display()
             self.columns_changed.emit()
 

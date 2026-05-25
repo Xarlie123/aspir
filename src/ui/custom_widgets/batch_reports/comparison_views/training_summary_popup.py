@@ -9,16 +9,16 @@ from typing import List, Dict, Any, Optional
 
 import numpy as np
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QComboBox,
     QGroupBox, QGridLayout, QSplitter, QScrollArea, QFrame,
     QSizePolicy, QFileDialog, QMessageBox, QMenu
 )
-from PyQt5.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
     ChartConfigPopup, CustomNavigationToolbar
@@ -168,7 +168,7 @@ class TrainingSummaryPopup(QDialog):
         else:
             canvas = self.quality_canvas
 
-        action = menu.exec_(canvas.mapToGlobal(pos))
+        action = menu.exec(canvas.mapToGlobal(pos))
         if action == save_action:
             self._save_chart(figure, chart_name)
 
@@ -248,7 +248,7 @@ class TrainingSummaryPopup(QDialog):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._loss_chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._loss_chart_config = popup.get_config()
             self.logger.debug("Loss chart config updated: %s", self._loss_chart_config)
             # Re-draw only loss chart
@@ -262,7 +262,7 @@ class TrainingSummaryPopup(QDialog):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._quality_chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._quality_chart_config = popup.get_config()
             self.logger.debug("Quality chart config updated: %s", self._quality_chart_config)
             # Re-draw only quality chart

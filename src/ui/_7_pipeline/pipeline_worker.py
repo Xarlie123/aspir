@@ -1,20 +1,20 @@
 # File: ui/_5_pipeline/pipeline_worker.py
 
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, Signal, Slot
 import traceback
 from simulation_engine._6_pipeline.pipeline_executor import execute_pipeline
 
 class PipelineWorker(QObject):
-    progress_task = pyqtSignal(int)
-    progress_overall = pyqtSignal(int)
-    finished = pyqtSignal(list)
-    error = pyqtSignal(str)
+    progress_task = Signal(int)
+    progress_overall = Signal(int)
+    finished = Signal(list)
+    error = Signal(str)
 
     def __init__(self, tests):
         super().__init__()
         self.tests = tests
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         try:
             # Validate size_px for ir_beam before execution

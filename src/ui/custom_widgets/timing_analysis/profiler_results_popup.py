@@ -4,16 +4,16 @@ from typing import Dict, Any, List
 
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QGridLayout, QFileDialog, QSizePolicy, QScrollArea,
     QWidget, QFrame, QTextEdit, QTableWidget, QTableWidgetItem,
     QHeaderView, QSplitter, QProgressBar, QMessageBox, QApplication
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 
 

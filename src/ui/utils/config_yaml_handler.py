@@ -8,7 +8,7 @@ import yaml
 import os
 import logging
 from pathlib import Path
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QSpinBox, QDoubleSpinBox, QLineEdit,
     QCheckBox, QComboBox, QTableWidgetItem, QMessageBox
 )

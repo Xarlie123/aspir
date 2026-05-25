@@ -3,11 +3,11 @@ import logging
 import time
 import numpy as np
 import torch
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QMessageBox, QListWidget, QStackedWidget, QLabel,
     QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QFrame
 )
-from PyQt5.QtCore import QObject, QThread
+from PySide6.QtCore import QObject, QThread
 
 from ui.custom_widgets.quality_metrics.quality_metrics_page import QualityMetricsPage
 from ui.custom_widgets.timing_analysis.timing_analysis_page import TimingAnalysisPage
@@ -535,7 +535,7 @@ class UIReportsHandler(QObject):
             use_gpu=use_gpu,
             logger=self.logger
         )
-        popup.exec_()
+        popup.exec()
 
     def _on_nsight_profiling(self):
         """Open the Nsight Systems profiler popup."""
@@ -548,7 +548,7 @@ class UIReportsHandler(QObject):
             simulation=self.simulation,
             logger=self.logger
         )
-        popup.exec_()
+        popup.exec()
 
     # -------------------------------------------------------------------------
     # Energy Analysis Methods

@@ -5,10 +5,10 @@ Reusable across different dataset types.
 """
 
 import logging
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLabel, QSlider, QDoubleSpinBox
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PySide6.QtCore import Qt, Signal
 
 
 class SpeckleNoiseWidget(QWidget):
@@ -17,7 +17,7 @@ class SpeckleNoiseWidget(QWidget):
     Contains a slider and spinbox for precise control.
     Default value is 0 (no noise).
     """
-    valueChanged = pyqtSignal(float)  # Emits noise level when changed
+    valueChanged = Signal(float)  # Emits noise level when changed
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

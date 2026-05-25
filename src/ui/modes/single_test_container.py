@@ -4,10 +4,10 @@ The stepper widget is managed externally (in main_window) for top bar placement.
 Navigation is done by clicking on step indicators.
 """
 import logging
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QStackedWidget, QSizePolicy
 )
-from PyQt5.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from ui.custom_widgets.stepper import StepperWidget, StepState
 from ui.modes.stepper_state_manager import StepperStateManager
@@ -21,7 +21,7 @@ class SingleTestContainer(QWidget):
     Navigation is done by clicking step indicators.
     """
     # Signal when step changes (for external tracking)
-    step_changed = pyqtSignal(int)
+    step_changed = Signal(int)
 
     def __init__(self, simulation, logger=None, status_manager=None, parent=None):
         super().__init__(parent)

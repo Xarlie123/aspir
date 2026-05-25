@@ -5,9 +5,9 @@ Includes sliders for each split percentage and a horizontal stacked bar visualiz
 """
 
 import logging
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QSlider, QSpinBox, QGroupBox)
 
 
@@ -136,7 +136,7 @@ class SplitSlider(QWidget):
     """
     A single split slider with label, percentage display, and image count.
     """
-    valueChanged = pyqtSignal(str, int)  # split_name, value
+    valueChanged = Signal(str, int)  # split_name, value
 
     def __init__(self, split_name: str, display_name: str, color: QtGui.QColor,
                  initial_value: int = 0, parent=None):
@@ -232,7 +232,7 @@ class DatasetSplitWidget(QWidget):
     Complete widget for configuring dataset split (train/validation/test).
     Ensures the total always equals 100%.
     """
-    splitChanged = pyqtSignal(dict)  # Emits the split distribution dict
+    splitChanged = Signal(dict)  # Emits the split distribution dict
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

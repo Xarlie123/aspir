@@ -1,8 +1,8 @@
 import logging
-from PyQt5.QtWidgets import (QMessageBox, QWidget, QVBoxLayout,
+from PySide6.QtWidgets import (QMessageBox, QWidget, QVBoxLayout,
                               QListWidget, QLabel, QSizePolicy, QFrame,
                               QPushButton, QFileDialog)
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
+from PySide6.QtCore import Signal, QObject, Qt
 
 from ui.utils.worker_launcher import WorkerLauncher
 from ui.utils.file_formats import MODELS_DIR
@@ -19,8 +19,8 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
 
 
 class UIPostprocessorHandler(QObject):
-    images_ready = pyqtSignal(list, list, list)
-    training_finished = pyqtSignal()  # Emitted when training completes successfully
+    images_ready = Signal(list, list, list)
+    training_finished = Signal()  # Emitted when training completes successfully
 
     # Available neural network models — display names come from the single
     # source of truth in postprocessor_nn.MODEL_DISPLAY_NAMES so the menu
@@ -135,7 +135,7 @@ class UIPostprocessorHandler(QObject):
         content_layout.addWidget(self.nn_control)
 
         # Export buttons layout (horizontal)
-        from PyQt5.QtWidgets import QHBoxLayout
+        from PySide6.QtWidgets import QHBoxLayout
         export_layout = QHBoxLayout()
         export_layout.setSpacing(8)
 

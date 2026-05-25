@@ -1,13 +1,13 @@
 # File: ui/_1_dataset/dataset_worker.py
 
 import logging
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 class DatasetWorker(QObject):
     """Worker to generate the dataset in a separate thread with progress signal."""
-    progress = pyqtSignal(int)      # Signal for progress percentage
-    finished = pyqtSignal()         # Signal for successful completion
-    error = pyqtSignal(Exception)   # Signal for error
+    progress = Signal(int)      # Signal for progress percentage
+    finished = Signal()         # Signal for successful completion
+    error = Signal(Exception)   # Signal for error
 
     def __init__(self, dataset, logger=None):
         super().__init__()

@@ -7,7 +7,7 @@ for embedded system deployment (FPGA, microcontrollers, etc.).
 
 import logging
 from enum import Enum
-from PyQt5 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 import numpy as np
 import torch
 
@@ -66,7 +66,7 @@ class DataFormatSelector(QtWidgets.QWidget):
     A reusable widget for selecting data format (quantization precision).
     Emits formatChanged signal when the selection changes.
     """
-    formatChanged = QtCore.pyqtSignal(str)  # Emits the format name as string
+    formatChanged = QtCore.Signal(str)  # Emits the format name as string
 
     def __init__(self, parent=None, logger=None):
         """

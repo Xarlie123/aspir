@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPushButton,
     QLabel, QProgressBar, QFileDialog, QMessageBox, QGroupBox,
     QSizePolicy, QFrame, QComboBox, QLineEdit,
     QRadioButton, QSpinBox, QButtonGroup, QCheckBox,
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QTimer
+from PySide6.QtCore import Signal, Qt, QTimer
 
 from ui.custom_widgets.batch_test.test_config_model import (
     TestConfiguration, BatchTestConfig, TestStatus, ExportLevel
@@ -43,11 +43,11 @@ class BatchTestContainer(QWidget):
     """
 
     # Signals
-    run_requested = pyqtSignal(object)  # Emits BatchTestConfig
-    cancel_all_requested = pyqtSignal()
-    cancel_test_requested = pyqtSignal(int)  # Test index
-    dataset_load_requested = pyqtSignal(dict, bool)  # Emits (dataset_info, should_generate) when loading config
-    batch_report_available = pyqtSignal(str)  # Emits path to last completed batch report
+    run_requested = Signal(object)  # Emits BatchTestConfig
+    cancel_all_requested = Signal()
+    cancel_test_requested = Signal(int)  # Test index
+    dataset_load_requested = Signal(dict, bool)  # Emits (dataset_info, should_generate) when loading config
+    batch_report_available = Signal(str)  # Emits path to last completed batch report
 
     def __init__(self, simulation=None, logger=None, parent=None):
         super().__init__(parent)

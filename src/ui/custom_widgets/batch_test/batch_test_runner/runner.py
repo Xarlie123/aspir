@@ -11,7 +11,7 @@ from datetime import datetime
 from threading import Lock
 from typing import Any
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer import Analyzer
@@ -55,19 +55,19 @@ class BatchTestRunner(QThread):
     """
 
     # Test lifecycle signals
-    test_started = pyqtSignal(int)
-    test_progress = pyqtSignal(int, int)  # index, progress %
-    test_completed = pyqtSignal(int, dict)  # index, results dict
-    test_failed = pyqtSignal(int, str)  # index, error message
-    test_cancelled = pyqtSignal(int)
-    batch_completed = pyqtSignal(str)  # results path
-    batch_cancelled = pyqtSignal()
-    status_update = pyqtSignal(str)
+    test_started = Signal(int)
+    test_progress = Signal(int, int)  # index, progress %
+    test_completed = Signal(int, dict)  # index, results dict
+    test_failed = Signal(int, str)  # index, error message
+    test_cancelled = Signal(int)
+    batch_completed = Signal(str)  # results path
+    batch_cancelled = Signal()
+    status_update = Signal(str)
 
     # Phase-specific progress signals (index, phase_name, progress 0-100)
-    phase_started = pyqtSignal(int, str)        # Test index, Phase name started
-    phase_progress = pyqtSignal(int, str, int)  # Test index, Phase name, progress 0-100
-    phase_completed = pyqtSignal(int, str)      # Test index, Phase name completed
+    phase_started = Signal(int, str)        # Test index, Phase name started
+    phase_progress = Signal(int, str, int)  # Test index, Phase name, progress 0-100
+    phase_completed = Signal(int, str)      # Test index, Phase name completed
 
     # Phase names constants
     PHASE_BASELINE = "Idle Baseline"

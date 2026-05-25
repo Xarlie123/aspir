@@ -7,7 +7,7 @@
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
 LABEL maintainer="ASPIR Development Team"
-LABEL description="PyQt5 application for single-pixel imaging with PyTorch GPU support"
+LABEL description="PySide6 application for single-pixel imaging with PyTorch GPU support"
 
 # -----------------------------------------------------------------------------
 # Environment variables
@@ -17,7 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     # Qt/X11 settings for GUI
     QT_QPA_PLATFORM=xcb \
     QT_X11_NO_MITSHM=1 \
-    MPLBACKEND=Qt5Agg \
+    MPLBACKEND=QtAgg \
     # Ensure UTF-8 locale
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
@@ -38,6 +38,7 @@ RUN apt-get update && \
       libxcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
       libxcb-render0 libxcb-render-util0 libxcb-shm0 libxcb-xfixes0 \
       libxcb-xinerama0 libxcb-xkb1 libxcb-shape0 libxcb-sync1 \
+      libxcb-cursor0 \
       libfontconfig1 libfreetype6 libgl1 libgl1-mesa-dri libglib2.0-0 \
       # LaTeX for DNN architecture preview (PlotNeuralNet)
       texlive-latex-base texlive-latex-extra texlive-fonts-recommended \

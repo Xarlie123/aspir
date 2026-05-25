@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import csv
 
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 from ui.custom_widgets.batch_reports.comparison_views.summary_view._table_logic import (
     get_nested_value,

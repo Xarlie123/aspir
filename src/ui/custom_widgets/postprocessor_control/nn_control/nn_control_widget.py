@@ -3,9 +3,9 @@ import inspect
 from typing import Dict, Any, Optional
 
 import numpy as np
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QGroupBox, QVBoxLayout
-from PyQt5.QtCore import pyqtSignal
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QSizePolicy, QMessageBox, QGroupBox, QVBoxLayout
+from PySide6.QtCore import Signal
 
 try:
     import torch
@@ -34,11 +34,11 @@ class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
     Model selection is done via external menu.
     """
     # Signals
-    trainProgress   = pyqtSignal(int)             # training progress percentage
-    trainFinished   = pyqtSignal()                # emitted when training is done
-    imagesReady     = pyqtSignal(list, list, list)  # original, noisy, reconstructed
+    trainProgress   = Signal(int)             # training progress percentage
+    trainFinished   = Signal()                # emitted when training is done
+    imagesReady     = Signal(list, list, list)  # original, noisy, reconstructed
     # batch, lr, epochs, model_name, use_gpu, weight_decay, dropout, loss_function, optimizer, arch_config
-    trainRequested  = pyqtSignal(int, float, int, str, bool, float, float, str, str, dict)
+    trainRequested  = Signal(int, float, int, str, bool, float, float, str, str, dict)
 
     def __init__(self, parent=None, simulation=None, logger=None):
         super().__init__(parent)
@@ -174,7 +174,7 @@ class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
                 parent=self,
                 logger=self.logger
             )
-            popup.exec_()
+            popup.exec()
 
         except Exception as e:
             self.logger.error(f"Failed to create architecture preview: {e}", exc_info=True)

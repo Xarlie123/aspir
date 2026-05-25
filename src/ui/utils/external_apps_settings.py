@@ -15,13 +15,13 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QPushButton, QLineEdit, QGroupBox, QFileDialog, QMessageBox,
     QFrame, QSizePolicy
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 
 class ExternalApp:

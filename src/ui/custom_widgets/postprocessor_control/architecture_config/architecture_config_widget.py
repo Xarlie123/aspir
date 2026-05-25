@@ -5,13 +5,13 @@ Provides model-specific parameter panels that swap based on selection.
 import logging
 from typing import Dict, Any, Optional
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QGridLayout, QSpinBox,
     QDoubleSpinBox, QCheckBox, QLineEdit, QComboBox,
     QPushButton, QLabel, QGroupBox, QHBoxLayout, QFrame,
     QSizePolicy
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PySide6.QtCore import Signal, Qt
 
 from simulation_engine._4_postprocessor.architecture_schema import (
     ARCHITECTURE_SCHEMA, ParamSpec, get_schema_for_model
@@ -27,8 +27,8 @@ class ArchitectureConfigWidget(QWidget):
         previewRequested(): Emitted when user clicks the preview button
     """
 
-    configChanged = pyqtSignal(dict)
-    previewRequested = pyqtSignal()
+    configChanged = Signal(dict)
+    previewRequested = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None, logger: Optional[logging.Logger] = None):
         super().__init__(parent)

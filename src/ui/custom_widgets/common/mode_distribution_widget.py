@@ -5,9 +5,9 @@ Includes sliders for each mode percentage and a pie chart visualization.
 """
 
 import logging
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QLabel, QSlider, QSpinBox, QGroupBox, QDoubleSpinBox)
 import numpy as np
 
@@ -102,7 +102,7 @@ class ModeSlider(QWidget):
     """
     A single mode slider with label and percentage display.
     """
-    valueChanged = pyqtSignal(str, int)  # mode_name, value
+    valueChanged = Signal(str, int)  # mode_name, value
 
     def __init__(self, mode_name: str, display_name: str, color: QtGui.QColor, parent=None):
         super().__init__(parent)
@@ -170,7 +170,7 @@ class ModeDistributionWidget(QWidget):
     Complete widget for configuring beam mode distribution.
     Includes sliders for each mode and a pie chart visualization.
     """
-    distributionChanged = pyqtSignal(dict)  # Emits the mode distribution dict
+    distributionChanged = Signal(dict)  # Emits the mode distribution dict
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

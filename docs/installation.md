@@ -136,13 +136,14 @@ Jetson-AI-Lab index, pin torch to the 2.8 series, and keep NumPy on 1.x
 pip where to find the Jetson-specific wheel.
 
 ```bash
-# 1. System packages Jetson needs (PyQt5 + poppler for Architecture Preview).
-sudo apt install -y python3-pyqt5 python3-pyqt5.qtsvg python3-pyqt5.qtopengl \
-                    poppler-utils
+# 1. System packages Jetson needs (poppler is required by the Architecture
+#    Preview to rasterise the PlotNeuralNet PDF). PySide6 ships official
+#    aarch64 wheels on PyPI from 6.5+, so the previous apt + system-site-
+#    packages trick for PyQt5 is no longer needed.
+sudo apt install -y poppler-utils
 
-# 2. Virtualenv that inherits the system site-packages (so PyQt5 is visible
-#    without rebuilding it from source — pip would otherwise try for ~40 min).
-python3 -m venv --system-site-packages .venv
+# 2. Standard virtualenv.
+python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip setuptools wheel
 

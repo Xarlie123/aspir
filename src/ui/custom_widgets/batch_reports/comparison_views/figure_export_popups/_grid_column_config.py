@@ -1,9 +1,9 @@
 """Column configuration widgets for the Samples Grid popup (Fig 2)."""
 from __future__ import annotations
 
-from PyQt5.QtCore import QMimeData, QPoint, Qt, pyqtSignal
-from PyQt5.QtGui import QDrag, QPainter, QPixmap
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QMimeData, QPoint, Qt, Signal
+from PySide6.QtGui import QDrag, QPainter, QPixmap
+from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QFrame,
@@ -44,9 +44,9 @@ class GridColumnConfig:
 class GridColumnCardWidget(QFrame):
     """Draggable card for grid column configuration."""
 
-    double_clicked = pyqtSignal(object)
-    drag_started = pyqtSignal(object)
-    remove_requested = pyqtSignal(object)
+    double_clicked = Signal(object)
+    drag_started = Signal(object)
+    remove_requested = Signal(object)
 
     def __init__(self, config: GridColumnConfig, index: int, parent=None):
         super().__init__(parent)
@@ -165,7 +165,7 @@ class GridColumnCardWidget(QFrame):
 
         self._update_style(dragging=True)
         self.drag_started.emit(self)
-        drag.exec_(Qt.MoveAction)
+        drag.exec(Qt.MoveAction)
         self._update_style(dragging=False)
         self.setCursor(Qt.OpenHandCursor)
 
@@ -286,7 +286,7 @@ class GridColumnListWidget(QWidget):
 
     MAX_COLUMNS = 32
 
-    columns_changed = pyqtSignal()
+    columns_changed = Signal()
 
     def __init__(self, tests: list[dict], parent=None):
         super().__init__(parent)
@@ -434,7 +434,7 @@ class GridColumnListWidget(QWidget):
 
     def _on_card_double_clicked(self, card: GridColumnCardWidget):
         dialog = GridColumnConfigDialog(card.config, self.tests, self)
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.Accepted:
             card.update_display()
             self.columns_changed.emit()
 

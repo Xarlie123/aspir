@@ -1,10 +1,10 @@
 """
 Navigation bar for stepper widget with Back and Next buttons.
 """
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QPushButton, QSizePolicy
 )
-from PyQt5.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 
 class StepperNavigation(QWidget):
@@ -13,8 +13,8 @@ class StepperNavigation(QWidget):
     Back is disabled on step 1.
     Next is disabled until current step is complete.
     """
-    back_clicked = pyqtSignal()
-    next_clicked = pyqtSignal()
+    back_clicked = Signal()
+    next_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

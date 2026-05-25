@@ -26,7 +26,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from simulation_engine._4_postprocessor.postprocessor_nn import (
     MODEL_REGISTRY,
@@ -307,10 +307,10 @@ class RemeasureWorker(QObject):
     call :meth:`cancel` between tests.
     """
 
-    progress = pyqtSignal(int, int, str)        # current, total, message
-    job_done = pyqtSignal(object)               # RemeasureOutcome
-    finished = pyqtSignal()
-    error = pyqtSignal(str)
+    progress = Signal(int, int, str)        # current, total, message
+    job_done = Signal(object)               # RemeasureOutcome
+    finished = Signal()
+    error = Signal(str)
 
     def __init__(self, jobs: list[RemeasureJob], cfg: RemeasureConfig,
                  logger: Optional[logging.Logger] = None, parent=None):

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Migrated from PyQt5 to PySide6 (Qt6).** PyQt5 is GPLv3-only, which
+  conflicted with ASPIR's CC BY 4.0 license; PySide6 is LGPLv3 and
+  compatible. Also bumps the Qt runtime from 5.15 to 6.6+ (automatic
+  HiDPI scaling, scoped enums available, `QAction` moved from
+  `QtWidgets` to `QtGui`, `exec_()` renamed to `exec()`). No public
+  API changes; all GUI flows behave identically. The Jetson install
+  recipe drops the `apt install python3-pyqt5` +
+  `--system-site-packages` workaround — PySide6 ships official
+  aarch64 wheels on PyPI from 6.5+.
+
 ## [1.0.1] - 2026-05-24
 
 ### Added

@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QPainter, QPixmap, QWheelEvent
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPainter, QPixmap, QWheelEvent
+from PySide6.QtWidgets import (
     QFrame,
     QGraphicsPixmapItem,
     QGraphicsScene,
@@ -25,7 +25,7 @@ class ZoomableImageView(QGraphicsView):
     - Emits zoom level changes
     """
 
-    zoom_changed = pyqtSignal(float)  # Emits zoom percentage (100 = 100%)
+    zoom_changed = Signal(float)  # Emits zoom percentage (100 = 100%)
 
     MIN_ZOOM = 0.1   # 10%
     MAX_ZOOM = 10.0  # 1000%

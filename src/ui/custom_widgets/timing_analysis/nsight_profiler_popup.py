@@ -5,20 +5,20 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QGridLayout, QFileDialog, QCheckBox, QSpinBox,
     QLineEdit, QMessageBox, QProgressBar, QTextEdit, QApplication,
     QSizePolicy
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QProcess
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt, QThread, Signal, QProcess
+from PySide6.QtGui import QFont
 
 
 class NsightWorker(QThread):
     """Worker thread for running nsys profile."""
-    finished = pyqtSignal(bool, str)  # success, message
-    output = pyqtSignal(str)  # stdout/stderr output
+    finished = Signal(bool, str)  # success, message
+    output = Signal(str)  # stdout/stderr output
 
     def __init__(self, command: list, parent=None):
         super().__init__(parent)

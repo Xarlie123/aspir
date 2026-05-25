@@ -1,7 +1,7 @@
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QMessageBox
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QMessageBox
 from ui.custom_widgets.mask_control.scatter_control.ui_scatter_control import Ui_Scatter_Control
 from ui.custom_widgets.common.button_styles import BUTTON_STYLE_GREEN, apply_button_style
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
@@ -12,7 +12,7 @@ class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
     Emits:
         maskReady(mask: MaskScatter) when the mask is created successfully.
     """
-    maskReady = pyqtSignal(object)
+    maskReady = Signal(object)
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

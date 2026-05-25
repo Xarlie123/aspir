@@ -1,9 +1,9 @@
 # File: ui/_5_pipeline/pipeline_processor.py
 
 import webbrowser
-from PyQt5.QtCore import QObject, QThread, Qt
-from PyQt5.QtWidgets import QMessageBox, QGraphicsScene
-from PyQt5.QtGui import QPixmap
+from PySide6.QtCore import QObject, QThread, Qt
+from PySide6.QtWidgets import QMessageBox, QGraphicsScene
+from PySide6.QtGui import QPixmap
 
 from simulation_engine._6_pipeline.pipeline_reporter import PipelineReporter
 from ui._7_pipeline.pipeline_worker import PipelineWorker

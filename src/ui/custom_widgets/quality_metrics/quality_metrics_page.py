@@ -3,16 +3,16 @@ import logging
 import numpy as np
 from matplotlib import cm
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QCheckBox, QGridLayout, QSlider, QSizePolicy,
     QGraphicsView, QGraphicsScene, QFrame, QSplitter, QScrollArea,
     QMenu, QFileDialog
 )
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QImage, QPixmap, QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QImage, QPixmap, QFont
 
 from ui.custom_widgets.quality_metrics.quality_report_popup import QualityReportPopup
 
@@ -25,7 +25,7 @@ class QualityMetricsPage(QWidget):
     """
 
     # Signal emitted when analysis is requested
-    analysisRequested = pyqtSignal()
+    analysisRequested = Signal()
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)
@@ -663,7 +663,7 @@ class QualityMetricsPage(QWidget):
         # Show popup
         popup = QualityReportPopup(self, logger=self.logger)
         popup.set_data(metrics_data, selected)
-        popup.exec_()
+        popup.exec()
 
         self.logger.info("Quality report displayed")
 
@@ -672,14 +672,14 @@ class QualityMetricsPage(QWidget):
         menu = QMenu(self)
         save_action = menu.addAction("Save as...")
         save_action.triggered.connect(self._save_preview_images)
-        menu.exec_(self.images_group.mapToGlobal(pos))
+        menu.exec(self.images_group.mapToGlobal(pos))
 
     def _show_metrics_context_menu(self, pos):
         """Show context menu for saving the metrics plot and table."""
         menu = QMenu(self)
         save_action = menu.addAction("Save as...")
         save_action.triggered.connect(self._save_metrics_plot)
-        menu.exec_(self.metrics_group.mapToGlobal(pos))
+        menu.exec(self.metrics_group.mapToGlobal(pos))
 
     def _save_preview_images(self):
         """Save the 3 preview images (Ground-Truth, Noisy, Denoised) in one plot."""

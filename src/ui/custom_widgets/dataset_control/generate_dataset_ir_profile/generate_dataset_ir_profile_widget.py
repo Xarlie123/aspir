@@ -1,9 +1,9 @@
 # File: ui/custom_widgets/genera_dataset_perfil_ir_widget.py
 
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QMessageBox
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QMessageBox
 from ui.custom_widgets.dataset_control.generate_dataset_ir_profile.ui_generate_dataset_ir_profile_widget import Ui_Generates_dataset_perfil_ir
 from ui.custom_widgets.common.data_format_selector import DataFormatSelector
 from ui.custom_widgets.common.mode_distribution_widget import ModeDistributionWidget
@@ -22,7 +22,7 @@ class GeneratesDatasetPerfilIR(QtWidgets.QWidget, Ui_Generates_dataset_perfil_ir
     - Add speckle noise to simulate IR sensor behavior
     - Visualize mode distribution with pie chart
     """
-    datasetReady = pyqtSignal(object)
+    datasetReady = Signal(object)
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

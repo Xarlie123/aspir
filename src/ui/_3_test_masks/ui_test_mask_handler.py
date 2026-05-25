@@ -1,10 +1,10 @@
 import logging
 import numpy as np
 import matplotlib.cm as cm  # For the jet colormap
-from PyQt5.QtWidgets import (QMessageBox, QSizePolicy, QVBoxLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QMessageBox, QSizePolicy, QVBoxLayout, QHBoxLayout,
                               QApplication, QWidget, QLabel, QFrame)
-from PyQt5.QtGui import QPixmap, QImage
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QTimer
+from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtCore import Qt, Signal, QObject, QTimer
 
 from ui.custom_widgets.visualizers.visual_dataset.visual_dataset_widget import VisualDatasetWidget
 from ui.custom_widgets.visualizers.visual_applicator.visual_applicator_widget import VisualApplicatorWidget
@@ -16,7 +16,7 @@ class UITestMaskHandler(QObject):
     Handler for mask testing: visualizes dataset and applicator.
     Updates previews when the Test Masks tab becomes visible.
     """
-    dataset_changed = pyqtSignal(int)
+    dataset_changed = Signal(int)
 
     def __init__(self, ui, simulation, ui_mask_handler, logger=None, status_manager=None):
         super().__init__()

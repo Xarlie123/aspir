@@ -1,10 +1,10 @@
 
 import logging
 import numpy as np
-from PyQt5.QtWidgets import (QMessageBox, QListWidget, QStackedWidget, QLabel,
+from PySide6.QtWidgets import (QMessageBox, QListWidget, QStackedWidget, QLabel,
                                QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QFrame)
-from PyQt5.QtCore import QObject, pyqtSignal, Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import QObject, Signal, Qt
+from PySide6.QtGui import QFont
 
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
@@ -22,8 +22,8 @@ from ui.utils.worker_launcher import WorkerLauncher
 
 class UIMaskHandler(QObject):
     """Manages the masks tab: controls, generation and preview."""
-    mask_created    = pyqtSignal(object, object, object)
-    dataset_changed = pyqtSignal(int)
+    mask_created    = Signal(object, object, object)
+    dataset_changed = Signal(int)
 
     def __init__(self, ui, simulation, logger=None, status_manager=None):
         super().__init__()

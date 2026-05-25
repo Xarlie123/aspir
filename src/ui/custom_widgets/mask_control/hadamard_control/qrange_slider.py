@@ -9,9 +9,9 @@ Features:
 - Percentage display support via get_percentage() method
 """
 import logging
-from PyQt5.QtWidgets import QWidget, QLabel
-from PyQt5.QtCore import Qt, QRect, QRectF, pyqtSignal
-from PyQt5.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath
+from PySide6.QtWidgets import QWidget, QLabel
+from PySide6.QtCore import Qt, QRect, QRectF, Signal
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QPainterPath
 
 
 class QRangeSlider(QWidget):
@@ -25,8 +25,8 @@ class QRangeSlider(QWidget):
     - Click between handles moves the entire range
     - Connected to external label for value display
     """
-    valueChanged = pyqtSignal(int, int)  # Signal emitting (low, high) values
-    percentageChanged = pyqtSignal(float)  # Signal emitting percentage of total
+    valueChanged = Signal(int, int)  # Signal emitting (low, high) values
+    percentageChanged = Signal(float)  # Signal emitting percentage of total
 
     # Color palette (matching application style)
     COLOR_TRACK_BG = QColor(220, 220, 220)       # Light gray track background

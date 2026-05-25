@@ -10,17 +10,17 @@ from datetime import datetime
 
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGroupBox,
     QPushButton, QFileDialog, QMessageBox, QScrollArea,
     QGridLayout, QFrame, QDialog, QComboBox, QSpinBox,
     QCheckBox, QLineEdit, QSizePolicy, QSplitter, QTextEdit
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 from ui.utils.file_formats import BATCH_TESTS_DIR
 
@@ -216,7 +216,7 @@ class ExportView(QWidget):
             VisualComparisonPopup
         )
         popup = VisualComparisonPopup(self._tests, logger=self.logger, parent=self)
-        popup.exec_()
+        popup.exec()
 
     def _on_generate_fig8(self):
         """Open dialog for Quality per Sampling Ratio figure (Fig 8)."""
@@ -224,7 +224,7 @@ class ExportView(QWidget):
             QualitySamplingRatioPopup
         )
         popup = QualitySamplingRatioPopup(self._tests, logger=self.logger, parent=self)
-        popup.exec_()
+        popup.exec()
 
     def _on_generate_fig2(self):
         """Open dialog for Samples Grid figure (Fig 2)."""
@@ -232,7 +232,7 @@ class ExportView(QWidget):
             SamplesGridPopup
         )
         popup = SamplesGridPopup(self._tests, logger=self.logger, parent=self)
-        popup.exec_()
+        popup.exec()
 
     def _on_generate_html(self):
         """Open dialog for Interactive HTML export."""
@@ -240,7 +240,7 @@ class ExportView(QWidget):
             InteractiveHTMLPopup
         )
         popup = InteractiveHTMLPopup(self._tests, logger=self.logger, parent=self)
-        popup.exec_()
+        popup.exec()
 
     def clear(self):
         """Clear all data from the view."""

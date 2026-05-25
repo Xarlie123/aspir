@@ -1,10 +1,10 @@
 """Widget to visualize noise analysis metrics and quality comparisons."""
 import logging
 import numpy as np
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QSizePolicy
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtCore import Qt
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QGraphicsScene, QLabel, QSizePolicy
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import cm

@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from PyQt5.QtWidgets import QDialog, QFileDialog, QMenu, QMessageBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QMenu, QMessageBox
 
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
     ChartConfigPopup,
@@ -107,7 +107,7 @@ class BatchTimingReportPopup(QDialog):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._chart_config = popup.get_config()
             self.logger.debug("Chart config updated: %s", self._chart_config)
             timing_charts.update_timing_charts(self)
@@ -142,7 +142,7 @@ class BatchTimingReportPopup(QDialog):
         save_png = menu.addAction("Save as PNG...")
         save_pdf = menu.addAction("Save as PDF...")
 
-        action = menu.exec_(widget.mapToGlobal(pos))
+        action = menu.exec(widget.mapToGlobal(pos))
 
         if action == save_png:
             self._save_figure(figure, name, "png")

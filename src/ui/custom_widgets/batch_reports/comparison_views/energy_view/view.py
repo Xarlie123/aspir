@@ -5,8 +5,8 @@ import logging
 from typing import Any, Optional
 
 import matplotlib
-matplotlib.use('Qt5Agg')
-from PyQt5.QtWidgets import (
+matplotlib.use('QtAgg')
+from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QMenu,
@@ -121,7 +121,7 @@ class EnergyView(QWidget):
         """Show context menu for copying summary table."""
         menu = QMenu(self)
         copy_action = menu.addAction("Copy table")
-        action = menu.exec_(self.summary_group.mapToGlobal(pos))
+        action = menu.exec(self.summary_group.mapToGlobal(pos))
 
         if action == copy_action:
             copy_summary_table(self)
@@ -131,7 +131,7 @@ class EnergyView(QWidget):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._chart_config = popup.get_config()
             self.logger.debug("Chart config updated: %s", self._chart_config)
             self._refresh_chart()
@@ -222,7 +222,7 @@ class EnergyView(QWidget):
 
         popup = BatchEnergyReportPopup(parent=self, logger=self.logger)
         popup.set_data(self._tests)
-        popup.exec_()
+        popup.exec()
 
         self.logger.info("Batch energy report displayed")
 
@@ -235,7 +235,7 @@ class EnergyView(QWidget):
         menu = QMenu(self)
         save_action = menu.addAction("Save chart as...")
         save_action.triggered.connect(self._on_save_chart)
-        menu.exec_(self.canvas.mapToGlobal(pos))
+        menu.exec(self.canvas.mapToGlobal(pos))
 
     def _on_save_chart(self):
         """Save chart to file."""

@@ -1,7 +1,7 @@
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QMessageBox, QHBoxLayout, QLabel, QComboBox
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QMessageBox, QHBoxLayout, QLabel, QComboBox
 from ui.custom_widgets.mask_control.sweep_control.ui_sweep_control import Ui_Sweep_Control
 from ui.custom_widgets.common.button_styles import (
     BUTTON_STYLE_GREEN, BUTTON_STYLE_ORANGE, BUTTON_STYLE_RED, apply_button_style
@@ -20,7 +20,7 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
     Emits:
         maskReady(mask): when a MaskSweep is created.
     """
-    maskReady = pyqtSignal(object)
+    maskReady = Signal(object)
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

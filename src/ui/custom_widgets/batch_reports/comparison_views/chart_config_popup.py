@@ -8,16 +8,16 @@ Reusable across all chart views in Batch Reports.
 import logging
 from typing import Dict, Any, Callable, Optional
 
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QPushButton, QGroupBox, QSpinBox, QComboBox, QLabel,
     QCheckBox, QColorDialog, QGridLayout, QFrame, QLineEdit,
     QDoubleSpinBox
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QIcon
 
 
 class ColorButton(QPushButton):

@@ -72,7 +72,7 @@ dependencies = [
 
     # Plotting / GUI
     "matplotlib>=3.7",
-    "PyQt5>=5.15",
+    "PySide6>=6.6",
 
     # Deep learning
     "torch>=2.2",
@@ -132,8 +132,9 @@ cpu = [
 #   ``tensor.numpy()``) silently breaks — which ASPIR uses on every
 #   dataset / reconstruction / metric path.
 #
-# Install recipe (run inside a venv with --system-site-packages so the
-# apt-provided PyQt5 is visible; see docs/installation.md for details):
+# Install recipe (PySide6 ships official aarch64 wheels on PyPI from 6.5+,
+# so the previous apt + --system-site-packages trick is no longer needed;
+# see docs/installation.md for details):
 #
 #     pip install --index-url       https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ \
 #                 --extra-index-url https://pypi.org/simple \
