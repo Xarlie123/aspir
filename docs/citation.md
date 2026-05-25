@@ -12,7 +12,7 @@ If you use ASPIR in your research, please cite:
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.19864089},
   url       = {https://doi.org/10.5281/zenodo.19864089},
-  version   = {1.0.1}
+  version   = {1.1.0}
 }
 ```
 

@@ -49,8 +49,8 @@ authors:
 # tagged on GitHub, so Zenodo archives them correctly into the CITATION.cff
 # of the version snapshot.
 # -----------------------------------------------------------------------------
-version: "1.0.1"              # TODO: bump per release (1.0.0, 1.1.0, ...)
-date-released: "2026-05-24"   # TODO: use the actual release date (YYYY-MM-DD)
+version: "1.1.0"              # TODO: bump per release (1.0.0, 1.1.0, ...)
+date-released: "2026-05-25"   # TODO: use the actual release date (YYYY-MM-DD)
 # Zenodo concept DOI (resolves to the latest archived version of the
 # software). Version-specific DOIs live alongside it on Zenodo and can
 # be cited from a paper when the bits used in the figures need to stay

@@ -42,7 +42,7 @@ def show_about_dialog(parent, assets_dir: str):
     title_label = QLabel(
         '<h1 style="margin:0; padding:0;">ASPIR</h1>'
         '<p style="margin:4px 0 0 0; padding:0;"><b>A Single-Pixel Imaging Research Platform</b></p>'
-        '<p style="margin:2px 0 0 0; padding:0; color:#666;">Version 1.0.1</p>'
+        '<p style="margin:2px 0 0 0; padding:0; color:#666;">Version 1.1.0</p>'
     )
     title_label.setTextFormat(Qt.RichText)
     title_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)

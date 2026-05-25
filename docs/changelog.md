@@ -7,18 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Migrated from PyQt5 to PySide6 (Qt6).** PyQt5 is GPLv3-only, which
-  conflicted with ASPIR's CC BY 4.0 license; PySide6 is LGPLv3 and
-  compatible. Also bumps the Qt runtime from 5.15 to 6.6+ (automatic
-  HiDPI scaling, scoped enums available, `QAction` moved from
-  `QtWidgets` to `QtGui`, `exec_()` renamed to `exec()`). No public
-  API changes; all GUI flows behave identically. The Jetson install
-  recipe drops the `apt install python3-pyqt5` +
-  `--system-site-packages` workaround — PySide6 ships official
-  aarch64 wheels on PyPI from 6.5+.
-
-## [1.0.1] - 2026-05-24
+## [1.1.0] - 2026-05-25
 
 ### Added
 - **U-Net-Residual (ResUNet) post-processing model.** New `UNetRes` architecture
@@ -85,6 +74,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial documentation with Read the Docs.
 
 ### Changed
+- **Migrated from PyQt5 to PySide6 (Qt6).** PyQt5 is GPLv3-only, which
+  conflicted with ASPIR's CC BY 4.0 license; PySide6 is LGPLv3 and
+  compatible. Also bumps the Qt runtime from 5.15 to 6.6+ (automatic
+  HiDPI scaling, scoped enums available, `QAction` and `QShortcut`
+  moved from `QtWidgets` to `QtGui`, `exec_()` renamed to `exec()`).
+  No public API changes; all GUI flows behave identically. The Jetson
+  install recipe drops the `apt install python3-pyqt5` +
+  `--system-site-packages` workaround — PySide6 ships official
+  aarch64 wheels on PyPI from 6.5+.
+- **Author + affiliation metadata** synced with the Intelligent
+  Computing paper draft: hyphenated surname *Chabert-Ull* applied
+  consistently, GROC and HPC&A research groups added to all
+  affiliations in `CITATION.cff`, BibTeX entry in `docs/citation.md`
+  expanded to all five authors, About dialog lists every author with
+  superscript markers and both institutional blocks. The dialog
+  itself was reflowed (logo + title side-by-side, 700 × 700 min
+  size) so the new footer fits.
+- **README License section** filled in with the canonical CC BY 4.0
+  badge + attribution (was previously a one-line stub).
+- **Installation docs** call out the `torch>=2.12` / CUDA 13 trap
+  introduced when PyPI made cu130 the default wheel, and list
+  `libxcb-cursor0` as a hard Linux runtime dep of Qt 6 ≥ 6.5.
 - **Batch Reports → Energy** *Backend* selector renamed to *Compute path*.
   Options are now `CPU run + GPU run`, `CPU run only`, `GPU run only`;
   bars are bucketed by the test's `use_gpu` flag rather than by
@@ -116,6 +127,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tests of a pass (one `jtop()` connection instead of N), and
   reconstruction timing samples are capped at 3 per test to bound the
   CPU NumPy cost at high `M/N`.
+- **Docker image GUI startup** on hosts with NVIDIA driver < 535: the
+  Dockerfile now pins torch to the CUDA 12.4 wheel index (two-step
+  install with `--upgrade-strategy only-if-needed`) instead of letting
+  pip default to the CUDA 13 wheels that fail with "driver too old"
+  on the 12.4 runtime base. Also adds `libegl1`, `libopengl0` and
+  `libdbus-1-3` to the apt deps so `from PySide6.QtWidgets import
+  QApplication` no longer aborts with `libEGL.so.1: cannot open
+  shared object file`.
 
 ## [1.0.0] - 2026-04-26
 
