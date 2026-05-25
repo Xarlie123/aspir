@@ -5,9 +5,15 @@ ASPIR can be installed locally or run via Docker. Docker is recommended for most
 ## Requirements
 
 - Python 3.10+ (tested against 3.10, 3.11 and 3.12)
-- NVIDIA GPU with CUDA 12.4 runtime (optional — the project works on CPU
-  too; see the CPU-only instructions below)
+- NVIDIA GPU with CUDA 12.4+ runtime (optional — the project works on
+  CPU too; see the CPU-only instructions below). See the *Driver
+  predates CUDA 13?* note in the Linux/Windows CUDA sections if your
+  GPU driver is on CUDA 12.x.
 - 8 GB+ RAM recommended
+- **Linux only**: `libxcb-cursor0` is a hard runtime dependency of
+  Qt 6 ≥ 6.5 (which PySide6 pulls in); install it with
+  `sudo apt install libxcb-cursor0` before launching the GUI, or the
+  app aborts with `xcb-cursor0 not found`.
 - Poppler (only needed by the "Preview Architecture" diagram renderer):
   - Linux: `sudo apt install poppler-utils`
   - Windows: download a Poppler build and add its `bin/` to `PATH`
@@ -100,6 +106,17 @@ cd src && python main.py       # historical workflow
 python -m main                 # from anywhere in the repo
 ```
 
+```{warning}
+**Driver predates CUDA 13?** As of May 2026, PyPI serves `torch>=2.12`
+with CUDA 13 wheels by default. If your NVIDIA driver is older than 13
+(check with `nvidia-smi`; the driver version 535+ is CUDA 13-capable),
+`torch.cuda.is_available()` will silently return `False` and the GUI
+falls back to CPU. Force the cu124 wheel index:
+
+   pip install --force-reinstall torch torchvision \
+       --index-url https://download.pytorch.org/whl/cu124
+```
+
 ### Windows (CUDA)
 
 ```powershell
@@ -114,6 +131,10 @@ pip install -e .
 cd src
 python main.py
 ```
+
+The same *Driver predates CUDA 13?* note above applies on Windows —
+if `torch.cuda.is_available()` returns `False` after a fresh install,
+reinstall torch from `https://download.pytorch.org/whl/cu124`.
 
 ### CPU-only (Linux or Windows)
 
@@ -153,7 +174,7 @@ pip install --index-url       https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/ \
             "torch==2.8.0" "torchvision>=0.23,<0.24"
 
 # 4. ASPIR plus the Jetson extras. ``--upgrade-strategy only-if-needed`` stops
-#    pip from "helpfully" pulling torch 2.11 (cu13) just because some other
+#    pip from "helpfully" pulling torch 2.12+ (cu130) just because some other
 #    dependency accepts it.
 pip install -e .[jetson] --upgrade-strategy only-if-needed
 
@@ -267,7 +288,7 @@ Quick smoke-tests:
   the left menu of the *Dataset* step and point it at any PNG/JPG to
   load a one-image dataset.
 - **GPU**: open **Settings → Log Settings…** and watch the first log
-  lines: the message `CUDA available: <device-name>` confirms PyTorch
+  lines: the message `CUDA initialized: <device-name>` confirms PyTorch
   sees your GPU.
 - **External tools**: open **Settings → External Applications…** to
   see which optional tools (pdflatex, poppler, nsys, kaggle) were

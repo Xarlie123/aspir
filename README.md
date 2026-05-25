@@ -43,6 +43,18 @@ cd src
 python main.py
 ```
 
+> **Driver predates CUDA 13?** As of May 2026 PyPI serves `torch>=2.12`
+> with CUDA 13 wheels by default; if `nvidia-smi` shows a driver older
+> than 535 / CUDA 13, `torch.cuda.is_available()` will return `False`.
+> Force cu124 wheels:
+> ```
+> pip install --force-reinstall torch torchvision \
+>   --index-url https://download.pytorch.org/whl/cu124
+> ```
+>
+> On Linux only, PySide6 also needs `libxcb-cursor0`
+> (`sudo apt install libxcb-cursor0`) to launch the GUI.
+
 #### Windows
 
 ```powershell
@@ -64,6 +76,9 @@ python main.py
 
 > CPU-only Windows: add `--extra-index-url https://download.pytorch.org/whl/cpu`
 > to the `pip install` above.
+>
+> Same *driver predates CUDA 13* caveat applies on Windows — see the note
+> above for the cu124 reinstall command.
 
 ### Option 2: Docker (Recommended)
 
@@ -137,7 +152,9 @@ aspir/
 ## Requirements
 
 - Python 3.10+
-- NVIDIA GPU + CUDA 12.4 (for GPU acceleration)
+- NVIDIA GPU + CUDA 12.4+ (for GPU acceleration; see the *Driver
+  predates CUDA 13* note in Quick Start if your driver is older than 13)
+- `libxcb-cursor0` on Linux (Qt 6 ≥ 6.5 runtime dep)
 - PySide6, PyTorch, NumPy, SciPy, pylops, pyproximal
 
 ## External Applications
