@@ -2,7 +2,7 @@
 Container for Pipeline mode using existing UIPipelineHandler content.
 """
 import logging
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QSizePolicy, QScrollArea, QFrame
 )
 

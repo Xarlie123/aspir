@@ -1,20 +1,20 @@
 import logging
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 import time  # For simulated preprocessing
 
 
 class PostprocessorWorker(QObject):
     # Overall progress
-    progress = pyqtSignal(int)               # % of progress
-    finished = pyqtSignal()                  # task finished
-    error    = pyqtSignal(Exception)         # on error
-    result   = pyqtSignal(list, list, list)  # orig, noise, recon
-    metrics  = pyqtSignal(list, list, list, list, list)  # val_losses, test_losses, val_psnr, val_ssim, val_lpips
+    progress = Signal(int)               # % of progress
+    finished = Signal()                  # task finished
+    error    = Signal(Exception)         # on error
+    result   = Signal(list, list, list)  # orig, noise, recon
+    metrics  = Signal(list, list, list, list, list)  # val_losses, test_losses, val_psnr, val_ssim, val_lpips
 
     # Phase-specific signals
-    phase_started = pyqtSignal(str)        # Phase name started
-    phase_progress = pyqtSignal(str, int)  # Phase name, progress 0-100
-    phase_completed = pyqtSignal(str)      # Phase name completed
+    phase_started = Signal(str)        # Phase name started
+    phase_progress = Signal(str, int)  # Phase name, progress 0-100
+    phase_completed = Signal(str)      # Phase name completed
 
     # Phase name constants
     PHASE_RECONSTRUCTION = "Reconstruction"

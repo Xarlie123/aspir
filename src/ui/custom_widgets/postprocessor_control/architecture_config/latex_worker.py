@@ -8,7 +8,7 @@ import logging
 from typing import List, Tuple, Optional
 
 import numpy as np
-from PyQt5.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from .plotneuralnet_generator import PlotNeuralNetGenerator
 from .network_visualizer import SemanticBlock
@@ -25,10 +25,10 @@ class LaTeXCompilationWorker(QThread):
         tex_ready(str): Emitted with .tex source code
     """
 
-    finished = pyqtSignal(str)    # PDF path
-    error = pyqtSignal(str)       # Error message
-    progress = pyqtSignal(str)    # Status message
-    tex_ready = pyqtSignal(str)   # .tex source code
+    finished = Signal(str)    # PDF path
+    error = Signal(str)       # Error message
+    progress = Signal(str)    # Status message
+    tex_ready = Signal(str)   # .tex source code
 
     def __init__(self,
                  blocks: List[SemanticBlock],

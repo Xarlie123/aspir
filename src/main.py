@@ -5,7 +5,7 @@ import warnings
 # Suppress FutureWarning from pynvml (PyTorch imports it internally)
 warnings.filterwarnings("ignore", message=".*pynvml package is deprecated.*", category=FutureWarning)
 
-# Initialize CUDA before PyQt5 to avoid OpenGL/CUDA conflicts
+# Initialize CUDA before PySide6 to avoid OpenGL/CUDA conflicts
 import torch
 if torch.cuda.is_available():
     torch.cuda.init()
@@ -13,8 +13,8 @@ if torch.cuda.is_available():
 else:
     print("CUDA not available, using CPU")
 
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
 from ui.main_window import MainWindow
 
 if __name__ == "__main__":
@@ -33,4 +33,4 @@ if __name__ == "__main__":
 
     ventana = MainWindow()
     ventana.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

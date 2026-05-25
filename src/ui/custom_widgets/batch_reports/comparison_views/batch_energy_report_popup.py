@@ -4,15 +4,15 @@ from typing import List, Dict, Any
 
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QGridLayout, QFileDialog, QSizePolicy,
     QWidget, QMenu, QApplication, QSplitter
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
     ChartConfigPopup, CustomNavigationToolbar
@@ -234,7 +234,7 @@ class BatchEnergyReportPopup(QDialog):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._chart_configs[config_key])
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._chart_configs[config_key] = popup.get_config()
             self.logger.debug("Chart config updated for %s", config_key)
             self._update_charts()
@@ -616,7 +616,7 @@ class BatchEnergyReportPopup(QDialog):
         save_png = menu.addAction("Save as PNG...")
         save_pdf = menu.addAction("Save as PDF...")
 
-        action = menu.exec_(widget.mapToGlobal(pos))
+        action = menu.exec(widget.mapToGlobal(pos))
 
         if action == save_png:
             self._save_figure(figure, chart_name, "png")
@@ -646,7 +646,7 @@ class BatchEnergyReportPopup(QDialog):
         """Show context menu for copying statistics table."""
         menu = QMenu(self)
         copy_action = menu.addAction("Copy statistics")
-        action = menu.exec_(self.sender().mapToGlobal(pos))
+        action = menu.exec(self.sender().mapToGlobal(pos))
 
         if action == copy_action:
             self._copy_stats_table()

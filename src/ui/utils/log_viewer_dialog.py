@@ -2,12 +2,12 @@
 Log Viewer Dialog - View application log files.
 """
 import os
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QComboBox,
     QPushButton, QLabel, QFileDialog, QCheckBox, QSplitter
 )
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QTextCursor
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont, QTextCursor
 
 from ui.utils.log_manager import get_log_manager
 

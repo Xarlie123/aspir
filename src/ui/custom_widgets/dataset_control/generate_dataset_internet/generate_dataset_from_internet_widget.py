@@ -3,9 +3,9 @@
 
 import os
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal, QThread
-from PyQt5.QtWidgets import QMessageBox, QGroupBox, QFormLayout, QLineEdit, QProgressBar
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal, QThread
+from PySide6.QtWidgets import QMessageBox, QGroupBox, QFormLayout, QLineEdit, QProgressBar
 
 from ui.custom_widgets.dataset_control.generate_dataset_internet.ui_generate_dataset_internet_widget import Ui_Generates_dataset_internet
 from ui.custom_widgets.dataset_control.generate_dataset_internet.download_worker import DownloadWorker
@@ -33,7 +33,7 @@ class GeneratesDatasetInternetWidget(QtWidgets.QWidget, Ui_Generates_dataset_int
 
     Emits `datasetReady(dataset_instance)` so the handler can run it in a worker.
     """
-    datasetReady = pyqtSignal(object)
+    datasetReady = Signal(object)
 
     # Dataset configurations
     DATASET_INFO = {

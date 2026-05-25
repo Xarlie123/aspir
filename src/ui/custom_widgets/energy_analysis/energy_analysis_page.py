@@ -2,16 +2,16 @@
 import logging
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QGridLayout, QSizePolicy, QFrame, QSplitter,
     QScrollArea, QFormLayout, QSpinBox, QCheckBox,
     QMenu, QFileDialog, QTextEdit, QApplication
 )
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont
 
 try:
     import torch
@@ -45,7 +45,7 @@ class EnergyAnalysisPage(QWidget):
     """
 
     # Signal emitted when analysis is requested
-    analysisRequested = pyqtSignal()
+    analysisRequested = Signal()
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)
@@ -860,7 +860,7 @@ class EnergyAnalysisPage(QWidget):
 
         popup = EnergyReportPopup(parent=self, logger=self.logger)
         popup.set_data(self._energy_data)
-        popup.exec_()
+        popup.exec()
 
         self.logger.info("Energy report displayed")
 
@@ -870,7 +870,7 @@ class EnergyAnalysisPage(QWidget):
         save_png = menu.addAction("Save as PNG...")
         save_pdf = menu.addAction("Save as PDF...")
 
-        action = menu.exec_(widget.mapToGlobal(pos))
+        action = menu.exec(widget.mapToGlobal(pos))
 
         if action == save_png:
             self._save_figure(chart_type, "png")
@@ -898,7 +898,7 @@ class EnergyAnalysisPage(QWidget):
         """Show context menu to copy the summary table."""
         menu = QMenu(self)
         copy_action = menu.addAction("Copy table")
-        action = menu.exec_(self.summary_group.mapToGlobal(pos))
+        action = menu.exec(self.summary_group.mapToGlobal(pos))
 
         if action == copy_action:
             self._copy_summary_table()

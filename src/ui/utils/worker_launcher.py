@@ -1,6 +1,6 @@
 # ui/utils/worker_launcher.py
 
-from PyQt5.QtCore import QThread
+from PySide6.QtCore import QThread
 
 
 class WorkerLauncher:

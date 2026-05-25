@@ -3,10 +3,10 @@ import logging
 import numpy as np
 from math import ceil, sqrt
 from typing import Sequence
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import (QLabel, QGridLayout, QSizePolicy, QVBoxLayout, QComboBox,
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (QLabel, QGridLayout, QSizePolicy, QVBoxLayout, QComboBox,
                               QSlider, QFormLayout, QWidget, QMenu, QFileDialog)
 
 from matplotlib import cm
@@ -309,7 +309,7 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
         menu = QMenu(self)
         save_action = menu.addAction("Save As...")
 
-        action = menu.exec_(self.preview_applicator_graphics.mapToGlobal(pos))
+        action = menu.exec(self.preview_applicator_graphics.mapToGlobal(pos))
         if action == save_action:
             self._save_reconstruction(mask_idx)
 
@@ -337,7 +337,7 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
             rgba = self.cmap(norm)
             rgb = (rgba[..., :3] * 255).astype(np.uint8)
 
-            from PyQt5.QtGui import QImage
+            from PySide6.QtGui import QImage
             data = rgb.tobytes()
             bytes_per_line = 3 * w
             qimg = QImage(data, w, h, bytes_per_line, QImage.Format_RGB888)

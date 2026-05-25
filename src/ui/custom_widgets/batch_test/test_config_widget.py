@@ -5,13 +5,13 @@ Embeds the existing mask control widgets from Single Test mode.
 import logging
 from typing import Optional, List
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QFormLayout,
     QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox,
     QGroupBox, QLabel, QScrollArea, QSizePolicy, QStackedWidget,
     QFrame
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PySide6.QtCore import Signal, Qt
 
 from ui.custom_widgets.batch_test.test_config_model import (
     TestConfiguration, BatchTestConfig
@@ -38,7 +38,7 @@ class TestConfigWidget(QWidget):
         config_changed(): Emitted when any configuration value changes
     """
 
-    config_changed = pyqtSignal()
+    config_changed = Signal()
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)
@@ -696,7 +696,7 @@ class TestConfigWidget(QWidget):
             for i, angle in enumerate(angles):
                 row = table.rowCount()
                 table.insertRow(row)
-                from PyQt5 import QtWidgets
+                from PySide6 import QtWidgets
                 table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(angle)))
                 table.setItem(row, 1, QtWidgets.QTableWidgetItem(str(bar_widths[i] if i < len(bar_widths) else 2)))
                 table.setItem(row, 2, QtWidgets.QTableWidgetItem(str(strides[i] if i < len(strides) else 4)))

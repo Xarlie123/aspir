@@ -2,10 +2,10 @@
 
 import os
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
-from PyQt5.QtGui import QImageReader
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QMessageBox, QFileDialog
+from PySide6.QtGui import QImageReader
 from ui.custom_widgets.dataset_control.select_image_directory.ui_select_image_directory_widget import Ui_Selecciona_directorio_imagen
 from ui.custom_widgets.common.data_format_selector import DataFormatSelector
 from ui.custom_widgets.common.speckle_noise_widget import SpeckleNoiseWidget
@@ -17,7 +17,7 @@ class SeleccionaCarpetaImagenWidget(QtWidgets.QWidget, Ui_Selecciona_directorio_
     Widget para seleccionar un directorio de imágenes
     y emitir un DatasetFromFolder listo para generar.
     """
-    datasetReady = pyqtSignal(object)
+    datasetReady = Signal(object)
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

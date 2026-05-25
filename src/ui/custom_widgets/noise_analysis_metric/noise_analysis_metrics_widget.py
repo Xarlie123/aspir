@@ -4,10 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from io import BytesIO
 
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QGraphicsScene
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtCore import pyqtSignal, Qt
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QGraphicsScene
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import Signal, Qt
 
 # Import the generated UI
 from ui.custom_widgets.noise_analysis_metric.noise_analysis_metrics import Ui_Analisis_Ruido_metricas
@@ -29,7 +29,7 @@ class NoiseAnalysisMetricsWidget(QtWidgets.QWidget, Ui_Analisis_Ruido_metricas):
     HIGHRES_DPI   = 300
     HIGHRES_SIZE  = (8, 6)
 
-    runAnalysisRequested = pyqtSignal()
+    runAnalysisRequested = Signal()
 
     def __init__(self, simulation, parent=None, logger=None):
         super().__init__(parent)

@@ -1,8 +1,8 @@
 """QTableWidget subclass with row drag-and-drop reordering support."""
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QAbstractItemView, QTableWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QAbstractItemView, QTableWidget
 
 
 class DraggableRowTableWidget(QTableWidget):
@@ -14,7 +14,7 @@ class DraggableRowTableWidget(QTableWidget):
     refresh the table from the updated data model.
     """
 
-    rows_reordered = pyqtSignal(int, int)  # from_row, to_row
+    rows_reordered = Signal(int, int)  # from_row, to_row
 
     def __init__(self, parent=None):
         super().__init__(parent)

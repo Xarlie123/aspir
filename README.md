@@ -5,7 +5,7 @@
 <h1 align="center">ASPIR: A Single-Pixel Imaging Research Platform</h1>
 
 <p align="center">
-  PyQt5 application for <strong>Single Pixel Imaging (SPI)</strong> simulation and analysis.<br>
+  PySide6 application for <strong>Single Pixel Imaging (SPI)</strong> simulation and analysis.<br>
   Implements a complete computational imaging pipeline for infrared beam profiling using mask patterns, classical reconstruction algorithms, and neural network post-processing.
 </p>
 
@@ -138,7 +138,7 @@ aspir/
 
 - Python 3.10+
 - NVIDIA GPU + CUDA 12.4 (for GPU acceleration)
-- PyQt5, PyTorch, NumPy, SciPy, pylops, pyproximal
+- PySide6, PyTorch, NumPy, SciPy, pylops, pyproximal
 
 ## External Applications
 

@@ -1,11 +1,11 @@
 """UI builder for :class:`QualityPreviewPopup` — attaches widgets to the popup."""
 from __future__ import annotations
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
     QGroupBox,

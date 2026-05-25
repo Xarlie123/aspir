@@ -1,11 +1,11 @@
 """
 Log Settings Dialog - Configure logging settings.
 """
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QComboBox, QSpinBox, QCheckBox, QPushButton, QGroupBox, QLabel
 )
-from PyQt5.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from ui.utils.log_manager import get_log_manager, LOG_LEVELS
 

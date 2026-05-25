@@ -1,14 +1,14 @@
 import logging
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 class MaskWorker(QObject):
     """
     Worker object that executes mask generation in a separate thread.
     Reports progress via signals and logs key events.
     """
-    progress = pyqtSignal(int)      # Signal to report progress (percentage)
-    finished = pyqtSignal()         # Signal emitted when generation is complete
-    error = pyqtSignal(Exception)   # Signal emitted on error
+    progress = Signal(int)      # Signal to report progress (percentage)
+    finished = Signal()         # Signal emitted when generation is complete
+    error = Signal(Exception)   # Signal emitted on error
 
     def __init__(self, mask, *args, **kwargs):
         super().__init__()

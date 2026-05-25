@@ -9,16 +9,16 @@ import logging
 import shutil
 import subprocess
 import stat
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from urllib.request import urlretrieve
 
 
 class DownloadWorker(QObject):
     """Worker to download datasets in a separate thread."""
-    progress = pyqtSignal(int)      # Progress percentage (0-100)
-    finished = pyqtSignal()         # Download completed successfully
-    error = pyqtSignal(Exception)   # Error occurred
-    status = pyqtSignal(str)        # Status message
+    progress = Signal(int)      # Progress percentage (0-100)
+    finished = Signal()         # Download completed successfully
+    error = Signal(Exception)   # Error occurred
+    status = Signal(str)        # Status message
 
     # Dataset configurations
     SVHN_URL = "http://ufldl.stanford.edu/housenumbers/train_32x32.mat"

@@ -6,14 +6,14 @@ import logging
 from pathlib import Path
 from typing import Optional, List
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPushButton,
     QLabel, QListWidget, QListWidgetItem, QTabWidget, QGroupBox,
     QFileDialog, QMessageBox, QSizePolicy, QFrame, QMenu, QInputDialog,
     QDialog,
 )
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QCursor
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QCursor
 
 from ui.utils.file_formats import BATCH_TESTS_DIR, FileExtensions
 from ui.custom_widgets.batch_reports.batch_report_model import BatchReportModel, LoadedExperiment
@@ -477,7 +477,7 @@ class BatchReportsContainer(QWidget):
         remove_action.triggered.connect(lambda: self._remove_experiment_at(current_row))
 
         # Show menu at cursor position
-        menu.exec_(self.experiment_list.mapToGlobal(position))
+        menu.exec(self.experiment_list.mapToGlobal(position))
 
     def _selected_experiment_indices_for_remeasure(self) -> List[int]:
         """Selected experiments that have a ``models/`` sibling directory.
@@ -521,7 +521,7 @@ class BatchReportsContainer(QWidget):
                 sources.append((idx, exp.path))
 
         dialog = RemeasureDialog(sources, logger=self.logger, parent=self)
-        if dialog.exec_() != QDialog.Accepted:
+        if dialog.exec() != QDialog.Accepted:
             # User closed without finishing — anything that did write has
             # already been logged but won't be auto-loaded; that's fine.
             written = dialog.written_paths()
@@ -705,4 +705,4 @@ class BatchReportsContainer(QWidget):
 
         # Open the preview popup
         popup = QualityPreviewPopup(tests_with_data, logger=self.logger, parent=self)
-        popup.exec_()
+        popup.exec()

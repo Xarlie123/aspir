@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QColor
-from PyQt5.QtWidgets import QCheckBox, QHBoxLayout, QTableWidgetItem, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QTableWidgetItem, QWidget
 
 
 def get_nested_value(data: dict, key: str):

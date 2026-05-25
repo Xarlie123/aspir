@@ -2,10 +2,10 @@ import logging
 import numpy as np
 from math import ceil, sqrt
 from typing import Sequence
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QLabel, QGridLayout, QSizePolicy, QMenu, QFileDialog
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QLabel, QGridLayout, QSizePolicy, QMenu, QFileDialog
 from matplotlib import cm
 
 from ui.custom_widgets.visualizers.visual_dataset.visual_dataset import Ui_Visual_Dataset
@@ -99,7 +99,7 @@ class VisualDatasetWidget(QtWidgets.QWidget, Ui_Visual_Dataset):
         menu = QMenu(self)
         save_action = menu.addAction("Save As...")
 
-        action = menu.exec_(self.preview_image_graphics.mapToGlobal(pos))
+        action = menu.exec(self.preview_image_graphics.mapToGlobal(pos))
         if action == save_action:
             self._save_image(idx)
 

@@ -3,11 +3,11 @@ Horizontal stepper widget showing step progress in a wizard-style interface.
 """
 import logging
 from enum import Enum
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QFrame, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
-from PyQt5.QtGui import QFont, QPainter, QColor, QPen, QBrush
+from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtGui import QFont, QPainter, QColor, QPen, QBrush
 
 
 class StepState(Enum):
@@ -23,7 +23,7 @@ class StepIndicator(QWidget):
     Individual step indicator showing number, name, and state.
     Clickable when completed or active.
     """
-    clicked = pyqtSignal(int)  # Emits step index when clicked
+    clicked = Signal(int)  # Emits step index when clicked
 
     # Colors for different states
     COLORS = {
@@ -211,7 +211,7 @@ class StepperWidget(QWidget):
     Horizontal stepper showing 5 steps with their states.
     Emits step_clicked when a completed/active step is clicked.
     """
-    step_clicked = pyqtSignal(int)  # Emits step index
+    step_clicked = Signal(int)  # Emits step index
 
     # Step definitions
     STEPS = [

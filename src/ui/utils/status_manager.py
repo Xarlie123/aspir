@@ -3,7 +3,7 @@ Status Manager for centralized task state management.
 Provides signals for task start/finish/error events to update the status bar.
 """
 import logging
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class StatusManager(QObject):
@@ -13,9 +13,9 @@ class StatusManager(QObject):
     """
 
     # Signals
-    task_started = pyqtSignal(str)   # Emits task name when a task starts
-    task_finished = pyqtSignal()     # Emits when current task finishes
-    task_error = pyqtSignal(str)     # Emits error message when task fails
+    task_started = Signal(str)   # Emits task name when a task starts
+    task_finished = Signal()     # Emits when current task finishes
+    task_error = Signal(str)     # Emits error message when task fails
 
     def __init__(self, logger: logging.Logger = None):
         super().__init__()

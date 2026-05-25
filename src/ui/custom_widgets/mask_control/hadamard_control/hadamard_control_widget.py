@@ -1,7 +1,7 @@
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QHBoxLayout, QLabel, QDoubleSpinBox, QComboBox
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtWidgets import QSizePolicy, QMessageBox, QHBoxLayout, QLabel, QDoubleSpinBox, QComboBox
 
 # First label names the Hadamard-specific linear algorithm; the rest match
 # the generic iterative solvers exposed by every other mask widget.
@@ -22,7 +22,7 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
     - Percentage spinbox to select by percentage of total patterns
     - Click on slider track (between handles) drags the entire range
     """
-    maskReady = pyqtSignal(object)
+    maskReady = Signal(object)
 
     def __init__(self, parent=None, mask_cls=None, logger=None):
         super().__init__(parent)

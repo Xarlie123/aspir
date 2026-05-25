@@ -5,11 +5,11 @@ import re
 from typing import Any
 
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
@@ -48,8 +48,8 @@ class QualityRowWidget(QFrame):
     - Line 2: Label: [text field] [delete button]
     """
 
-    changed = pyqtSignal()
-    remove_requested = pyqtSignal(object)
+    changed = Signal()
+    remove_requested = Signal(object)
 
     def __init__(self, tests: list[dict[str, Any]], row_num: int, parent=None):
         super().__init__(parent)

@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import os
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -75,4 +75,4 @@ pipeline for testing denoising algorithms.</p>
     button_layout.addStretch()
     layout.addLayout(button_layout)
 
-    dialog.exec_()
+    dialog.exec()

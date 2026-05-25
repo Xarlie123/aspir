@@ -2,15 +2,15 @@
 import logging
 import numpy as np
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGroupBox, QGridLayout, QFileDialog, QSizePolicy, QScrollArea,
     QWidget, QFrame, QMenu, QApplication
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 
 def _shorten_backend_name(name: str, max_length: int = 25) -> str:
@@ -456,7 +456,7 @@ class EnergyReportPopup(QDialog):
         save_pdf = menu.addAction("Save as PDF...")
         save_svg = menu.addAction("Save as SVG...")
 
-        action = menu.exec_(widget.mapToGlobal(pos))
+        action = menu.exec(widget.mapToGlobal(pos))
 
         if action == save_png:
             self._save_figure(figure, chart_name, "png")
@@ -485,7 +485,7 @@ class EnergyReportPopup(QDialog):
         """Show context menu to copy the statistics table."""
         menu = QMenu(self)
         copy_action = menu.addAction("Copy table")
-        action = menu.exec_(self._stats_group.mapToGlobal(pos))
+        action = menu.exec(self._stats_group.mapToGlobal(pos))
 
         if action == copy_action:
             self._copy_stats_table()

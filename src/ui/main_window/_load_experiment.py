@@ -6,7 +6,7 @@ import json
 import os
 
 import numpy as np
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 def load_experiment(window):

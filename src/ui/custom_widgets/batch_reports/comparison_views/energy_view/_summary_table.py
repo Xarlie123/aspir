@@ -21,9 +21,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QApplication, QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QApplication, QLabel
 
 from ui.custom_widgets.batch_reports.comparison_views.energy_view._helpers import (
     get_nested_value,

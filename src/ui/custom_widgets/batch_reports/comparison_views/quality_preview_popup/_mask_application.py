@@ -6,9 +6,9 @@ from typing import Optional
 
 import numpy as np
 from matplotlib import cm
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QGroupBox,

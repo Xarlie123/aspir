@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from ui.utils.file_formats import (
     SINGLE_TESTS_DIR,

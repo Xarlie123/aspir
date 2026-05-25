@@ -5,13 +5,13 @@ Supports drag-and-drop reordering and context menu operations.
 import logging
 from typing import Optional, List
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
     QPushButton, QLabel, QMenu, QSizePolicy, QAbstractItemView, QProgressBar,
     QApplication, QShortcut
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QSize
-from PyQt5.QtGui import QColor, QFont, QKeySequence, QDrag
+from PySide6.QtCore import Signal, Qt, QSize
+from PySide6.QtGui import QColor, QFont, QKeySequence, QDrag
 
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration, TestStatus
 from ui.custom_widgets.common.button_styles import (
@@ -22,7 +22,7 @@ from ui.custom_widgets.common.button_styles import (
 class TestListItemWidget(QWidget):
     """Custom widget for displaying a test item with status, phase progress, and cancel button."""
 
-    cancel_clicked = pyqtSignal(int)  # Emits index when cancel is clicked
+    cancel_clicked = Signal(int)  # Emits index when cancel is clicked
 
     STATUS_ICONS = {
         TestStatus.PENDING: "○",
@@ -242,7 +242,7 @@ class DraggableListWidget(QListWidget):
     Emits item_moved signal when an item is moved to a new position.
     """
 
-    item_moved = pyqtSignal(int, int)  # from_index, to_index
+    item_moved = Signal(int, int)  # from_index, to_index
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -292,12 +292,12 @@ class TestListWidget(QWidget):
         cancel_test_requested(int): Emitted when cancel is requested for a test
     """
 
-    test_selected = pyqtSignal(int)
-    test_added = pyqtSignal()
-    test_removed = pyqtSignal(int)
-    test_duplicated = pyqtSignal(int)
-    tests_reordered = pyqtSignal(int, int)  # from_index, to_index
-    cancel_test_requested = pyqtSignal(int)
+    test_selected = Signal(int)
+    test_added = Signal()
+    test_removed = Signal(int)
+    test_duplicated = Signal(int)
+    tests_reordered = Signal(int, int)  # from_index, to_index
+    cancel_test_requested = Signal(int)
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)
@@ -514,7 +514,7 @@ class TestListWidget(QWidget):
                         cancel_action = menu.addAction("Cancel Test")
                         cancel_action.triggered.connect(lambda: self.cancel_test_requested.emit(row))
 
-        menu.exec_(self.list_widget.mapToGlobal(pos))
+        menu.exec(self.list_widget.mapToGlobal(pos))
 
     def _move_test(self, from_index: int, to_index: int):
         """Move a test from one position to another."""

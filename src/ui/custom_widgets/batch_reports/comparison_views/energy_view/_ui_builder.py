@@ -1,10 +1,10 @@
 """UI builder for :class:`EnergyView` — attaches widgets to the view instance."""
 from __future__ import annotations
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
     QGroupBox,
@@ -105,7 +105,7 @@ def build_ui(view):
     # Subtract-idle-baseline toggle. Enabled only when at least one
     # loaded experiment has a captured baseline in metadata; otherwise
     # the toggle stays disabled so the user doesn't get silent zeroes.
-    from PyQt5.QtWidgets import QCheckBox
+    from PySide6.QtWidgets import QCheckBox
     view.baseline_check = QCheckBox("Subtract idle baseline")
     view.baseline_check.setMaximumWidth(220)
     view.baseline_check.setMinimumWidth(180)

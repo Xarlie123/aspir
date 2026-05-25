@@ -7,18 +7,18 @@ from typing import List, Dict, Any, Optional
 
 import numpy as np
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFileDialog, QMessageBox, QGroupBox, QGridLayout,
     QSplitter, QListWidget, QDialog, QDialogButtonBox, QMenu, QComboBox,
     QApplication,
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
     ChartConfigPopup, CustomNavigationToolbar
@@ -403,7 +403,7 @@ class TimingView(QWidget):
         """Right-click handler for the Timing Summary group."""
         menu = QMenu(self)
         copy_action = menu.addAction("Copy table")
-        action = menu.exec_(self.summary_group.mapToGlobal(pos))
+        action = menu.exec(self.summary_group.mapToGlobal(pos))
         if action == copy_action:
             self._copy_summary_table()
 
@@ -456,7 +456,7 @@ class TimingView(QWidget):
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._chart_config = popup.get_config()
             self.logger.debug("Chart config updated: %s", self._chart_config)
             self._refresh_chart()
@@ -999,7 +999,7 @@ class TimingView(QWidget):
         menu = QMenu(self)
         save_action = menu.addAction("Save chart as...")
         save_action.triggered.connect(self._on_save_chart)
-        menu.exec_(self.canvas.mapToGlobal(pos))
+        menu.exec(self.canvas.mapToGlobal(pos))
 
     def _on_save_chart(self):
         """Save the chart to a file."""
@@ -1044,7 +1044,7 @@ class TimingView(QWidget):
             parent=self,
             logger=self.logger
         )
-        popup.exec_()
+        popup.exec()
 
     def _on_nsight_clicked(self):
         """Handle Nsight launch button click."""
@@ -1089,7 +1089,7 @@ class TimingView(QWidget):
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
 
-        if dialog.exec_() != QDialog.Accepted:
+        if dialog.exec() != QDialog.Accepted:
             return
 
         selected_idx = test_combo.currentIndex()

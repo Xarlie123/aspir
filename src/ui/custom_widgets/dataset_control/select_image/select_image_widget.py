@@ -2,10 +2,10 @@
 
 import os
 import logging
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QImageReader, QImage
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from PySide6 import QtWidgets
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QImageReader, QImage
+from PySide6.QtWidgets import QMessageBox, QFileDialog
 from ui.custom_widgets.dataset_control.select_image.ui_select_image_widget import Ui_Selecciona_imagen
 from ui.custom_widgets.common.data_format_selector import DataFormatSelector
 from ui.custom_widgets.common.speckle_noise_widget import SpeckleNoiseWidget
@@ -17,7 +17,7 @@ class SeleccionaImagenWidget(QtWidgets.QWidget, Ui_Selecciona_imagen):
     Widget to select, validate an image,
     and emit a DatasetFromImage ready for generation.
     """
-    datasetReady = pyqtSignal(object)
+    datasetReady = Signal(object)
 
     def __init__(self, parent=None, logger=None):
         super().__init__(parent)

@@ -5,11 +5,11 @@ import logging
 import os
 from typing import Optional
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QProgressBar, QFrame
 )
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QFont
 
 # Try to import psutil for CPU/RAM monitoring
 try:

@@ -2,10 +2,10 @@
 Multi-phase progress widget for showing progress of multiple sequential tasks.
 """
 from typing import List, Dict, Optional
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar, QFrame, QSizePolicy
 )
-from PyQt5.QtCore import Qt
+from PySide6.QtCore import Qt
 
 
 class PhaseProgressBar(QWidget):

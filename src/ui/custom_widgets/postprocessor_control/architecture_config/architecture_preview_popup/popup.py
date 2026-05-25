@@ -13,9 +13,9 @@ from typing import Any, Optional
 
 import numpy as np
 import torch.nn as nn
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QFileDialog,

@@ -1,8 +1,8 @@
 import numpy as np
-from PyQt5.QtWidgets import (QMessageBox, QListWidget, QStackedWidget, QLabel,
+from PySide6.QtWidgets import (QMessageBox, QListWidget, QStackedWidget, QLabel,
                                QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QFrame)
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Signal, QObject, Qt
+from PySide6.QtGui import QFont
 
 from ui._1_dataset.dataset_worker import DatasetWorker
 from ui.custom_widgets.dataset_control.select_image.select_image_widget import SeleccionaImagenWidget
@@ -14,7 +14,7 @@ from ui.custom_widgets.visualizers.visual_dataset.visual_dataset_widget import V
 from ui.utils.worker_launcher import WorkerLauncher
 
 class UIDatasetHandler(QObject):
-    dataset_updated = pyqtSignal(int)  # notify new img_size
+    dataset_updated = Signal(int)  # notify new img_size
 
     def __init__(self, ui, simulation, logger, ui_test_mask=None, ui_mask=None, status_manager=None):
         super().__init__()

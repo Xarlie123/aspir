@@ -1,10 +1,10 @@
 import logging
 import numpy as np
 from typing import Sequence
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer, QEvent
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import (QGraphicsScene, QLabel, QSizePolicy, QDialog,
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt, QTimer, QEvent
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (QGraphicsScene, QLabel, QSizePolicy, QDialog,
                               QVBoxLayout, QHBoxLayout, QMenu, QFileDialog)
 from matplotlib import cm
 
@@ -317,7 +317,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         else:
             view = self.preview_image_reconstructed
 
-        action = menu.exec_(view.mapToGlobal(pos))
+        action = menu.exec(view.mapToGlobal(pos))
         if action == save_action:
             self._save_image(arr, default_name)
 
@@ -362,7 +362,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         menu = QMenu(self)
         save_action = menu.addAction("Save As...")
 
-        action = menu.exec_(self.plot_training_curve.mapToGlobal(pos))
+        action = menu.exec(self.plot_training_curve.mapToGlobal(pos))
         if action == save_action:
             self._save_plot()
 
@@ -424,7 +424,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         denoised_pixmap = self._array_to_pixmap(self._denoised_images[idx])
 
         dialog = CombinedImagePopupDialog(orig_pixmap, noisy_pixmap, denoised_pixmap, self)
-        dialog.exec_()
+        dialog.exec()
 
     def resizeEvent(self, event):
         """
@@ -581,7 +581,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
 
         from matplotlib.figure import Figure
         from matplotlib.backends.backend_agg import FigureCanvasAgg
-        from PyQt5.QtGui import QImage, QPixmap
+        from PySide6.QtGui import QImage, QPixmap
 
         self.logger.debug(
             "Plotting metrics: %d val_loss, %d test_loss, %d PSNR, %d SSIM, %d LPIPS points",

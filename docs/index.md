@@ -4,7 +4,7 @@
 
 ASPIR is an open-source project developed in Python designed to bring the world of Single-Pixel Imaging (SPI) and Artificial Intelligence (AI) closer to researchers and students, breaking down the programming barrier. The software implements an end-to-end pipeline for testing denoising algorithms from A to Z.
 
-ASPIR allows users to import or generate datasets, create mask patterns, select reconstruction algorithms, and apply post-processing models based on neural networks. The application is built on Python and the PyQt5 library for its graphical user interface.
+ASPIR allows users to import or generate datasets, create mask patterns, select reconstruction algorithms, and apply post-processing models based on neural networks. The application is built on Python and the PySide6 library for its graphical user interface.
 
 ## Summary
 

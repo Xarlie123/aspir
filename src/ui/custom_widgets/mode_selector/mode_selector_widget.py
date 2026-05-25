@@ -2,11 +2,11 @@
 Mode selector widget for choosing between Single Test, Batch Test, and Batch Reports modes.
 Compact layout for top bar placement with descriptions.
 """
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QRadioButton, QButtonGroup, QLabel, QFrame,
     QSizePolicy
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PySide6.QtCore import Signal, Qt
 
 
 class ModeSelectorWidget(QWidget):
@@ -15,7 +15,7 @@ class ModeSelectorWidget(QWidget):
     Three modes: Single Test, Batch Test, and Batch Reports.
     Includes descriptions for each mode.
     """
-    mode_changed = pyqtSignal(str)  # Emits "single_test", "batch_test", or "batch_reports"
+    mode_changed = Signal(str)  # Emits "single_test", "batch_test", or "batch_reports"
 
     MODES = {
         "single_test": {

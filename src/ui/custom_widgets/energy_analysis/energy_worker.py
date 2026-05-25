@@ -7,7 +7,7 @@ import logging
 import time
 from typing import Optional, List, Dict, Any
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 try:
     import torch
@@ -29,11 +29,11 @@ class EnergyMeasurementWorker(QObject):
         platform_detected: Emitted with (platform_info, backends) after detection
     """
 
-    progress = pyqtSignal(int, int, str)  # current, total, message
-    finished = pyqtSignal()
-    error = pyqtSignal(Exception)
-    result = pyqtSignal(dict)  # energy_data dictionary
-    platform_detected = pyqtSignal(dict, list)  # platform_info, backend_names
+    progress = Signal(int, int, str)  # current, total, message
+    finished = Signal()
+    error = Signal(Exception)
+    result = Signal(dict)  # energy_data dictionary
+    platform_detected = Signal(dict, list)  # platform_info, backend_names
 
     def __init__(
         self,

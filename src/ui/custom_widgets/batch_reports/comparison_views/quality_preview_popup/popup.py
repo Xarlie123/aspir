@@ -7,9 +7,9 @@ from typing import Any, Optional
 
 import numpy as np
 from matplotlib import cm
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QDialog, QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QDialog, QLabel
 
 from ui.custom_widgets.batch_reports.comparison_views.quality_preview_popup._mask_application import (
     MaskApplicationPopup,
@@ -188,7 +188,7 @@ class QualityPreviewPopup(QDialog):
             logger=self.logger,
             parent=self
         )
-        popup.exec_()
+        popup.exec()
 
     def _on_slider_changed(self, idx: int):
         """Handle image slider change."""

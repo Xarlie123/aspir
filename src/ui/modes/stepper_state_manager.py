@@ -3,7 +3,7 @@ State manager for the stepper workflow.
 Tracks step states, validates transitions, and handles invalidation cascade.
 """
 import logging
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from ui.custom_widgets.stepper.stepper_widget import StepState
 
 
@@ -19,8 +19,8 @@ class StepperStateManager(QObject):
 
     Handles invalidation cascade: changing step N invalidates steps N+1 onwards.
     """
-    state_changed = pyqtSignal(int, str)  # (step_index, new_state)
-    current_step_changed = pyqtSignal(int)  # new current step index
+    state_changed = Signal(int, str)  # (step_index, new_state)
+    current_step_changed = Signal(int)  # new current step index
 
     # Step definitions
     STEPS = [

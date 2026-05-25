@@ -4,9 +4,9 @@ from __future__ import annotations
 import os
 import time
 
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -352,7 +352,7 @@ class MainWindow(QMainWindow):
             self.ui_dataset_handler.dataset_updated.connect(on_dataset_generated)
 
             # Use a timer to allow UI to update first
-            from PyQt5.QtCore import QTimer
+            from PySide6.QtCore import QTimer
             QTimer.singleShot(100, lambda: self._trigger_dataset_generation(menu_index))
 
     def _get_dataset_menu_index(self, dataset_type: str) -> int:
@@ -497,18 +497,18 @@ class MainWindow(QMainWindow):
     def show_log_settings(self):
         """Show the Log Settings dialog."""
         dialog = LogSettingsDialog(self)
-        dialog.exec_()
+        dialog.exec()
 
     def show_external_apps_settings(self):
         """Show the External Applications Settings dialog."""
         manager = get_external_apps_manager(self.logger)
         dialog = ExternalAppsSettingsDialog(manager, self)
-        dialog.exec_()
+        dialog.exec()
 
     def show_log_viewer(self):
         """Show the Log Viewer dialog."""
         dialog = LogViewerDialog(self)
-        dialog.exec_()
+        dialog.exec()
 
     def save_config(self):
         """Save UI configuration as JSON with .single_test_config extension."""

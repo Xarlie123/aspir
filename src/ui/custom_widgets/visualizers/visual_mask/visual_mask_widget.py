@@ -3,10 +3,10 @@ import logging
 import numpy as np
 from math import ceil, sqrt
 from typing import Sequence
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap
-from PyQt5.QtWidgets import QLabel, QGridLayout, QSizePolicy, QMenu, QFileDialog
+from PySide6 import QtWidgets
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QLabel, QGridLayout, QSizePolicy, QMenu, QFileDialog
 
 from ui.custom_widgets.visualizers.visual_mask.visual_mask import Ui_Visual_Mask
 from ui.custom_widgets.common.hoverable_image_label import HoverableImageLabel
@@ -102,7 +102,7 @@ class VisualMaskWidget(QtWidgets.QWidget, Ui_Visual_Mask):
         menu = QMenu(self)
         save_action = menu.addAction("Save As...")
 
-        action = menu.exec_(self.preview_masks_graphics.mapToGlobal(pos))
+        action = menu.exec(self.preview_masks_graphics.mapToGlobal(pos))
         if action == save_action:
             self._save_mask(idx)
 

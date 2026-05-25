@@ -18,8 +18,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtCore import QThread, QTimer, Qt
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QThread, QTimer, Qt
+from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
@@ -125,7 +125,7 @@ class RemeasureDialog(QDialog):
         self._build_ui()
 
     # ------------------------------------------------------------------
-    # Public — what the caller reads after exec_()
+    # Public — what the caller reads after exec()
     # ------------------------------------------------------------------
     def written_paths(self) -> list[Path]:
         return list(self._outputs)

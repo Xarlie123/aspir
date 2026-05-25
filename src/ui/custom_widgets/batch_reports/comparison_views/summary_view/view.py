@@ -7,8 +7,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from PyQt5.QtCore import QPoint, Qt, pyqtSignal
-from PyQt5.QtWidgets import QAction, QCheckBox, QInputDialog, QMenu, QWidget
+from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QCheckBox, QInputDialog, QMenu, QWidget
 
 from ui.custom_widgets.batch_reports.comparison_views.summary_view._export import (
     copy_to_clipboard,
@@ -41,8 +42,8 @@ class SummaryView(QWidget):
     """
 
     # Signals
-    tests_reordered = pyqtSignal(list)  # List of test dicts in new order
-    selection_changed = pyqtSignal(list)  # List of selected (checked) test indices
+    tests_reordered = Signal(list)  # List of test dicts in new order
+    selection_changed = Signal(list)  # List of selected (checked) test indices
 
     # Columns configuration: (header, data_key, format_func, higher_is_better, default_visible)
     # Keys match the flat structure exported by BatchTestRunner
@@ -228,7 +229,7 @@ class SummaryView(QWidget):
             menu.addAction(action)
 
         # Show menu below the button
-        menu.exec_(self.columns_btn.mapToGlobal(
+        menu.exec(self.columns_btn.mapToGlobal(
             QPoint(0, self.columns_btn.height())
         ))
 
@@ -403,7 +404,7 @@ class SummaryView(QWidget):
         rename_action.triggered.connect(lambda: self._rename_test(row))
         menu.addAction(rename_action)
 
-        menu.exec_(self.table.viewport().mapToGlobal(pos))
+        menu.exec(self.table.viewport().mapToGlobal(pos))
 
     def _rename_test(self, row: int):
         """Rename a test via input dialog."""

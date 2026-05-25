@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from ui.utils.file_formats import FileExtensions
 
@@ -53,9 +53,9 @@ class BatchReportModel(QObject):
     """
 
     # Signals
-    experiments_changed = pyqtSignal()  # Emitted when experiments list changes
-    experiment_loaded = pyqtSignal(int)  # Emitted with index of newly loaded experiment
-    experiment_removed = pyqtSignal(int)  # Emitted with index of removed experiment
+    experiments_changed = Signal()  # Emitted when experiments list changes
+    experiment_loaded = Signal(int)  # Emitted with index of newly loaded experiment
+    experiment_removed = Signal(int)  # Emitted with index of removed experiment
 
     def __init__(self, logger=None, parent=None):
         super().__init__(parent)

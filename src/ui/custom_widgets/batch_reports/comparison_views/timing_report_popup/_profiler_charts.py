@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from PyQt5.QtWidgets import QTableWidgetItem
+from PySide6.QtWidgets import QTableWidgetItem
 
 
 def update_profiler_display(popup):

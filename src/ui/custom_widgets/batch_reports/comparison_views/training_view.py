@@ -7,17 +7,17 @@ from typing import List, Dict, Any, Optional
 
 import numpy as np
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFileDialog, QMessageBox, QMenu,
     QSplitter, QListWidget, QDialog
 )
-from PyQt5.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from ui.custom_widgets.batch_reports.comparison_views.training_summary_popup import (
     TrainingSummaryPopup
@@ -296,7 +296,7 @@ class TrainingView(QWidget):
         menu = QMenu(self)
         save_action = menu.addAction("Save chart as...")
         save_action.triggered.connect(self._on_export_chart)
-        menu.exec_(self.canvas.mapToGlobal(pos))
+        menu.exec(self.canvas.mapToGlobal(pos))
 
     def _on_summary_clicked(self):
         """Handle summary button click - open TrainingSummaryPopup."""
@@ -308,7 +308,7 @@ class TrainingView(QWidget):
             parent=self,
             logger=self.logger
         )
-        popup.exec_()
+        popup.exec()
 
     def _on_preview_architecture_clicked(self):
         """Handle preview architecture button click."""
@@ -437,14 +437,14 @@ class TrainingView(QWidget):
             tests=self._tests,
             test_name=test_name
         )
-        popup.exec_()
+        popup.exec()
 
     def _on_open_chart_config(self):
         """Open chart configuration dialog."""
         popup = ChartConfigPopup(parent=self, logger=self.logger)
         popup.set_config(self._chart_config)
 
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.Accepted:
             self._chart_config = popup.get_config()
             self.logger.debug("Chart config updated: %s", self._chart_config)
             self._refresh_chart()

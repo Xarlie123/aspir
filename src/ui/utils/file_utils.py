@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog
 
 def seleccionar_archivo(line_edit):
     """Opens a dialog to select a file and displays the path in the QLineEdit."""

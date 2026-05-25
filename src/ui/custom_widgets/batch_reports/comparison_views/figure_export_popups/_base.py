@@ -7,8 +7,8 @@ from typing import Any
 
 import numpy as np
 from matplotlib.figure import Figure
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QDialog,
