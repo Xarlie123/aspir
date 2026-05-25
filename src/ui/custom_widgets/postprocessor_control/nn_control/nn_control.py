@@ -153,7 +153,7 @@ class Ui_nn_control(object):
         self.train_button.setMinimumSize(QtCore.QSize(0, 32))
         font = QtGui.QFont()
         font.setBold(True)
-        font.setWeight(75)
+        font.setWeight(QtGui.QFont.Weight.Bold)
         self.train_button.setFont(font)
         self.train_button.setObjectName("train_button")
         self.main_layout.addWidget(self.train_button)

@@ -150,4 +150,12 @@ These tools are **pre-installed in the Docker image**. For local development, in
 
 ## License
 
-Research project 
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+
+ASPIR is released under the [Creative Commons Attribution 4.0
+International License (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+See the [LICENSE](LICENSE) file for details.
+
+This is a research project developed at the Institute of New Imaging
+Technologies (INIT) and the Department of Computer Engineering and
+Computer Science, Universitat Jaume I, Spain.

@@ -8,10 +8,10 @@ from typing import Optional, List
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
     QPushButton, QLabel, QMenu, QSizePolicy, QAbstractItemView, QProgressBar,
-    QApplication, QShortcut
+    QApplication
 )
 from PySide6.QtCore import Signal, Qt, QSize
-from PySide6.QtGui import QColor, QFont, QKeySequence, QDrag
+from PySide6.QtGui import QColor, QFont, QKeySequence, QDrag, QShortcut
 
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration, TestStatus
 from ui.custom_widgets.common.button_styles import (
