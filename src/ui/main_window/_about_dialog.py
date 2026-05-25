@@ -18,27 +18,41 @@ def show_about_dialog(parent, assets_dir: str):
     """Show the About dialog with application information and logo."""
     dialog = QDialog(parent)
     dialog.setWindowTitle("About ASPIR")
-    dialog.setMinimumWidth(500)
+    dialog.setMinimumWidth(700)
+    dialog.setMinimumHeight(700)
 
     layout = QVBoxLayout(dialog)
     layout.setSpacing(15)
     layout.setContentsMargins(20, 20, 20, 20)
 
-    # Logo at top center
+    # Header row: logo left, title/subtitle/version right
+    header_layout = QHBoxLayout()
+    header_layout.setSpacing(20)
+    header_layout.setContentsMargins(0, 0, 0, 0)
+
     logo_path = os.path.join(assets_dir, 'logo_banner.png')
     if os.path.exists(logo_path):
         logo_label = QLabel()
         logo_pixmap = QPixmap(logo_path)
-        scaled_logo = logo_pixmap.scaledToHeight(80, Qt.SmoothTransformation)
+        scaled_logo = logo_pixmap.scaledToHeight(90, Qt.SmoothTransformation)
         logo_label.setPixmap(scaled_logo)
-        logo_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(logo_label)
+        logo_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        header_layout.addWidget(logo_label)
 
-    # About text
-    about_text = """<h2 style="text-align: center;">ASPIR</h2>
-<p style="text-align: center;"><b>A Single-Pixel Imaging Research Platform</b></p>
-<p style="text-align: center;">Version 1.0.1</p>
-<hr>
+    title_label = QLabel(
+        '<h1 style="margin:0; padding:0;">ASPIR</h1>'
+        '<p style="margin:4px 0 0 0; padding:0;"><b>A Single-Pixel Imaging Research Platform</b></p>'
+        '<p style="margin:2px 0 0 0; padding:0; color:#666;">Version 1.0.1</p>'
+    )
+    title_label.setTextFormat(Qt.RichText)
+    title_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+    header_layout.addWidget(title_label)
+    header_layout.addStretch()
+
+    layout.addLayout(header_layout)
+
+    # Body text
+    about_text = """<hr>
 <p>ASPIR is an open-source platform developed in Python designed to bring the world of
 Single-Pixel Imaging (SPI) and Artificial Intelligence (AI) closer to researchers and
 students, breaking down the programming barrier. The software implements an end-to-end
