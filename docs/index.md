@@ -87,7 +87,7 @@ changelog
 
 The DOI above is the **concept DOI** — it always points at the latest archived version on Zenodo. To cite a specific release, follow the link and pick the version-specific DOI from the right-hand sidebar. See {doc}`citation` for the full BibTeX entries.
 
-This is a research project developed at the Institute of New Imaging Technologies (INIT) and the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain. Released under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license.
+This is a research project developed by the GROC research group at the Institute of New Imaging Technologies (INIT) and the HPC&A research group at the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain. Released under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license.
 
 ## Indices
 

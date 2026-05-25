@@ -5,10 +5,10 @@ If you use ASPIR in your research, please cite:
 ## Software Citation
 
 ```bibtex
-@software{aspir2025,
-  author    = {Chabert Ull, Carlos},
+@software{aspir2026,
+  author    = {Chabert-Ull, Carlos and Tob{\'o}n-Maya, Heberley and Zapata-Valencia, Samuel I. and Tajahuerce, Enrique and Le{\'o}n, Germ{\'a}n},
   title     = {ASPIR: A Single-Pixel Imaging Research Platform},
-  year      = {2025},
+  year      = {2026},
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.19864089},
   url       = {https://doi.org/10.5281/zenodo.19864089},
@@ -16,11 +16,17 @@ If you use ASPIR in your research, please cite:
 }
 ```
 
-## Author
+## Authors
 
-Carlos Chabert Ull — cchabert@uji.es
+- **Carlos Chabert-Ull**¹ (corresponding author) — cchabert@uji.es
+- **Heberley Tobón-Maya**¹
+- **Samuel I. Zapata-Valencia**¹
+- **Enrique Tajahuerce**¹
+- **Germán León**²
 
-Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain
+¹ GROC research group, Institute of New Imaging Technologies (INIT), Universitat Jaume I, 12071 Castelló de la Plana, Spain
+
+² HPC&A research group, Department of Computer Engineering and Computer Science, Universitat Jaume I, 12071 Castelló de la Plana, Spain
 
 ## Related Publications
 

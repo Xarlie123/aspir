@@ -53,11 +53,16 @@ pipeline for testing denoising algorithms.</p>
 <li>Batch experiments with comparative reports</li>
 </ul>
 <hr>
-<p><b>Author:</b> Carlos Chabert Ull &mdash; <a href="mailto:cchabert@uji.es">cchabert@uji.es</a></p>
+<p><b>Authors:</b> Carlos Chabert-Ull&sup1; (corresponding, <a href="mailto:cchabert@uji.es">cchabert@uji.es</a>),
+Heberley Tob&oacute;n-Maya&sup1;, Samuel I. Zapata-Valencia&sup1;, Enrique Tajahuerce&sup1;, Germ&aacute;n Le&oacute;n&sup2;</p>
 <p><b>Repository:</b> <a href="https://github.com/Xarlie123/aspir">github.com/Xarlie123/aspir</a></p>
 <p><b>Documentation:</b> <a href="https://aspir.readthedocs.io">aspir.readthedocs.io</a></p>
 <p><b>License:</b> <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
-<p style="text-align: center;">Institute of New Imaging Technologies (INIT), Universitat Jaume I, Spain</p>
+<p style="text-align: center;">
+&sup1; GROC research group &mdash; Institute of New Imaging Technologies (INIT)<br>
+&sup2; HPC&amp;A research group &mdash; Department of Computer Engineering and Computer Science<br>
+Universitat Jaume I, Castell&oacute; de la Plana, Spain
+</p>
 """
     text_label = QLabel(about_text)
     text_label.setTextFormat(Qt.RichText)
