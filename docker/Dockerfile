@@ -40,6 +40,8 @@ RUN apt-get update && \
       libxcb-xinerama0 libxcb-xkb1 libxcb-shape0 libxcb-sync1 \
       libxcb-cursor0 \
       libfontconfig1 libfreetype6 libgl1 libgl1-mesa-dri libglib2.0-0 \
+      # Qt6 GUI runtime deps that PySide6 expects but doesn't bundle
+      libegl1 libopengl0 libdbus-1-3 \
       # LaTeX for DNN architecture preview (PlotNeuralNet)
       texlive-latex-base texlive-latex-extra texlive-fonts-recommended \
       # PDF utilities
@@ -76,10 +78,19 @@ WORKDIR /app
 # install succeeds — pip writes a .pth file pointing to /app/src/, and the
 # real src/ will be there at runtime thanks to the volume mount.
 COPY pyproject.toml README.md ./
+# Two-step install. PyPI now serves torch>=2.12 with CUDA 13 wheels by
+# default, which silently fails at runtime against this image's CUDA 12.4
+# base ("The NVIDIA driver on your system is too old"). Forcing the cu124
+# index up front pins torch/torchvision to wheels built against CUDA 12.4;
+# then the editable install with --upgrade-strategy only-if-needed
+# prevents pip from promoting torch back to a cu13 wheel just because
+# some transitive dep would accept it.
 RUN mkdir -p src/simulation_engine src/ui && \
     touch src/main.py src/simulation_engine/__init__.py src/ui/__init__.py && \
     python -m pip install --upgrade pip && \
-    pip install -e . && \
+    pip install torch torchvision \
+        --index-url https://download.pytorch.org/whl/cu124 && \
+    pip install -e . --upgrade-strategy only-if-needed && \
     rm -rf src
 
 # -----------------------------------------------------------------------------
