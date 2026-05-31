@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://doi.org/10.5281/zenodo.19864089"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.19864089.svg" alt="DOI"></a>
-  <a href="https://creativecommons.org/licenses/by/4.0/"><img src="https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg" alt="License: CC BY 4.0"></a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
   <a href="https://aspir.readthedocs.io/en/latest/"><img src="https://readthedocs.org/projects/aspir/badge/?version=latest" alt="Documentation Status"></a>
 </p>
 
@@ -167,12 +167,15 @@ These tools are **pre-installed in the Docker image**. For local development, in
 
 ## License
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-ASPIR is released under the [Creative Commons Attribution 4.0
-International License (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
-See the [LICENSE](LICENSE) file for details.
+ASPIR is released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+See the [LICENSE](LICENSE) file for the full text, [NOTICE](NOTICE) for
+attribution, and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the
+licenses of bundled dependencies (notably PySide6, pylops and pyproximal,
+which are LGPL-3.0).
 
-This is a research project developed at the Institute of New Imaging
-Technologies (INIT) and the Department of Computer Engineering and
-Computer Science, Universitat Jaume I, Spain.
+This is a research project developed by the GROC research group at the
+Institute of New Imaging Technologies (INIT) and the HPC&A research group at
+the Department of Computer Engineering and Computer Science, Universitat
+Jaume I, Spain.

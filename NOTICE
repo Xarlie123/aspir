@@ -1,0 +1,24 @@
+ASPIR: A Single-Pixel Imaging Research Platform
+Copyright 2026 Universitat Jaume I and the ASPIR authors
+
+This product is licensed under the Apache License, Version 2.0 (see the
+LICENSE file). The authors are:
+
+  Carlos Chabert-Ull, Heberley Tobón-Maya, Samuel I. Zapata-Valencia,
+  Enrique Tajahuerce (GROC research group, Institute of New Imaging
+  Technologies, Universitat Jaume I), and Germán León (HPC&A research
+  group, Department of Computer Engineering and Computer Science,
+  Universitat Jaume I).
+
+This product bundles or depends on third-party software whose licenses
+are reproduced and summarised in the THIRD_PARTY_LICENSES.md file. Two
+dependencies in particular are not Apache/BSD/MIT and carry copyleft
+obligations you should be aware of when redistributing:
+
+  - PySide6 / shiboken6 (The Qt Company) — LGPL-3.0. Used as an
+    unmodified, dynamically imported dependency; ASPIR does not embed or
+    modify the Qt for Python sources.
+  - pylops, pyproximal — LGPL-3.0. Same dynamic-import arrangement.
+
+See THIRD_PARTY_LICENSES.md for the full list and the implications of
+each license.

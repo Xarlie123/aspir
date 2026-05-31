@@ -12,7 +12,7 @@ If you use ASPIR in your research, please cite:
   publisher = {Zenodo},
   doi       = {10.5281/zenodo.19864089},
   url       = {https://doi.org/10.5281/zenodo.19864089},
-  version   = {1.1.0}
+  version   = {1.2.0}
 }
 ```
 
@@ -49,6 +49,6 @@ persistent.
 
 ## License
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-ASPIR is released under the [Creative Commons Attribution 4.0 International License (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/). See the LICENSE file for details.
+ASPIR is released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). See the `LICENSE` file for the full text, `NOTICE` for attribution, and `THIRD_PARTY_LICENSES.md` for the licenses of bundled dependencies.

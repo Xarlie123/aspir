@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-05-25
+## [1.2.0] - 2026-05-26
+
+### Changed
+- **Relicensed from CC BY 4.0 to Apache License 2.0.** CC BY 4.0 is a
+  content licence that Creative Commons itself advises against for
+  software (no patent grant, no notion of source vs object form).
+  Apache 2.0 is a purpose-built OSI-approved software licence with an
+  explicit patent grant, making downstream/industrial reuse
+  unambiguous. The `LICENSE` file now carries the full Apache 2.0
+  text; new `NOTICE` (attribution) and `THIRD_PARTY_LICENSES.md`
+  (dependency licences, flagging the LGPL-3.0 status of PySide6,
+  pylops and pyproximal, and the AGPL-3.0 of the optional Jetson
+  `jetson-stats` extra) files were added. License metadata updated in
+  `pyproject.toml` (now with the `License :: OSI Approved :: Apache
+  Software License` trove classifier), `CITATION.cff`, the README, the
+  Read the Docs pages and the in-app About dialog. Documentation and
+  figures are covered by the same Apache 2.0 licence as the code.
 
 ### Added
 - **U-Net-Residual (ResUNet) post-processing model.** New `UNetRes` architecture

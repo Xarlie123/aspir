@@ -42,7 +42,7 @@ def show_about_dialog(parent, assets_dir: str):
     title_label = QLabel(
         '<h1 style="margin:0; padding:0;">ASPIR</h1>'
         '<p style="margin:4px 0 0 0; padding:0;"><b>A Single-Pixel Imaging Research Platform</b></p>'
-        '<p style="margin:2px 0 0 0; padding:0; color:#666;">Version 1.1.0</p>'
+        '<p style="margin:2px 0 0 0; padding:0; color:#666;">Version 1.2.0</p>'
     )
     title_label.setTextFormat(Qt.RichText)
     title_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
@@ -71,7 +71,7 @@ pipeline for testing denoising algorithms.</p>
 Heberley Tob&oacute;n-Maya&sup1;, Samuel I. Zapata-Valencia&sup1;, Enrique Tajahuerce&sup1;, Germ&aacute;n Le&oacute;n&sup2;</p>
 <p><b>Repository:</b> <a href="https://github.com/Xarlie123/aspir">github.com/Xarlie123/aspir</a></p>
 <p><b>Documentation:</b> <a href="https://aspir.readthedocs.io">aspir.readthedocs.io</a></p>
-<p><b>License:</b> <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
+<p><b>License:</b> <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
 <p style="text-align: center;">
 &sup1; GROC research group &mdash; Institute of New Imaging Technologies (INIT)<br>
 &sup2; HPC&amp;A research group &mdash; Department of Computer Engineering and Computer Science<br>

@@ -8,11 +8,11 @@ build-backend = "setuptools.build_meta"
 # =============================================================================
 [project]
 name = "aspir"
-version = "1.1.0"
+version = "1.2.0"
 description = "A Single-Pixel Imaging Research Platform — end-to-end pipeline for SPI with classical reconstruction and deep-learning post-processing."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "CC-BY-4.0"}
+license = {text = "Apache-2.0"}
 authors = [
     {name = "Carlos Chabert-Ull", email = "cchabert@uji.es"},
     {name = "Heberley Tobón-Maya"},
@@ -31,11 +31,7 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    # CC-BY-4.0 has no dedicated trove classifier and is not OSI-approved
-    # (which rules out "OSI Approved :: …"); the canonical SPDX
-    # expression in the ``license`` field above is authoritative for
-    # tooling, so the classifier is intentionally omitted to avoid the
-    # misleading "Other/Proprietary License" placeholder we used to ship.
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",

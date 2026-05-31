@@ -83,11 +83,11 @@ changelog
 ## License & Citation
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19864089.svg)](https://doi.org/10.5281/zenodo.19864089)
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 The DOI above is the **concept DOI** — it always points at the latest archived version on Zenodo. To cite a specific release, follow the link and pick the version-specific DOI from the right-hand sidebar. See {doc}`citation` for the full BibTeX entries.
 
-This is a research project developed by the GROC research group at the Institute of New Imaging Technologies (INIT) and the HPC&A research group at the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain. Released under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license.
+This is a research project developed by the GROC research group at the Institute of New Imaging Technologies (INIT) and the HPC&A research group at the Department of Computer Engineering and Computer Science, Universitat Jaume I, Spain. Released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
 ## Indices
 
