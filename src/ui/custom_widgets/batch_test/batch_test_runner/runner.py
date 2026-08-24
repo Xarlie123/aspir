@@ -35,6 +35,11 @@ from ui.custom_widgets.batch_test.test_config_model import (
     TestStatus,
 )
 
+# Frames exported as INT8 quantization calibration set. A few hundred inputs are
+# enough to observe activation ranges on the networks used here; None exports the
+# whole train split.
+CALIBRATION_LIMIT = 200
+
 
 class BatchTestRunner(QThread):
     """
@@ -528,11 +533,36 @@ class BatchTestRunner(QThread):
                         "reconstructions": recons,
                         "denoised": denoised,
                         "config": config,
+                        **self._calibration_payload(postprocessor),
                     }
                 self._all_results.append(results)
 
             self.test_completed.emit(index, results)
             self.logger.info("Test %d completed (no timing/energy): %s", index, config.name)
+
+    def _calibration_payload(self, postprocessor: PostprocessorNN) -> dict:
+        """Build the INT8 calibration entries for a test's export record.
+
+        Returns train-split inputs (never test frames, which would leak the
+        evaluation distribution into the quantized model) plus the normalization
+        constants needed to reproduce the reconstruction downstream.
+
+        Never raises: this is an additive export, and a failure here must not
+        cost the caller the data it already collected.
+        """
+        try:
+            calib_orig, calib_recons = postprocessor.train_dataset(limit=CALIBRATION_LIMIT)
+            indices = list(getattr(postprocessor, "train_indices", []))[:len(calib_recons)]
+            return {
+                "calibration_originals": calib_orig,
+                "calibration_reconstructions": calib_recons,
+                "calibration_indices": indices,
+                "norm_lo": getattr(postprocessor, "norm_lo", None),
+                "norm_span": getattr(postprocessor, "norm_span", None),
+            }
+        except Exception as e:
+            self.logger.warning("Failed to collect calibration data: %s", e)
+            return {}
 
     def _run_analysis_phase(self, index: int, config: TestConfiguration):
         """
@@ -629,6 +659,7 @@ class BatchTestRunner(QThread):
                     "reconstructions": recons,
                     "denoised": denoised,
                     "config": config,
+                    **self._calibration_payload(postprocessor),
                 }
 
             self._all_results.append(results)
@@ -800,6 +831,7 @@ class BatchTestRunner(QThread):
                         "reconstructions": recons,
                         "denoised": denoised,
                         "config": config,
+                        **self._calibration_payload(postprocessor),
                     }
 
                 self._all_results.append(results)

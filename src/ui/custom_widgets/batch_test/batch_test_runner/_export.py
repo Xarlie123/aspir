@@ -162,6 +162,36 @@ def export_onnx(postprocessor, onnx_path: str):
     )
 
 
+def _mask_geometry(mask) -> dict:
+    """Describe the mask set as actually generated, for downstream deployment.
+
+    The nominal M requested in the UI is not always the effective one: the sweep
+    and scatter geometries quantize it. Polarity matters too - a bipolar (+-1)
+    pattern needs two complementary shots on a binary DMD, so acquisition time
+    per pattern differs by a factor 2 between families.
+
+    Never raises: metadata must not cost us the export.
+    """
+    import numpy as np
+
+    try:
+        masks = getattr(mask, "masks", None)
+        if masks is None:
+            return {}
+        masks = np.asarray(masks)
+        if masks.ndim != 3:
+            return {}
+        m_real = int(masks.shape[0])
+        n_pixels = int(masks.shape[1] * masks.shape[2])
+        return {
+            "M_real": m_real,
+            "M_over_N_real": (m_real / n_pixels) if n_pixels else None,
+            "mask_polarity": "bipolar" if float(masks.min()) < 0 else "binary",
+        }
+    except Exception:
+        return {}
+
+
 def export_datasets(
     test_data: dict[int, dict],
     logger,
@@ -169,8 +199,12 @@ def export_datasets(
 ):
     """Export all test data including masks and inference results (test images).
 
-    Note: We don't export the original training dataset as it's not needed for reports.
-    We only export the test images (ground truth, noisy/reconstructed, denoised) per test.
+    Per test this writes masks.npz, test_images.npz (test split) and
+    calibration_images.npz (train split, inputs only - consumed downstream as the
+    INT8 post-training-quantization calibration set).
+
+    Note: we don't export the full original training dataset, only the train-split
+    reconstructions needed for calibration.
     """
     import numpy as np
 
@@ -215,6 +249,13 @@ def export_datasets(
                 "learning_rate": config.learning_rate,
                 "architecture_config": dict(getattr(config, "architecture_config", {}) or {}),
             }
+            # Appended last so the pre-existing keys keep their order and values.
+            config_dict.update(_mask_geometry(entry.get("mask")))
+            if entry.get("norm_lo") is not None:
+                config_dict["normalization"] = {
+                    "lo": entry.get("norm_lo"),
+                    "span": entry.get("norm_span"),
+                }
             with open(config_path, 'w') as f:
                 json.dump(config_dict, f, indent=2)
 
@@ -222,3 +263,28 @@ def export_datasets(
 
         except Exception as e:
             logger.error("Failed to export data for %s: %s", safe_name, e)
+
+        # Calibration set for INT8 post-training quantization: train-split inputs
+        # only. Kept in its own try block - this export is additive and must never
+        # cost us the files above.
+        try:
+            calib_recons = entry.get("calibration_reconstructions")
+            if calib_recons is not None and len(calib_recons) > 0:
+                payload = {
+                    "reconstructions": np.asarray(calib_recons, dtype=np.float32),
+                }
+                calib_orig = entry.get("calibration_originals")
+                if calib_orig is not None and len(calib_orig) > 0:
+                    payload["originals"] = np.asarray(calib_orig, dtype=np.float32)
+                calib_idx = entry.get("calibration_indices")
+                if calib_idx is not None and len(calib_idx) > 0:
+                    payload["indices"] = np.asarray(calib_idx, dtype=np.int64)
+                np.savez_compressed(
+                    os.path.join(test_dir, "calibration_images.npz"), **payload
+                )
+                logger.debug(
+                    "Exported %d calibration frames for %s",
+                    len(payload["reconstructions"]), safe_name
+                )
+        except Exception as e:
+            logger.error("Failed to export calibration data for %s: %s", safe_name, e)

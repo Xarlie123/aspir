@@ -353,6 +353,11 @@ class PostprocessorNN(Postprocessor):
         max_val = float(noisy_np.max())
         noisy_np = (noisy_np - min_val) / (max_val - min_val + 1e-8)
 
+        # Keep the normalization constants: reproducing a reconstruction outside
+        # ASPIR (INT8 deployment) needs the exact lo/span applied here.
+        self.norm_lo = min_val
+        self.norm_span = (max_val - min_val) + 1e-8
+
         # Apply format-specific processing
         clean_np, noisy_np = self._apply_data_format_to_arrays(clean_np, noisy_np)
 
@@ -414,6 +419,11 @@ class PostprocessorNN(Postprocessor):
             [n_train, n_val, n_test],
             generator=split_generator
         )
+        # Frame indices behind each split. Exported with the calibration set as
+        # documentary proof that calibration and evaluation frames are disjoint.
+        self.train_indices = list(train_ds.indices)
+        self.test_indices = list(test_ds.indices)
+
         self.loaders = {
             "train": DataLoader(train_ds, batch_size=batch_size, shuffle=True),
             "val":   DataLoader(val_ds,   batch_size=batch_size, shuffle=False),
@@ -777,3 +787,56 @@ class PostprocessorNN(Postprocessor):
             len(orig), len(recon), len(denoised)
         )
         return orig, recon, denoised
+
+    def train_dataset(self, limit: int | None = None):
+        """Return lists of orig, recon from the train set (no model inference).
+
+        Post-training INT8 quantization observes activation ranges by pushing a
+        few hundred representative inputs through the network. Those inputs must
+        come from the train split: calibrating on test frames leaks the
+        evaluation distribution into the quantized model and inflates the PSNR
+        reported afterwards.
+
+        Only the network inputs are needed, so the model is never run here -
+        that makes this pass much cheaper than test_dataset().
+
+        Args:
+            limit: Stop after this many frames. None exports the whole split.
+
+        Returns:
+            Tuple of (orig, recon) lists of (H, W) arrays. Element i corresponds
+            to self.train_indices[i].
+        """
+        self.logger.debug("Starting train_dataset pass (limit=%s)", limit)
+
+        # Iterate the split in its stored order: the train loader shuffles, which
+        # would break the pairing with self.train_indices and would also consume
+        # the global RNG that training depends on.
+        train_ds = self.loaders["train"].dataset
+        loader = DataLoader(
+            train_ds,
+            batch_size=self.loaders["train"].batch_size,
+            shuffle=False,
+        )
+
+        orig, recon = [], []
+        with torch.no_grad():
+            for noisy, clean in loader:
+                if self.is_conv:
+                    o = clean.numpy().squeeze(1)
+                    r = noisy.numpy().squeeze(1)
+                else:
+                    o = clean.numpy().reshape(-1, self.img_size, self.img_size)
+                    r = noisy.numpy().reshape(-1, self.img_size, self.img_size)
+                orig.extend(list(o))
+                recon.extend(list(r))
+                if limit is not None and len(recon) >= limit:
+                    break
+
+        if limit is not None:
+            orig, recon = orig[:limit], recon[:limit]
+
+        self.logger.info(
+            "train_dataset complete: orig=%d, recon=%d", len(orig), len(recon)
+        )
+        return orig, recon
