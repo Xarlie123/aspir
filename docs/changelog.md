@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-14
+
+### Added
+- **Train-split calibration set for INT8 post-training quantization.**
+  Batch Test exports that include datasets now write
+  `data/<test>/calibration_images.npz` next to the existing files.
+  Post-training quantization (e.g. Xilinx DPU, TensorRT) needs a few
+  hundred representative inputs to observe activation ranges, and those
+  inputs must come from the train split: calibrating on test frames
+  leaks the evaluation distribution into the quantized model and
+  inflates the PSNR reported afterwards. The file contains
+  `reconstructions` (float32, N x 64 x 64, same normalization as
+  `test_images.npz`), `originals` (float32, N x 64 x 64) and `indices`
+  (int64, N, train-split frame indices, disjoint from the test split).
+  N is capped at 200 frames (`CALIBRATION_LIMIT` in `runner.py`). The
+  model is not run over the train split, so the extra export cost is
+  small. A failure while collecting the set is logged as a warning and
+  does not abort the batch or the other export files.
+- **`PostprocessorNN.train_dataset(limit=None)`** returns
+  `(orig, recon)` from the train split, in a fixed order that matches
+  the new `train_indices` attribute. It does not consume the global RNG,
+  so training results are unaffected.
+
+### Changed
+- **`test_config.json` carries deployment metadata.** New keys:
+  `M_real` and `M_over_N_real` (the effective number of patterns, which
+  for some mask geometries differs from the nominal setting),
+  `mask_polarity` (`bipolar` or `binary`; a bipolar pattern needs two
+  complementary shots on a binary DMD, which doubles the acquisition
+  time per pattern) and `normalization` (`lo`, `span`, to reproduce the
+  reconstruction scaling outside ASPIR). They come after the existing
+  keys, whose order and values are unchanged, but the file's hash
+  differs from v1.2.0 exports. `test_images.npz` and `masks.npz` are
+  byte-identical to v1.2.0 output for the same configuration and seed.
+
 ## [1.2.0] - 2026-05-26
 
 ### Changed
