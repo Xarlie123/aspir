@@ -171,6 +171,9 @@ def _make_test_config(test_entry: dict, cfg: RemeasureConfig) -> TestConfigurati
         name=test_entry.get("name", "test"),
         mask_type=test_entry.get("mask_type", "scatter"),
         reconstruction_method=test_entry.get("reconstruction_method", "conventional"),
+        # Reconstruction follows the pass being measured, so a "-cpu" / "-gpu"
+        # report times every stage on the device its tag names.
+        reconstruction_device="cuda" if cfg.use_gpu else "cpu",
         use_gpu=cfg.use_gpu,
         timing_warmup_runs=cfg.warmup_runs,
         timing_measurement_runs=cfg.measurement_runs,

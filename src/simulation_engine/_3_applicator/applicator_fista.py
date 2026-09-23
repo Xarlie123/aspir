@@ -22,15 +22,52 @@ class ApplicatorFISTA(ApplicatorABC):
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "FISTA"
 
-    def __init__(self, dataset, mask, maxit=500, lam=1e-3):
-        super().__init__(dataset, mask)
+    def __init__(self, dataset, mask, maxit=500, lam=1e-3, **backend_options):
+        super().__init__(dataset, mask, **backend_options)
         self.maxit = maxit
         self.lam = lam  # l1 regularization strength
         self.reconstructed_image = None
         self.reconstructed_dataset = None
         self.costf = []  # cost curve for monitoring convergence
+        # The legacy callback evaluates the objective every iteration; the torch
+        # path does the same by default so both do equal work.
+        self.record_cost = True
+        self.cost_trace = None
 
     def apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
+        """Reconstruct one image from masks ``[idx_mask_min, idx_mask_max)``.
+
+        Runs the torch backend on ``self.device_request`` unless
+        ``backend="legacy"``, which keeps the original implementation below.
+        """
+        if self.backend == "legacy":
+            return self._legacy_apply_mask_range(idx_mask_min, idx_mask_max, idx_image)
+        result = self._torch_reconstruct(idx_mask_min, idx_mask_max, [idx_image])[0]
+        self.reconstructed_image = result
+        return result
+
+    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+        """Reconstruct every image; one flattened reconstruction per DataFrame row."""
+        if self.backend == "legacy":
+            return self._legacy_process_dataset(idx_mask_min, idx_mask_max)
+        return self._torch_process_dataset(idx_mask_min, idx_mask_max)
+
+    def _torch_solve(self, op, Y, key):
+        """FISTA, same iteration and parameters (``lam``, ``maxit``) as the legacy path."""
+        from simulation_engine._3_applicator.torch_backend.solvers import fista, power_iteration
+        ck = ("L", *key)
+        if ck not in self._solver_cache:
+            self._solver_cache[ck] = power_iteration(op)
+        X, cost = fista(op, Y, lam=self.lam, maxit=self.maxit,
+                        L=self._solver_cache[ck], record_cost=self.record_cost)
+        self.costf.clear()
+        if cost.numel():
+            self.costf.extend(cost[-1].detach().cpu().tolist())
+        self.cost_trace = cost.detach().cpu().numpy()
+        self.last_solver_info = {"solver": "fista", "lipschitz": self._solver_cache[ck]}
+        return X
+
+    def _legacy_apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
         """
         Apply a range of masks to one image, simulate measurements,
         and reconstruct via FISTA l1-regularized least squares.
@@ -119,7 +156,7 @@ class ApplicatorFISTA(ApplicatorABC):
         """Process one image using all masks."""
         return self.apply_mask_range(0, len(self.mask.masks), idx)
 
-    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+    def _legacy_process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """
         Process entire dataset: each row in the returned DataFrame
         is the flattened reconstructed image.

@@ -5,6 +5,7 @@ import time
 from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
+from simulation_engine._5_analyzer.analyzer_timing import time_reconstruction
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
 
 
@@ -19,6 +20,7 @@ def measure_timing(
     sampling_rate_khz: float = 10.752,
     max_recon_samples: Optional[int] = None,
     inference_batch_size: int = 1,
+    recon_repeats: int = 3,
 ) -> dict[str, Any]:
     """
     Measure inference timing with configurable parameters.
@@ -55,9 +57,12 @@ def measure_timing(
 
     t_acquisition_ms = num_patterns / sampling_rate_khz if sampling_rate_khz > 0 else 0
 
-    # Measure reconstruction time if applicator is available
-    # Match Single Test behavior: measure all test images, with warmup
+    # Measure reconstruction time if applicator is available.
+    # Same image set as before (the test-split share of the dataset), now with
+    # the NN stage's protocol: device synchronisation around every timed call,
+    # warm-up, repeats, mean and std, and the device it actually ran on.
     t_reconstruction_ms = 0.0
+    recon = None
     if applicator is not None:
         logger.debug("Measuring reconstruction timing...")
         try:
@@ -65,30 +70,18 @@ def measure_timing(
             # Use same number of samples as test set (from config split)
             test_ratio = config.test_split / 100.0
             n_recon_samples = max(1, min(dataset_size, int(dataset_size * test_ratio)))
-            # Optional cap from the caller — reconstruction with NumPy
-            # on Jetson CPU costs ~1 s per image at 1000+ patterns,
-            # which dominates the entire re-measurement run; for the
-            # re-measure worker we only need a 2-3 sample estimate.
+            # Optional cap from the caller — the legacy NumPy reconstruction
+            # on Jetson CPU costs ~1 s per image at 1000+ patterns, which
+            # dominates the entire re-measurement run.
             if max_recon_samples is not None and max_recon_samples > 0:
                 n_recon_samples = min(n_recon_samples, int(max_recon_samples))
 
-            # Warmup runs to ensure fair comparison (like inference warmup)
-            warmup_recon = min(2, n_recon_samples)
-            for idx in range(warmup_recon):
-                _ = applicator.process_image(idx)
-
-            # Measure reconstruction time for test images
-            recon_times = []
-            for idx in range(n_recon_samples):
-                t0 = time.perf_counter()
-                _ = applicator.process_image(idx)
-                t1 = time.perf_counter()
-                recon_times.append((t1 - t0) * 1000.0)  # ms
-
-            if recon_times:
-                t_reconstruction_ms = float(np.mean(recon_times))
-                logger.debug("Reconstruction time: %.2f ms (mean of %d samples, after %d warmup)",
-                             t_reconstruction_ms, len(recon_times), warmup_recon)
+            recon = time_reconstruction(applicator, range(n_recon_samples),
+                                        warmup_runs=2, repeats=recon_repeats)
+            t_reconstruction_ms = recon["mean_ms"]
+            logger.debug("Reconstruction time: %.2f +- %.2f ms on %s (%d samples, %d warmup)",
+                         recon["mean_ms"], recon["std_ms"], recon["device"],
+                         recon["samples"], recon["warmup"])
         except Exception as e:
             logger.warning("Reconstruction timing failed: %s", e)
 
@@ -149,6 +142,15 @@ def measure_timing(
         "timing_batch_size": B,
         "use_gpu": config.use_gpu,
     }
+    if recon is not None:
+        results.update({
+            "timing_reconstruction_std_ms": recon["std_ms"],
+            "timing_reconstruction_device": recon["device"],
+            "timing_reconstruction_backend": recon["backend"],
+            "timing_reconstruction_precision": recon["precision"],
+            "timing_reconstruction_operator": recon["operator"],
+            "timing_reconstruction_samples": recon["samples"],
+        })
 
     # Also measure GPU timing if requested and available
     if config.use_gpu and torch.cuda.is_available():

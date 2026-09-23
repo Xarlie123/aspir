@@ -7,6 +7,11 @@ from ui.custom_widgets.common.button_styles import (
     BUTTON_STYLE_GREEN, BUTTON_STYLE_ORANGE, BUTTON_STYLE_RED, apply_button_style
 )
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
+from ui.custom_widgets.common.recon_device_selector import (
+    create_recon_device_combo,
+    get_recon_device,
+    set_recon_device,
+)
 
 # Dropdown options for the Sweep "Reconstruction method" selector.
 # The first label names the mask-specific native algorithm; the rest go
@@ -100,6 +105,11 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
             "Other options use the generic iterative solvers."
         )
         row.addWidget(self.reconstruction_method_combo)
+        device_label = QLabel("Device:")
+        device_label.setStyleSheet("font-size: 11px;")
+        row.addWidget(device_label)
+        self.reconstruction_device_combo = create_recon_device_combo()
+        row.addWidget(self.reconstruction_device_combo)
         row.addStretch()
         parent_layout = self.generate_masks_button.parent().layout()
         button_index = parent_layout.indexOf(self.generate_masks_button)
@@ -107,6 +117,12 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
             parent_layout.insertLayout(button_index, row)
         else:
             parent_layout.addLayout(row)
+
+    def get_reconstruction_device(self) -> str:
+        return get_recon_device(self.reconstruction_device_combo)
+
+    def set_reconstruction_device(self, value: str):
+        set_recon_device(self.reconstruction_device_combo, value)
 
     def get_reconstruction_method(self) -> str:
         return self.reconstruction_method_combo.currentText()
@@ -191,6 +207,7 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
             # Stash the user's choice so Simulation.set_mask picks it up via
             # getattr(mask, 'applicator_type_scatter', None).
             mask.applicator_type_scatter = self.get_reconstruction_method()
+            mask.reconstruction_device = self.get_reconstruction_device()
             self.logger.info("MaskSweep created with %d parameters (method=%s)",
                              len(params), mask.applicator_type_scatter)
         except Exception as e:

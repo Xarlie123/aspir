@@ -87,17 +87,17 @@ def create_mask(config: TestConfiguration, dataset, logger):
         raise ValueError(f"Unknown mask type: {config.mask_type}")
 
 
-def _native_applicator_for_mask(mask, dataset):
+def _native_applicator_for_mask(mask, dataset, **backend_options):
     """Return the mask-specific default ("native") applicator."""
     if isinstance(mask, MaskScatter):
-        return ApplicatorScatter(dataset, mask)
+        return ApplicatorScatter(dataset, mask, **backend_options)
     if isinstance(mask, MaskSweep):
-        return ApplicatorSweep(dataset, mask)
+        return ApplicatorSweep(dataset, mask, **backend_options)
     if isinstance(mask, MaskFourier):
-        return ApplicatorFourier(dataset, mask)
+        return ApplicatorFourier(dataset, mask, **backend_options)
     if isinstance(mask, (MaskHadamard, MaskHadamardCakeCutting,
                          MaskHadamardWalshPaley, MaskCalSal)):
-        return ApplicatorHadamard(dataset, mask)
+        return ApplicatorHadamard(dataset, mask, **backend_options)
     raise ValueError(f"Unsupported mask type for applicator: {type(mask)}")
 
 
@@ -113,18 +113,19 @@ def create_applicator(config: TestConfiguration, mask, dataset):
     mask.generate_masks()
 
     method = (config.reconstruction_method or "").lower()
+    opts = {"device": getattr(config, "reconstruction_device", "auto") or "auto"}
 
     if method == "pseudoinverse":
-        return ApplicatorPseudoinverse(dataset, mask)
+        return ApplicatorPseudoinverse(dataset, mask, **opts)
     if method == "fista":
-        applicator = ApplicatorFISTA(dataset, mask)
+        applicator = ApplicatorFISTA(dataset, mask, **opts)
         applicator.lambda_val = config.fista_lambda
         applicator.max_iter = config.fista_iterations
         return applicator
     if method == "tv_norm":
-        applicator = ApplicatorTV(dataset, mask)
+        applicator = ApplicatorTV(dataset, mask, **opts)
         applicator.lambda_val = config.tv_lambda
         applicator.max_iter = config.tv_iterations
         return applicator
 
-    return _native_applicator_for_mask(mask, dataset)
+    return _native_applicator_for_mask(mask, dataset, **opts)

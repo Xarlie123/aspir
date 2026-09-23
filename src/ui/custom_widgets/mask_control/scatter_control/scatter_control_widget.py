@@ -1,9 +1,14 @@
 import logging
 from PySide6 import QtWidgets
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox
 from ui.custom_widgets.mask_control.scatter_control.ui_scatter_control import Ui_Scatter_Control
 from ui.custom_widgets.common.button_styles import BUTTON_STYLE_GREEN, apply_button_style
+from ui.custom_widgets.common.recon_device_selector import (
+    create_recon_device_combo,
+    get_recon_device,
+    set_recon_device,
+)
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 
 class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
@@ -27,6 +32,14 @@ class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
         # internal image size, set externally via set_img_size
         self._img_size = None
 
+        # Reconstruction device selector, on its own grid row below the
+        # "Reconstruction method" dropdown (the grid comes from Designer).
+        device_row = QHBoxLayout()
+        device_row.addWidget(QLabel("Device:"))
+        self.reconstruction_device_combo = create_recon_device_combo()
+        device_row.addWidget(self.reconstruction_device_combo)
+        self.Scatter_Grid_Layout.addLayout(device_row, 2, 2, 1, 2)
+
         # connect internal "Generate" button
         self.generate_masks_button.clicked.connect(self._on_generate_clicked)
         apply_button_style(self.generate_masks_button, BUTTON_STYLE_GREEN)
@@ -36,6 +49,12 @@ class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
         self.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
                            QtWidgets.QSizePolicy.Preferred)
         self.adjustSize()
+
+    def get_reconstruction_device(self) -> str:
+        return get_recon_device(self.reconstruction_device_combo)
+
+    def set_reconstruction_device(self, value: str):
+        set_recon_device(self.reconstruction_device_combo, value)
 
     def set_img_size(self, img_size: int):
         """Set the image size (dimension) for mask creation."""
@@ -66,6 +85,7 @@ class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
         try:
             mask = MaskScatter(self._img_size, d, n, s)
             mask.applicator_type_scatter = self.select_applicator_scatter_list.currentText()
+            mask.reconstruction_device = self.get_reconstruction_device()
             self.logger.info("MaskScatter created: %s", type(mask).__name__)
         except Exception as e:
             QMessageBox.critical(self, "Error creating scatter mask", str(e))

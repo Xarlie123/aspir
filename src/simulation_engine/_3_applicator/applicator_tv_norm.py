@@ -24,7 +24,7 @@ class ApplicatorTV(ApplicatorABC):
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "TV Norm"
 
-    def __init__(self, dataset, mask, niter=100, lam=1e-1):
+    def __init__(self, dataset, mask, niter=100, lam=1e-1, **backend_options):
         """
         Initializes the applicator with a dataset, masks, and TV parameters.
 
@@ -34,15 +34,54 @@ class ApplicatorTV(ApplicatorABC):
             niter: Number of iterations for the TV solver (default is 100).
             lam: Regularization strength for TV (default is 0.1).
         """
-        super().__init__(dataset, mask)
+        super().__init__(dataset, mask, **backend_options)
         self.dataset = dataset
         self.mask = mask
         self.niter = niter
         self.lam = lam  # TV regularization strength
+        self.record_cost = True  # objective trace, torch path only
+        self.costf = []
+        self.cost_trace = None
         self.reconstructed_image = None
         self.reconstructed_dataset = None
 
     def apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
+        """Reconstruct one image from masks ``[idx_mask_min, idx_mask_max)``.
+
+        Runs the torch backend on ``self.device_request`` unless
+        ``backend="legacy"``, which keeps the original implementation below.
+        """
+        if self.backend == "legacy":
+            return self._legacy_apply_mask_range(idx_mask_min, idx_mask_max, idx_image)
+        result = self._torch_reconstruct(idx_mask_min, idx_mask_max, [idx_image])[0]
+        self.reconstructed_image = result
+        return result
+
+    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+        """Reconstruct every image; one flattened reconstruction per DataFrame row."""
+        if self.backend == "legacy":
+            return self._legacy_process_dataset(idx_mask_min, idx_mask_max)
+        return self._torch_process_dataset(idx_mask_min, idx_mask_max)
+
+    def _torch_solve(self, op, Y, key):
+        """Chambolle-Pock TV, same steps and parameters (``lam``, ``niter``) as legacy."""
+        from simulation_engine._3_applicator.torch_backend.solvers import tv
+        ck = ("proxf", *key)
+        X, cost, prox_f = tv(op, Y, lam=self.lam, niter=self.niter, img_size=self.img_size,
+                             prox_f=self._solver_cache.get(ck), record_cost=self.record_cost)
+        self._solver_cache[ck] = prox_f
+        self.costf.clear()
+        if cost.numel():
+            self.costf.extend(cost[-1].detach().cpu().tolist())
+        self.cost_trace = cost.detach().cpu().numpy()
+        info = {"solver": "chambolle-pock", "prox_f": prox_f.mode}
+        if prox_f.cg_iterations:
+            info["prox_cg_iterations_mean"] = float(np.mean(prox_f.cg_iterations))
+            prox_f.cg_iterations.clear()
+        self.last_solver_info = info
+        return X
+
+    def _legacy_apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
         """
         Apply a range of masks to a given image, simulate measurements,
         and reconstruct using TV-regularized inverse problem.
@@ -135,7 +174,7 @@ class ApplicatorTV(ApplicatorABC):
         """
         return self.apply_mask_range(0, len(self.mask.masks), idx)
 
-    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+    def _legacy_process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """
         Process all images in the dataset with TV regularization.
         Each reconstructed image is flattened and stored as a row in a DataFrame.

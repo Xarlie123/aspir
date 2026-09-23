@@ -37,7 +37,8 @@ source_suffix = {
     '.md': 'markdown',
 }
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+# benchmarks/ holds raw result files referenced from the guide, not pages.
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'benchmarks']
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = 'sphinx_rtd_theme'

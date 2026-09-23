@@ -8,7 +8,7 @@ class ApplicatorSweep(ApplicatorABC):
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "Sweep Linear"
 
-    def __init__(self, dataset, mask):
+    def __init__(self, dataset, mask, **backend_options):
         """
         Initialize the applicator with a dataset and set of masks.
 
@@ -16,13 +16,36 @@ class ApplicatorSweep(ApplicatorABC):
             dataset: Dataset object providing 2D images.
             mask: Mask object containing sweep patterns.
         """
-        super().__init__(dataset, mask)
+        super().__init__(dataset, mask, **backend_options)
         self.dataset = dataset
         self.mask = mask
         self.reconstructed_image = None
         self.reconstructed_dataset = None
 
     def apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
+        """Reconstruct one image from masks ``[idx_mask_min, idx_mask_max)``.
+
+        Runs the torch backend on ``self.device_request`` unless
+        ``backend="legacy"``, which keeps the original implementation below.
+        """
+        if self.backend == "legacy":
+            return self._legacy_apply_mask_range(idx_mask_min, idx_mask_max, idx_image)
+        result = self._torch_reconstruct(idx_mask_min, idx_mask_max, [idx_image])[0]
+        self.reconstructed_image = result
+        return result
+
+    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+        """Reconstruct every image; one flattened reconstruction per DataFrame row."""
+        if self.backend == "legacy":
+            return self._legacy_process_dataset(idx_mask_min, idx_mask_max)
+        return self._torch_process_dataset(idx_mask_min, idx_mask_max)
+
+    def _torch_solve(self, op, Y, key):
+        """Sweep Linear: ``x = S^T (y - mean(y)) / M``, one operator product."""
+        from simulation_engine._3_applicator.torch_backend.solvers import correlation
+        return correlation(op, Y)
+
+    def _legacy_apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
         """
         Apply a range of sweep masks to an image and reconstruct using
         ghost imaging correlation formula to eliminate artifacts.
@@ -93,7 +116,7 @@ class ApplicatorSweep(ApplicatorABC):
         self.reconstructed_image = image_rec
         return image_rec
 
-    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+    def _legacy_process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """
         Process all images in the dataset by applying a range of masks.
         Each reconstructed image is flattened and stored as a row in a DataFrame.

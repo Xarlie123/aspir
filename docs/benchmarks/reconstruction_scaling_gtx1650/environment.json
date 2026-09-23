@@ -1,0 +1,11 @@
+{
+  "torch": "2.6.0+cu124",
+  "cuda_runtime": "12.4",
+  "cuda_available": true,
+  "host": "x86_64",
+  "cpu": "x86_64",
+  "ram_gb": 15.5,
+  "gpu": "NVIDIA GeForce GTX 1650",
+  "gpu_mem_gb": 3.6,
+  "driver": "580.178.04"
+}

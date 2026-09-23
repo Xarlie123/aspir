@@ -315,7 +315,7 @@ class UIReportsHandler(QObject):
     def _measure_per_image_times(self, device, test_images, warmup_runs=20, measurement_runs=800):
         """
         Per-image measurement using the TEST/VALIDATION dataset:
-          - Reconstruction on CPU (no GPU syncs)
+          - Reconstruction on the applicator's own device, synchronised
           - Denoising on selected 'device'
         Returns two lists (ms): recon_times, denoise_times
 
@@ -342,7 +342,10 @@ class UIReportsHandler(QObject):
         )
         self.logger.info("Using TEST dataset (%d images) for timing analysis", n_test_images)
 
-        # 1) Reconstruction timing (CPU only)
+        # 1) Reconstruction timing, on whatever device the applicator runs.
+        # Synchronising around each call makes a CUDA reconstruction count when
+        # its kernels finish, not when they are queued (a no-op on the CPU).
+        sync = getattr(aplic, 'synchronize', None) or (lambda: None)
         # Measure reconstruction time on a subset equal to the test set size
         dataset_size = len(getattr(self.simulation.dataset, 'data', []))
         n_recon_samples = min(n_test_images, dataset_size)
@@ -351,11 +354,14 @@ class UIReportsHandler(QObject):
         warmup_recon = min(2, n_recon_samples)
         for idx in range(warmup_recon):
             _ = aplic.process_image(idx)
+            sync()
 
         # Timed reconstruction runs
         for idx in range(n_recon_samples):
+            sync()
             t0 = time.perf_counter()
             _ = aplic.process_image(idx)
+            sync()
             t1 = time.perf_counter()
             recon_times.append((t1 - t0) * 1000.0)  # ms
 

@@ -22,6 +22,7 @@ from ui.custom_widgets.mask_control.scatter_control.scatter_control_widget impor
 from ui.custom_widgets.mask_control.hadamard_control.hadamard_control_widget import HadamardControlWidget
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
 from ui.custom_widgets.mask_control.fourier_control.fourier_control_widget import FourierControlWidget
+from ui.custom_widgets.common.recon_device_selector import get_recon_device, set_recon_device
 
 # Import mask classes for Hadamard variants
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
@@ -375,7 +376,7 @@ class TestConfigWidget(QWidget):
         self.scatter_control = ScatterControlWidget(logger=self.logger)
         self.scatter_control.generate_masks_button.hide()
         self.scatter_control.setMinimumHeight(0)
-        self.scatter_control.setMaximumHeight(80)
+        self.scatter_control.setMaximumHeight(110)
         self._connect_scatter_signals()
         self.mask_control_stack.addWidget(self.scatter_control)
 
@@ -412,6 +413,18 @@ class TestConfigWidget(QWidget):
         self.fourier_control.setMaximumHeight(150)
         self._connect_fourier_signals()
         self.mask_control_stack.addWidget(self.fourier_control)
+        self._connect_device_signals()
+
+    def _device_combos(self):
+        """Reconstruction-device selector of every embedded mask widget."""
+        return [getattr(w, "reconstruction_device_combo", None)
+                for w in (self.scatter_control, self.hadamard_control,
+                          self.sweep_control, self.fourier_control)]
+
+    def _connect_device_signals(self):
+        for combo in self._device_combos():
+            if combo is not None:
+                combo.currentIndexChanged.connect(self._on_value_changed)
 
     def _connect_fourier_signals(self):
         """Connect Fourier control signals to config updates."""
@@ -498,6 +511,19 @@ class TestConfigWidget(QWidget):
             return getattr(self.fourier_control,
                            "reconstruction_method_combo", None)
         # cal_sal currently has no widget → no selector
+        return None
+
+    def _active_recon_device_combo(self):
+        """Device selector of the active mask widget (None for Cal-Sal)."""
+        mask_type = self.mask_type_combo.currentText()
+        if mask_type.startswith("scatter"):
+            return getattr(self.scatter_control, "reconstruction_device_combo", None)
+        if mask_type == "sweep":
+            return getattr(self.sweep_control, "reconstruction_device_combo", None)
+        if mask_type.startswith("hadamard"):
+            return getattr(self.hadamard_control, "reconstruction_device_combo", None)
+        if mask_type == "fourier":
+            return getattr(self.fourier_control, "reconstruction_device_combo", None)
         return None
 
     def _active_recon_method_key(self) -> str:
@@ -671,6 +697,8 @@ class TestConfigWidget(QWidget):
             _apply(getattr(self.sweep_control, "reconstruction_method_combo", None))
             _apply(getattr(self.hadamard_control, "reconstruction_method_combo", None))
             _apply(getattr(self.fourier_control, "reconstruction_method_combo", None))
+            for combo in self._device_combos():
+                set_recon_device(combo, getattr(config, "reconstruction_device", "auto"))
 
             # FISTA/TV parameters
             if config.reconstruction_method == "fista":
@@ -757,6 +785,9 @@ class TestConfigWidget(QWidget):
         self.scatter_control.select_applicator_scatter_list.setEnabled(not read_only)
         for w in (self.sweep_control, self.hadamard_control):
             combo = getattr(w, "reconstruction_method_combo", None)
+            if combo is not None:
+                combo.setEnabled(not read_only)
+        for combo in self._device_combos():
             if combo is not None:
                 combo.setEnabled(not read_only)
 
@@ -861,6 +892,10 @@ class TestConfigWidget(QWidget):
 
         # Reconstruction — read from whichever mask widget is currently active.
         self._config.reconstruction_method = self._active_recon_method_key()
+        combo = self._active_recon_device_combo()
+        # Cal-Sal has no selector: keep whatever the config already holds.
+        if combo is not None:
+            self._config.reconstruction_device = get_recon_device(combo)
         if self._config.reconstruction_method == "fista":
             self._config.fista_lambda = self.recon_lambda_spin.value()
             self._config.fista_iterations = self.recon_iter_spin.value()

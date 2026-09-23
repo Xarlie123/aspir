@@ -63,6 +63,8 @@ class TestConfiguration:
 
     # Reconstruction method
     reconstruction_method: str = "conventional"  # conventional, pseudoinverse, fista, tv_norm
+    # Where the reconstruction runs: "auto" (CUDA if available), "cpu" or "cuda".
+    reconstruction_device: str = "auto"
 
     # FISTA-specific parameters
     fista_lambda: float = 0.01
@@ -137,6 +139,7 @@ class TestConfiguration:
             "sweep_angles": self.sweep_angles.copy(),
             # Reconstruction
             "reconstruction_method": self.reconstruction_method,
+            "reconstruction_device": self.reconstruction_device,
             "fista_lambda": self.fista_lambda,
             "fista_iterations": self.fista_iterations,
             "tv_lambda": self.tv_lambda,
@@ -195,6 +198,7 @@ class TestConfiguration:
             sweep_angles=data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]),
             # Reconstruction
             reconstruction_method=data.get("reconstruction_method", "pseudoinverse"),
+            reconstruction_device=data.get("reconstruction_device", "auto"),
             fista_lambda=data.get("fista_lambda", 0.01),
             fista_iterations=data.get("fista_iterations", 100),
             tv_lambda=data.get("tv_lambda", 0.1),

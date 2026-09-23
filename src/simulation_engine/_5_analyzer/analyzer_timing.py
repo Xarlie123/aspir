@@ -61,3 +61,55 @@ class TimingAnalyzer:
             "Inference timing complete: mean=%.6fs, std=%.6fs", mean, std
         )
         return mean, std
+
+
+def time_reconstruction(applicator, image_indices, warmup_runs=2, repeats=3):
+    """Per-image reconstruction latency with the same protocol as NN inference.
+
+    ``synchronize()`` before and after every timed call (so GPU kernels are
+    counted when they finish, not when they are queued), ``warmup_runs`` untimed
+    calls first — they also absorb one-off costs such as building the operator,
+    the cached pseudoinverse or the Lipschitz constant — then ``repeats``
+    passes over ``image_indices``. Each call is ``applicator.process_image``, so
+    it includes simulating the single-pixel measurements, exactly as before.
+
+    The applicator is used by duck typing (``process_image``, and optionally
+    ``synchronize``, ``reconstruction_device``, ``backend``,
+    ``reconstruction_precision``, ``last_operator_kind``), which keeps this
+    stage independent of the reconstruction stage.
+    """
+    sync = getattr(applicator, "synchronize", None) or (lambda: None)
+    indices = list(image_indices)
+    if not indices:
+        raise ValueError("time_reconstruction needs at least one image index")
+
+    n_warm = min(int(warmup_runs), len(indices))
+    for idx in indices[:n_warm]:
+        applicator.process_image(idx)
+        sync()
+
+    times_ms = []
+    for _ in range(max(1, int(repeats))):
+        for idx in indices:
+            sync()
+            t0 = time.perf_counter()
+            applicator.process_image(idx)
+            sync()
+            times_ms.append((time.perf_counter() - t0) * 1000.0)
+
+    arr = np.asarray(times_ms)
+    backend = getattr(applicator, "backend", "legacy")
+    return {
+        "mean_ms": float(arr.mean()),
+        "std_ms": float(arr.std()),
+        "min_ms": float(arr.min()),
+        "max_ms": float(arr.max()),
+        "samples": int(arr.size),
+        "warmup": n_warm,
+        "repeats": max(1, int(repeats)),
+        "device": getattr(applicator, "reconstruction_device", "cpu"),
+        "backend": backend,
+        "precision": getattr(applicator, "reconstruction_precision", "float64"),
+        "operator": getattr(applicator, "last_operator_kind", None)
+        or ("explicit" if backend == "legacy" else None),
+    }

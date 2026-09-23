@@ -16,6 +16,11 @@ from PySide6.QtWidgets import (
 
 from simulation_engine._2_mask_gen.mask_fourier import MaskFourier
 from ui.custom_widgets.common.button_styles import BUTTON_STYLE_GREEN, apply_button_style
+from ui.custom_widgets.common.recon_device_selector import (
+    create_recon_device_combo,
+    get_recon_device,
+    set_recon_device,
+)
 
 # First label names the Fourier-specific algorithm; the rest match the generic
 # iterative solvers exposed by every other mask widget.
@@ -176,6 +181,11 @@ class FourierControlWidget(QtWidgets.QWidget):
             "Other options use the generic iterative solvers."
         )
         recon_row.addWidget(self.reconstruction_method_combo)
+        device_label = QLabel("Device:")
+        device_label.setStyleSheet("font-size: 11px;")
+        recon_row.addWidget(device_label)
+        self.reconstruction_device_combo = create_recon_device_combo()
+        recon_row.addWidget(self.reconstruction_device_combo)
         recon_row.addStretch()
         self.main_layout.addLayout(recon_row)
 
@@ -246,6 +256,12 @@ class FourierControlWidget(QtWidgets.QWidget):
         self.dmd_upsampling_spinbox.setEnabled(self.get_binarization() != "none")
         self._update_count_label()
 
+    def get_reconstruction_device(self) -> str:
+        return get_recon_device(self.reconstruction_device_combo)
+
+    def set_reconstruction_device(self, value: str):
+        set_recon_device(self.reconstruction_device_combo, value)
+
     def get_reconstruction_method(self) -> str:
         return self.reconstruction_method_combo.currentText()
 
@@ -302,6 +318,7 @@ class FourierControlWidget(QtWidgets.QWidget):
                 logger=self.logger,
             )
             mask_obj.applicator_type_scatter = self.get_reconstruction_method()
+            mask_obj.reconstruction_device = self.get_reconstruction_device()
         except Exception as e:
             QMessageBox.warning(self, "Error", str(e))
             self.logger.error("Error instantiating mask: %s", e)

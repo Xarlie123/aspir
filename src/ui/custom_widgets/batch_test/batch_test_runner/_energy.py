@@ -1,4 +1,4 @@
-"""Inference energy measurement for batch tests."""
+"""Inference and reconstruction energy measurement for batch tests."""
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -162,3 +162,87 @@ def measure_energy(
     finally:
         if owns_analyzer:
             analyzer.shutdown()
+
+
+def measure_reconstruction_energy(
+    applicator,
+    config: TestConfiguration,
+    logger,
+    image_indices,
+    analyzer: EnergyAnalyzer | None = None,
+    t_reconstruction_ms: float | None = None,
+    target_seconds: float = 1.0,
+    max_passes: int = 200,
+) -> dict[str, Any]:
+    """Measure the energy of the reconstruction stage, per image.
+
+    The stage is attributed to the device it runs on the same way inference
+    is: the GPU energy backend is enabled only when the reconstruction runs on
+    CUDA, so a CPU reconstruction does not pick up the GPU's idle draw. The
+    monitor synchronises CUDA around the measured window, and each pass also
+    calls ``applicator.synchronize()``, so queued kernels are inside it.
+
+    ``image_indices`` are reconstructed once per pass; the number of passes is
+    chosen so the window lasts about ``target_seconds`` (energy counters are
+    too coarse for millisecond windows), using ``t_reconstruction_ms`` from the
+    timing phase when available.
+    """
+    import math
+
+    device = getattr(applicator, "reconstruction_device", "cpu")
+    indices = list(image_indices)
+    if not indices:
+        return {}
+    sync = getattr(applicator, "synchronize", None) or (lambda: None)
+
+    def one_pass():
+        for idx in indices:
+            applicator.process_image(idx)
+        sync()
+
+    per_pass_ms = float(t_reconstruction_ms or 0.0) * len(indices)
+    passes = 1
+    if per_pass_ms > 0:
+        passes = int(min(max_passes, max(1, math.ceil(target_seconds * 1000.0 / per_pass_ms))))
+
+    owns_analyzer = analyzer is None
+    previous_device = None
+    if owns_analyzer:
+        analyzer = EnergyAnalyzer(
+            model=None,
+            device=device,
+            enable_gpu_energy=(device == "cuda"),
+            enable_cpu_energy=True,
+            logger=logger,
+        )
+    else:
+        previous_device = analyzer.device
+        analyzer.device = device
+
+    try:
+        result = analyzer.measure_reconstruction_energy(
+            one_pass, n_iterations=passes, warmup_iterations=1, cuda_sync=True)
+    finally:
+        if owns_analyzer:
+            analyzer.shutdown()
+        else:
+            analyzer.device = previous_device
+
+    n_images = passes * len(indices)
+    total_j = result.total_energy_joules
+    gpu_j = sum(r.gpu_energy_joules or 0.0 for r in result.readings)
+    cpu_j = sum(r.cpu_energy_joules or 0.0 for r in result.readings)
+    out = {
+        "energy_reconstruction_mj": 1000.0 * total_j / n_images,
+        "energy_reconstruction_watts": float(result.avg_power_watts),
+        "energy_reconstruction_device": device,
+        "energy_reconstruction_images": int(n_images),
+        "energy_reconstruction_backends": [r.device_type.value for r in result.readings],
+    }
+    if gpu_j > 0:
+        out["energy_reconstruction_gpu_mj"] = 1000.0 * gpu_j / n_images
+    if cpu_j > 0:
+        out["energy_reconstruction_cpu_mj"] = 1000.0 * cpu_j / n_images
+    logger.debug("Reconstruction energy: %.3f mJ/image on %s over %d images",
+                 out["energy_reconstruction_mj"], device, n_images)
+    return out

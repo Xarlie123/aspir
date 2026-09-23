@@ -359,6 +359,7 @@ class EnergyAnalyzer:
         reconstruction_func: Callable,
         *args,
         n_iterations: int = 1,
+        warmup_iterations: int | None = None,
         **kwargs
     ) -> EnergyMeasurementResult:
         """
@@ -368,6 +369,9 @@ class EnergyAnalyzer:
             reconstruction_func: Function to measure
             *args: Arguments to pass to function
             n_iterations: Number of iterations
+            warmup_iterations: Untimed calls before measuring; defaults to
+                ``self.warmup_runs`` (sized for NN inference, and expensive for
+                an iterative reconstruction)
             **kwargs: Keyword arguments
 
         Returns:
@@ -381,7 +385,8 @@ class EnergyAnalyzer:
             reconstruction_func,
             *args,
             n_iterations=n_iterations,
-            warmup_iterations=self.warmup_runs,
+            warmup_iterations=(self.warmup_runs if warmup_iterations is None
+                               else warmup_iterations),
             **kwargs
         )
 

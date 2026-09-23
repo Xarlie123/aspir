@@ -15,7 +15,10 @@ from PySide6.QtCore import QThread, Signal
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer import Analyzer
-from ui.custom_widgets.batch_test.batch_test_runner._energy import measure_energy
+from ui.custom_widgets.batch_test.batch_test_runner._energy import (
+    measure_energy,
+    measure_reconstruction_energy,
+)
 from ui.custom_widgets.batch_test.batch_test_runner._export import (
     export_datasets,
     export_models,
@@ -387,6 +390,7 @@ class BatchTestRunner(QThread):
             "loss_function": config.loss_function,
             "optimizer": config.optimizer,
             "use_gpu": config.use_gpu,
+            "reconstruction_device": config.reconstruction_device,
             "architecture_config": dict(config.architecture_config or {}),
             "train_split": config.train_split,
             "val_split": config.val_split,
@@ -421,6 +425,8 @@ class BatchTestRunner(QThread):
         self.status_update.emit(f"Reconstructing images: {config.name}")
         self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 20)
         reconstructed_df = applicator.process_dataset()
+        # Free the device before NN training; timing rebuilds it on demand.
+        applicator.release_device_memory()
         reconstructed_data = reconstructed_df.to_numpy()
         self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 100)
         self.phase_completed.emit(index, self.PHASE_RECONSTRUCTION)
@@ -630,6 +636,7 @@ class BatchTestRunner(QThread):
             except Exception as e:
                 self.logger.warning("Energy analysis failed: %s", e)
                 results["energy_error"] = str(e)
+            self._add_reconstruction_energy(results, config, applicator)
 
         self.phase_progress.emit(index, self.PHASE_ANALYSIS, 100)
         self.phase_completed.emit(index, self.PHASE_ANALYSIS)
@@ -733,6 +740,7 @@ class BatchTestRunner(QThread):
             "loss_function": config.loss_function,
             "optimizer": config.optimizer,
             "use_gpu": config.use_gpu,
+            "reconstruction_device": config.reconstruction_device,
             "architecture_config": dict(config.architecture_config or {}),
             "train_split": config.train_split,
             "val_split": config.val_split,
@@ -769,6 +777,8 @@ class BatchTestRunner(QThread):
             self.status_update.emit(f"Reconstructing images: {config.name}")
             self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 20)
             reconstructed_df = applicator.process_dataset()
+            # Free the device before NN training; timing rebuilds it on demand.
+            applicator.release_device_memory()
             reconstructed_data = reconstructed_df.to_numpy()
             self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 100)
             self.phase_completed.emit(index, self.PHASE_RECONSTRUCTION)
@@ -955,6 +965,20 @@ class BatchTestRunner(QThread):
 
         return postprocessor
 
+    def _add_reconstruction_energy(self, results, config, applicator):
+        """Measure reconstruction-stage energy on the device it ran on."""
+        if applicator is None:
+            return
+        try:
+            n = len(getattr(applicator.dataset, "data", []))
+            results.update(measure_reconstruction_energy(
+                applicator, config, self.logger,
+                image_indices=range(min(5, n)),
+                t_reconstruction_ms=results.get("timing_reconstruction_ms"),
+            ))
+        except Exception as e:
+            self.logger.warning("Reconstruction energy analysis failed: %s", e)
+
     def _analyze_results(self, config: TestConfiguration, postprocessor: PostprocessorNN,
                          applicator=None) -> dict[str, Any]:
         """Analyze test results based on configured reports."""
@@ -1040,6 +1064,7 @@ class BatchTestRunner(QThread):
             except Exception as e:
                 self.logger.warning("Energy analysis failed: %s", e)
                 results["energy_error"] = str(e)
+            self._add_reconstruction_energy(results, config, applicator)
 
         return results
 

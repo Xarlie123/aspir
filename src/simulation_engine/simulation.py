@@ -96,16 +96,23 @@ class Simulation:
         option = (getattr(mask, 'applicator_type_scatter', None)
                   or reconstruction_method
                   or applicator_type_scatter)
-        self.set_applicator(reconstruction_method=option)
+        # The mask widgets stash the device choice on the mask, like the method.
+        device = getattr(mask, 'reconstruction_device', None) or "auto"
+        self.set_applicator(reconstruction_method=option, device=device)
 
     def set_applicator(self, reconstruction_method=None,
-                       applicator_type_scatter=None):
+                       applicator_type_scatter=None, device="auto"):
         """
         Instantiate the applicator implementing ``reconstruction_method`` over
         the current mask. ``"native"`` picks the mask-specific algorithm
         (Ghost Imaging, Sweep Linear, Hadamard Linear or Fourier Inverse);
         the iterative solvers work with any mask whose sensing matrix is
         exposed via ``mask.masks``.
+
+        ``device`` selects where the reconstruction runs: ``"auto"`` (CUDA if
+        available, else CPU), ``"cpu"`` or ``"cuda"`` — the same convention as
+        the NN stage, which uses CUDA only when it is both requested and
+        available.
         """
         if self.mask is None or self.dataset is None:
             raise RuntimeError("Dataset and mask must be defined.")
@@ -118,30 +125,31 @@ class Simulation:
                           cls_name, method)
 
         if method == "pseudoinverse":
-            self.applicator = ApplicatorPseudoinverse(self.dataset, self.mask)
+            self.applicator = ApplicatorPseudoinverse(self.dataset, self.mask, device=device)
         elif method == "fista":
-            self.applicator = ApplicatorFISTA(self.dataset, self.mask)
+            self.applicator = ApplicatorFISTA(self.dataset, self.mask, device=device)
         elif method == "tv_norm":
-            self.applicator = ApplicatorTV(self.dataset, self.mask)
+            self.applicator = ApplicatorTV(self.dataset, self.mask, device=device)
         else:
             # Native: mask-specific default.
             if isinstance(self.mask, MaskScatter):
-                self.applicator = ApplicatorScatter(self.dataset, self.mask)
+                self.applicator = ApplicatorScatter(self.dataset, self.mask, device=device)
             elif isinstance(self.mask, MaskSweep):
-                self.applicator = ApplicatorSweep(self.dataset, self.mask)
+                self.applicator = ApplicatorSweep(self.dataset, self.mask, device=device)
             elif isinstance(self.mask, MaskFourier):
-                self.applicator = ApplicatorFourier(self.dataset, self.mask)
+                self.applicator = ApplicatorFourier(self.dataset, self.mask, device=device)
             elif isinstance(self.mask, (
                 MaskHadamard,
                 MaskHadamardCakeCutting,
                 MaskHadamardWalshPaley,
                 MaskCalSal,
             )):
-                self.applicator = ApplicatorHadamard(self.dataset, self.mask)
+                self.applicator = ApplicatorHadamard(self.dataset, self.mask, device=device)
             else:
                 raise ValueError(f"Unsupported mask: {cls_name}")
 
-        self.logger.info("Applicator configured: %s", type(self.applicator).__name__)
+        self.logger.info("Applicator configured: %s (device request=%s)",
+                         type(self.applicator).__name__, device)
 
     def set_postprocessor(
         self,

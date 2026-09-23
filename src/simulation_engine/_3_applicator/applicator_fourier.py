@@ -58,8 +58,8 @@ class ApplicatorFourier(ApplicatorABC):
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "Fourier Inverse"
 
-    def __init__(self, dataset, mask):
-        super().__init__(dataset, mask)
+    def __init__(self, dataset, mask, **backend_options):
+        super().__init__(dataset, mask, **backend_options)
         self.dataset = dataset
         self.mask = mask
         self.reconstructed_image = None
@@ -125,6 +125,52 @@ class ApplicatorFourier(ApplicatorABC):
 
     # ------------------------------------------------------------------
     def apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
+        """Reconstruct one image from masks ``[idx_mask_min, idx_mask_max)``.
+
+        Runs the torch backend on ``self.device_request`` unless
+        ``backend="legacy"``, which keeps the original implementation below.
+        """
+        if self.backend == "legacy":
+            return self._legacy_apply_mask_range(idx_mask_min, idx_mask_max, idx_image)
+        result = self._torch_reconstruct(idx_mask_min, idx_mask_max, [idx_image])[0]
+        self.reconstructed_image = result
+        return result
+
+    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+        """Reconstruct every image; one flattened reconstruction per DataFrame row."""
+        if self.backend == "legacy":
+            return self._legacy_process_dataset(idx_mask_min, idx_mask_max)
+        return self._torch_process_dataset(idx_mask_min, idx_mask_max)
+
+    def _torch_solve(self, op, Y, key):
+        """Phase-shift demodulation + conjugate fill + ``torch.fft.ifft2``."""
+        import torch
+
+        from simulation_engine._3_applicator.torch_backend.solvers import (
+            fourier_groups,
+            fourier_inverse,
+        )
+        # Only the metadata is needed here: the FFT operator already simulated
+        # the measurements, so masks need not be materialised (at 256x256 and
+        # above they no longer fit in memory).
+        if getattr(self.mask, "freq_indices", None) is None:
+            self._require_metadata()
+        ck = ("groups", *key)
+        if ck not in self._solver_cache:
+            self._solver_cache[ck] = fourier_groups(
+                self.mask.freq_indices, self.mask.phases, self.mask.coeff_ids,
+                key[0], key[1], self.img_size, int(getattr(self.mask, "phase_steps", 4)),
+                self.torch_device)
+        groups, skipped = self._solver_cache[ck]
+        self.last_skipped_groups = skipped
+        if groups is None:
+            return torch.zeros((Y.shape[0], op.shape[1]), dtype=op.dtype, device=op.device)
+        X, spectrum = fourier_inverse(Y, groups, self.torch_dtype)
+        # Kept for inspection, as in the legacy path (last image of the batch).
+        self.last_spectrum = spectrum[-1].detach().cpu().numpy().astype(np.complex128)
+        return X
+
+    def _legacy_apply_mask_range(self, idx_mask_min, idx_mask_max, idx_image):
         """Acquire a range of patterns on one image and inverse-FFT it back."""
         masks, freq, phases, coeff_ids = self._require_metadata()
 
@@ -186,7 +232,7 @@ class ApplicatorFourier(ApplicatorABC):
         masks, _, _, _ = self._require_metadata()
         return self.apply_mask_range(0, len(masks), idx)
 
-    def process_dataset(self, idx_mask_min=0, idx_mask_max=None):
+    def _legacy_process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """Reconstruct every image; one flattened reconstruction per row."""
         masks, _, _, _ = self._require_metadata()
         if idx_mask_max is None:

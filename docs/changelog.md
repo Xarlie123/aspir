@@ -50,11 +50,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   On 20 CelebA images at 64x64 and M/N = 0.16 the cost against grayscale
   patterns is about 0.5 dB. Reference: Zhang et al., *Sci. Rep.* **7**, 12029
   (2017).
+- **Device-selectable reconstruction backend (CPU or CUDA).** All seven
+  reconstruction algorithms now run on a PyTorch backend with one
+  implementation per algorithm, so a CPU-versus-GPU comparison is the same code
+  on two devices. Select the device with the new *Device* dropdown next to
+  *Reconstruction method* (Single Test and Batch Test), the
+  `reconstruction_device` field of a batch test (`"auto"` default, `"cpu"`,
+  `"cuda"`), or `device=` on `Simulation.set_applicator` and every applicator.
+  `"auto"` uses CUDA when available and silently falls back to the CPU
+  otherwise. Precision is float32 by default, float64 optional.
+  - The sensing matrix is applied through the cheapest exact operator: a fast
+    Walsh-Hadamard transform for all Hadamard-family masks (rows recognised
+    from the patterns, whatever the ordering), an FFT for grayscale Fourier
+    masks, and a dense matrix otherwise, kept on the device when it fits and
+    streamed from host memory in row blocks when it does not. Iterative
+    solvers therefore scale to 256x256 and beyond on the GPU for the
+    matrix-free families.
+  - FISTA and TV reproduce the previous pyproximal iterations step for step
+    with the same parameters (TV: Chambolle-Pock with the exact data-term
+    prox). The TV prox is factorised once instead of solving a dense N x N
+    system at every iteration, which alone makes TV about 25x faster on the
+    same CPU.
+  - The NumPy / pylops / pyproximal implementations remain available as
+    `backend="legacy"` for reference; they are not exposed in the GUI.
+  - `scripts/bench_reconstruction_scaling.py` benchmarks all seven algorithms
+    across sizes, sampling ratios and devices (CSV and Markdown output).
+  - `tests/test_gpu_reconstruction.py` checks parity with the legacy path, CUDA
+    against CPU, FWHT against the explicit matrix for all four Hadamard
+    orderings, and chunked against resident matrix products.
 - **First automated tests in the repository.** `tests/test_fourier_fspi.py`
   covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
   fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers
   and an `.npz` save/load round trip. It runs standalone
   (`.venv/bin/python tests/test_fourier_fspi.py`) with no new dependency.
+
+### Changed
+- **Reconstruction timing is device-synchronised.** `timing_reconstruction_ms`
+  now uses the NN stage's protocol — synchronisation before and after each
+  call, warm-up, repeats — and batch reports add
+  `timing_reconstruction_std_ms`, `timing_reconstruction_device`,
+  `timing_reconstruction_backend`, `timing_reconstruction_precision` and
+  `timing_reconstruction_operator`. Values are not comparable with reports
+  produced by the previous NumPy path.
+- **Reconstruction energy is measured.** Batch tests with the *energy* report
+  add `energy_reconstruction_mj` (per image) and its CPU/GPU split, attributed
+  to the device the reconstruction ran on. Previously only NN inference energy
+  was measured.
 
 ## [1.2.1] - 2026-09-14
 

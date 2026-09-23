@@ -3,6 +3,12 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QSizePolicy, QMessageBox, QHBoxLayout, QLabel, QDoubleSpinBox, QComboBox
 
+from ui.custom_widgets.common.recon_device_selector import (
+    create_recon_device_combo,
+    get_recon_device,
+    set_recon_device,
+)
+
 # First label names the Hadamard-specific linear algorithm; the rest match
 # the generic iterative solvers exposed by every other mask widget.
 RECON_METHOD_CHOICES = ("Hadamard Linear", "Pseudoinverse", "FISTA", "TV-norm")
@@ -124,12 +130,23 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
             "Other options use the generic iterative solvers."
         )
         row.addWidget(self.reconstruction_method_combo)
+        device_label = QLabel("Device:")
+        device_label.setStyleSheet("font-size: 11px;")
+        row.addWidget(device_label)
+        self.reconstruction_device_combo = create_recon_device_combo()
+        row.addWidget(self.reconstruction_device_combo)
         row.addStretch()
         button_index = self.main_layout.indexOf(self.generate_masks_button)
         if button_index >= 0:
             self.main_layout.insertLayout(button_index, row)
         else:
             self.main_layout.addLayout(row)
+
+    def get_reconstruction_device(self) -> str:
+        return get_recon_device(self.reconstruction_device_combo)
+
+    def set_reconstruction_device(self, value: str):
+        set_recon_device(self.reconstruction_device_combo, value)
 
     def get_reconstruction_method(self) -> str:
         return self.reconstruction_method_combo.currentText()
@@ -183,6 +200,7 @@ class HadamardControlWidget(QtWidgets.QWidget, Ui_Hadamard_Control):
         try:
             mask_obj = self._mask_cls(self._img_size, low, high, logger=self.logger)
             mask_obj.applicator_type_scatter = self.get_reconstruction_method()
+            mask_obj.reconstruction_device = self.get_reconstruction_device()
         except Exception as e:
             QMessageBox.warning(self, "Error", str(e))
             self.logger.error("Error instantiating mask: %s", e)
