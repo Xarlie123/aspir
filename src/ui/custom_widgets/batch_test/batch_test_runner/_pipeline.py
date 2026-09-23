@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
+from simulation_engine._2_mask_gen.mask_fourier import MaskFourier
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
+from simulation_engine._3_applicator.applicator_fourier import ApplicatorFourier
 from simulation_engine._3_applicator.applicator_hadamard import ApplicatorHadamard
 from simulation_engine._3_applicator.applicator_scatter import ApplicatorScatter
 from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
@@ -71,6 +73,14 @@ def create_mask(config: TestConfiguration, dataset, logger):
             img_size=img_size,
             logger=logger
         )
+    elif config.mask_type == "fourier":
+        return MaskFourier(
+            img_size=img_size,
+            sampling_ratio=config.fourier_sampling_ratio,
+            phase_steps=config.fourier_phase_steps,
+            spectrum_ordering=config.fourier_spectrum_ordering,
+            logger=logger
+        )
     else:
         raise ValueError(f"Unknown mask type: {config.mask_type}")
 
@@ -81,6 +91,8 @@ def _native_applicator_for_mask(mask, dataset):
         return ApplicatorScatter(dataset, mask)
     if isinstance(mask, MaskSweep):
         return ApplicatorSweep(dataset, mask)
+    if isinstance(mask, MaskFourier):
+        return ApplicatorFourier(dataset, mask)
     if isinstance(mask, (MaskHadamard, MaskHadamardCakeCutting,
                          MaskHadamardWalshPaley, MaskCalSal)):
         return ApplicatorHadamard(dataset, mask)

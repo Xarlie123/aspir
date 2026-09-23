@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Fourier Single-Pixel Imaging (mask family + native reconstruction).**
+  ASPIR gains a seventh mask family and a seventh reconstruction algorithm,
+  wired through the same `MaskABC` / `ApplicatorABC` pipeline, Single Test
+  wizard, Batch Test runner and reports as the existing six.
+  - `MaskFourier` (`simulation_engine/_2_mask_gen/mask_fourier.py`) generates
+    sinusoidal grayscale patterns `a + b*cos(2*pi*(fx*x + fy*y) + phi)` with
+    `a = b = 0.5`, so patterns are non-negative and need no complementary
+    `P+`/`P-` projection. Parameters: `sampling_ratio` (M/N, the same meaning
+    as everywhere else in ASPIR), `phase_steps` (4 = four-step, default;
+    3 = three-step) and `spectrum_ordering` (`circular`, default, or
+    `square`). Only the conjugate-symmetric half-plane is acquired, ordered
+    low-frequency first, which is what makes FSPI competitive at low
+    sampling ratios.
+  - `ApplicatorFourier`
+    (`simulation_engine/_3_applicator/applicator_fourier.py`) demodulates the
+    phase-shifted bucket values into complex spectrum coefficients, fills the
+    conjugate half, and inverts with `numpy.fft.ifft2`. The normalisation is
+    unit scale and zero offset: a noiseless full-spectrum acquisition returns
+    the ground truth (> 140 dB PSNR in the tests). The phase-shift
+    differences are themselves the differential measurement, cancelling the
+    pattern offset and the detector's DC drift.
+  - The mask-agnostic solvers (Pseudoinverse, FISTA, TV-Norm) accept Fourier
+    masks unchanged, even though the phase-shifted patterns of one
+    coefficient are linearly dependent and the sensing matrix is therefore
+    rank-deficient.
+  - References: Zhang, Ma & Zhong, *Nat. Commun.* **6**, 6225 (2015) for the
+    four-step scheme; Zhang et al., *Sci. Rep.* **7**, 12029 (2017) for the
+    three-step variant.
+- **First automated tests in the repository.** `tests/test_fourier_fspi.py`
+  covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
+  fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers
+  and an `.npz` save/load round trip. It runs standalone
+  (`.venv/bin/python tests/test_fourier_fspi.py`) with no new dependency.
+
 ## [1.2.1] - 2026-09-14
 
 ### Added

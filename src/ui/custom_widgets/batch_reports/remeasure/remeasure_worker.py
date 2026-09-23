@@ -190,6 +190,7 @@ _MASK_TYPE_CLASSES: dict[str, str] = {
     "hadamard_cake_cutting":"simulation_engine._2_mask_gen.mask_hadamard_cake_cutting:MaskHadamardCakeCutting",
     "hadamard_walsh_paley": "simulation_engine._2_mask_gen.mask_hadamard_walsh_paley:MaskHadamardWalshPaley",
     "cal_sal":              "simulation_engine._2_mask_gen.mask_cal_sal:MaskCalSal",
+    "fourier":              "simulation_engine._2_mask_gen.mask_fourier:MaskFourier",
 }
 
 
@@ -214,6 +215,12 @@ def _instantiate_mask_facade(mask_type: str, img_size: int, n_patterns: int,
         # though we replace ``masks`` immediately afterwards.
         dummy = [{"angle": 0.0, "bar_width": 2, "stride": 4}]
         return cls(img_size=img_size, parametros=dummy, logger=logger)
+    if mask_type == "fourier":
+        # Patterns are replaced right after, so any ratio that yields at least
+        # one complete phase group keeps the constructor happy.
+        return cls(img_size=img_size,
+                   sampling_ratio=max(n_patterns, 1) / float(img_size * img_size),
+                   logger=logger)
     if mask_type in ("hadamard_natural", "hadamard_cake_cutting",
                      "hadamard_walsh_paley"):
         return cls(img_size=img_size, min_idx=0, max_idx=n_patterns,

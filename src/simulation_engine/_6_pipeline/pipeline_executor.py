@@ -15,6 +15,7 @@ from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
+from simulation_engine._2_mask_gen.mask_fourier import MaskFourier
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
 
@@ -45,7 +46,8 @@ def execute_pipeline(tests, progress_per_task=None, progress_overall=None):
         'hadamard': MaskHadamard,
         'hadamard_cake_cutting': MaskHadamardCakeCutting,
         'hadamard_walsh_paley': MaskHadamardWalshPaley,
-        'cal_sal': MaskCalSal
+        'cal_sal': MaskCalSal,
+        'fourier': MaskFourier
     }
 
     for i, cfg in enumerate(tests, start=1):

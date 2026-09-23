@@ -21,6 +21,7 @@ from ui.custom_widgets.batch_test.test_config_model import (
 from ui.custom_widgets.mask_control.scatter_control.scatter_control_widget import ScatterControlWidget
 from ui.custom_widgets.mask_control.hadamard_control.hadamard_control_widget import HadamardControlWidget
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
+from ui.custom_widgets.mask_control.fourier_control.fourier_control_widget import FourierControlWidget
 
 # Import mask classes for Hadamard variants
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
@@ -404,6 +405,23 @@ class TestConfigWidget(QWidget):
         cal_sal_layout.addStretch()
         self.mask_control_stack.addWidget(cal_sal_widget)
 
+        # Fourier control (3 parameter rows + budget label)
+        self.fourier_control = FourierControlWidget(logger=self.logger)
+        self.fourier_control.generate_masks_button.hide()
+        self.fourier_control.setMinimumHeight(0)
+        self.fourier_control.setMaximumHeight(150)
+        self._connect_fourier_signals()
+        self.mask_control_stack.addWidget(self.fourier_control)
+
+    def _connect_fourier_signals(self):
+        """Connect Fourier control signals to config updates."""
+        self.fourier_control.sampling_ratio_spinbox.valueChanged.connect(self._on_value_changed)
+        self.fourier_control.phase_steps_combo.currentIndexChanged.connect(self._on_value_changed)
+        self.fourier_control.spectrum_ordering_combo.currentIndexChanged.connect(
+            self._on_value_changed)
+        self.fourier_control.reconstruction_method_combo.currentTextChanged.connect(
+            self._on_applicator_changed)
+
     def _connect_scatter_signals(self):
         """Connect scatter control signals to config updates."""
         self.scatter_control.point_density_value.valueChanged.connect(self._on_value_changed)
@@ -442,6 +460,7 @@ class TestConfigWidget(QWidget):
         "Ghost Imaging": "conventional",
         "Sweep Linear": "conventional",
         "Hadamard Linear": "conventional",
+        "Fourier Inverse": "conventional",
         "Conventional": "conventional",
         "Native": "conventional",
         "Pseudoinverse": "pseudoinverse",
@@ -470,6 +489,9 @@ class TestConfigWidget(QWidget):
                            "reconstruction_method_combo", None)
         if mask_type.startswith("hadamard"):
             return getattr(self.hadamard_control,
+                           "reconstruction_method_combo", None)
+        if mask_type == "fourier":
+            return getattr(self.fourier_control,
                            "reconstruction_method_combo", None)
         # cal_sal currently has no widget → no selector
         return None
@@ -521,6 +543,7 @@ class TestConfigWidget(QWidget):
             "hadamard_walsh_paley": 1,
             "sweep": 2,
             "cal_sal": 3,
+            "fourier": 4,
         }
         index = type_to_index.get(mask_type, 0)
         self.mask_control_stack.setCurrentIndex(index)
@@ -569,6 +592,7 @@ class TestConfigWidget(QWidget):
             self.scatter_control.set_img_size(img_size)
             self.hadamard_control.set_img_size(img_size)
             self.sweep_control.set_img_size(img_size)
+            self.fourier_control.set_img_size(img_size)
 
             # Update Hadamard slider range
             max_patterns = img_size * img_size
@@ -610,6 +634,11 @@ class TestConfigWidget(QWidget):
             # Sweep params - update table
             self._update_sweep_table(config.sweep_angles, config.sweep_bar_widths, config.sweep_strides)
 
+            # Fourier params
+            self.fourier_control.set_sampling_ratio(config.fourier_sampling_ratio)
+            self.fourier_control.set_phase_steps(config.fourier_phase_steps)
+            self.fourier_control.set_spectrum_ordering(config.fourier_spectrum_ordering)
+
             # Reconstruction method - set via scatter applicator
             # Mirror the saved reconstruction method onto each widget's combo.
             # Each family has its own native label: the first item of every
@@ -635,6 +664,7 @@ class TestConfigWidget(QWidget):
             _apply(self.scatter_control.select_applicator_scatter_list)
             _apply(getattr(self.sweep_control, "reconstruction_method_combo", None))
             _apply(getattr(self.hadamard_control, "reconstruction_method_combo", None))
+            _apply(getattr(self.fourier_control, "reconstruction_method_combo", None))
 
             # FISTA/TV parameters
             if config.reconstruction_method == "fista":
@@ -794,6 +824,14 @@ class TestConfigWidget(QWidget):
             self._config.hadamard_max_idx = self.hadamard_control.hadamard_slider.high_value
             self.logger.debug("[DEBUG]   -> hadamard: min=%s, max=%s",
                              self._config.hadamard_min_idx, self._config.hadamard_max_idx)
+        elif mask_type == "fourier":
+            self._config.fourier_sampling_ratio = self.fourier_control.get_sampling_ratio()
+            self._config.fourier_phase_steps = self.fourier_control.get_phase_steps()
+            self._config.fourier_spectrum_ordering = self.fourier_control.get_spectrum_ordering()
+            self.logger.debug("[DEBUG]   -> fourier: ratio=%s, phases=%s, ordering=%s",
+                             self._config.fourier_sampling_ratio,
+                             self._config.fourier_phase_steps,
+                             self._config.fourier_spectrum_ordering)
         elif mask_type == "sweep":
             try:
                 params = self.sweep_control.get_parameters()

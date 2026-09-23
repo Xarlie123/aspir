@@ -7,6 +7,7 @@ from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
+from simulation_engine._2_mask_gen.mask_fourier import MaskFourier
 
 # Import applicators
 from simulation_engine._3_applicator.applicator_scatter import ApplicatorScatter
@@ -15,6 +16,7 @@ from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
 from simulation_engine._3_applicator.applicator_tv_norm import ApplicatorTV
 from simulation_engine._3_applicator.applicator_sweep import ApplicatorSweep
 from simulation_engine._3_applicator.applicator_hadamard import ApplicatorHadamard
+from simulation_engine._3_applicator.applicator_fourier import ApplicatorFourier
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 
@@ -42,8 +44,9 @@ class Simulation:
 
     # Canonical reconstruction-method keys accepted by set_applicator.
     # "native" delegates to the mask's natural reconstruction (Ghost Imaging,
-    # Sweep Linear, Hadamard Linear). The rest are mask-agnostic iterative
-    # solvers that reuse the sensing matrix ``mask.masks``.
+    # Sweep Linear, Hadamard Linear, Fourier Inverse). The rest are
+    # mask-agnostic iterative solvers that reuse the sensing matrix
+    # ``mask.masks``.
     _RECON_METHOD_ALIASES = {
         # Canonical
         "native": "native",
@@ -58,6 +61,9 @@ class Simulation:
         "ghost_imaging": "native",
         "sweep linear": "native",
         "hadamard linear": "native",
+        "fourier": "native",
+        "fourier inverse": "native",
+        "fourier_inverse": "native",
         "pinv": "pseudoinverse",
         "tv-norm": "tv_norm",
         "tv norm": "tv_norm",
@@ -97,9 +103,9 @@ class Simulation:
         """
         Instantiate the applicator implementing ``reconstruction_method`` over
         the current mask. ``"native"`` picks the mask-specific algorithm
-        (Ghost Imaging, Sweep Linear or Hadamard Linear); the iterative
-        solvers work with any mask whose sensing matrix is exposed via
-        ``mask.masks``.
+        (Ghost Imaging, Sweep Linear, Hadamard Linear or Fourier Inverse);
+        the iterative solvers work with any mask whose sensing matrix is
+        exposed via ``mask.masks``.
         """
         if self.mask is None or self.dataset is None:
             raise RuntimeError("Dataset and mask must be defined.")
@@ -123,6 +129,8 @@ class Simulation:
                 self.applicator = ApplicatorScatter(self.dataset, self.mask)
             elif isinstance(self.mask, MaskSweep):
                 self.applicator = ApplicatorSweep(self.dataset, self.mask)
+            elif isinstance(self.mask, MaskFourier):
+                self.applicator = ApplicatorFourier(self.dataset, self.mask)
             elif isinstance(self.mask, (
                 MaskHadamard,
                 MaskHadamardCakeCutting,

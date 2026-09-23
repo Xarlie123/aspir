@@ -47,6 +47,12 @@ class TestConfiguration:
     hadamard_min_idx: int = 0
     hadamard_max_idx: int = 1024  # Will be clamped to img_size²
 
+    # Fourier (FSPI) parameters. sampling_ratio is M/N, i.e. patterns over
+    # pixels; each coefficient costs fourier_phase_steps patterns.
+    fourier_sampling_ratio: float = 0.25
+    fourier_phase_steps: int = 4           # 4 = four-step, 3 = three-step
+    fourier_spectrum_ordering: str = "circular"   # or "square"
+
     # Sweep-specific parameters
     sweep_bar_widths: List[int] = field(default_factory=lambda: [2, 2, 2, 2])
     sweep_strides: List[int] = field(default_factory=lambda: [4, 4, 4, 4])
@@ -116,6 +122,10 @@ class TestConfiguration:
             # Hadamard params
             "hadamard_min_idx": self.hadamard_min_idx,
             "hadamard_max_idx": self.hadamard_max_idx,
+            # Fourier params
+            "fourier_sampling_ratio": self.fourier_sampling_ratio,
+            "fourier_phase_steps": self.fourier_phase_steps,
+            "fourier_spectrum_ordering": self.fourier_spectrum_ordering,
             # Sweep params
             "sweep_bar_widths": self.sweep_bar_widths.copy(),
             "sweep_strides": self.sweep_strides.copy(),
@@ -162,6 +172,10 @@ class TestConfiguration:
             # Hadamard
             hadamard_min_idx=data.get("hadamard_min_idx", 0),
             hadamard_max_idx=data.get("hadamard_max_idx", 1024),
+            # Fourier
+            fourier_sampling_ratio=data.get("fourier_sampling_ratio", 0.25),
+            fourier_phase_steps=data.get("fourier_phase_steps", 4),
+            fourier_spectrum_ordering=data.get("fourier_spectrum_ordering", "circular"),
             # Sweep - support both new list format and legacy single-value format
             sweep_bar_widths=data.get("sweep_bar_widths",
                                       [data["sweep_bar_width"]] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))
@@ -235,7 +249,8 @@ class BatchTestConfig:
         "hadamard_cake_cutting",
         "hadamard_walsh_paley",
         "sweep",
-        "cal_sal"
+        "cal_sal",
+        "fourier"
     ]
     RECONSTRUCTION_METHODS = ["conventional", "pseudoinverse", "fista", "tv_norm"]
     MODEL_NAMES = ["autoencoder", "dncnn", "u-net", "u-net-residual", "u-net-residual-attention",

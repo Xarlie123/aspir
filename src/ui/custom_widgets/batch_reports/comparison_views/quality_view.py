@@ -591,6 +591,13 @@ class QualityView(QWidget):
             hi = test.get("hadamard_max_idx")
             if lo is not None and hi is not None:
                 return max(0, int(hi) - int(lo))
+        if mask_type == "fourier":
+            # M = coefficients x phase steps, rounded to whole phase groups.
+            ratio = test.get("fourier_sampling_ratio")
+            steps = int(test.get("fourier_phase_steps") or 4)
+            n_pix = self._n_pixels_for_test(test)
+            if ratio is not None and n_pix:
+                return round(float(ratio) * n_pix / steps) * steps
         return None
 
     def _table_rows(self) -> List[Dict[str, Any]]:

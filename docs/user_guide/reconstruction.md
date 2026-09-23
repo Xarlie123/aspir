@@ -13,6 +13,7 @@ sensing matrix.
 | Sweep       | Sweep Linear      | Pseudoinverse, FISTA, TV-Norm        |
 | Hadamard *  | Hadamard Linear   | Pseudoinverse, FISTA, TV-Norm        |
 | Cal-Sal     | Hadamard Linear   | Pseudoinverse, FISTA, TV-Norm        |
+| Fourier     | Fourier Inverse   | Pseudoinverse, FISTA, TV-Norm        |
 
 \* applies to Natural, Cake-Cutting and Walsh-Paley variants.
 
@@ -56,6 +57,43 @@ $$
 **Characteristics**:
 - Default for **Hadamard** and **Cal-Sal** masks
 - Exact reconstruction when all Hadamard patterns are used
+
+### Fourier Inverse
+
+Phase-shifting demodulation followed by an inverse FFT — the reconstruction
+side of Fourier Single-Pixel Imaging (FSPI).
+
+Each spectrum coefficient is illuminated with `phase_steps` sinusoidal
+patterns, and the bucket values $D_\phi$ are demodulated into one complex
+coefficient:
+
+$$
+\tilde{F} = (D_0 - D_\pi) + j\,(D_{\pi/2} - D_{3\pi/2})
+\qquad \text{(four-step)}
+$$
+
+$$
+\tilde{F} = (2 D_0 - D_{2\pi/3} - D_{4\pi/3})
+           + j\sqrt{3}\,(D_{2\pi/3} - D_{4\pi/3})
+\qquad \text{(three-step)}
+$$
+
+ASPIR divides these by $2b$ and $3b$ respectively ($b = 0.5$ is the pattern
+amplitude), so the recovered value equals `numpy.fft.fft2(image)[u, v]`
+exactly. The conjugate-symmetric half of the spectrum is filled by
+conjugation, unsampled entries stay at zero, and the image is the real part
+of `numpy.fft.ifft2`.
+
+**Characteristics**:
+- Default for **Fourier** masks
+- Non-iterative and cheap: one FFT per image regardless of the pattern count
+- Exact (unit scale, zero offset) when the whole half-plane is acquired
+- The phase-shift subtraction is itself the differential measurement, so the
+  $a$ offset of the patterns — and with it the detector's DC drift —
+  cancels without needing complementary $P^+/P^-$ projections
+
+**References**: Zhang, Ma & Zhong, *Nat. Commun.* **6**, 6225 (2015);
+Zhang et al., *Sci. Rep.* **7**, 12029 (2017).
 
 ### Pseudoinverse
 
@@ -116,6 +154,7 @@ $$
 | Ghost Imaging   | ★★★★★    | ★★☆☆☆       | ★★☆☆☆            |
 | Sweep Linear    | ★★★★★    | ★★☆☆☆       | ★★☆☆☆            |
 | Hadamard Linear | ★★★★★    | ★★★☆☆       | ★★★☆☆            |
+| Fourier Inverse | ★★★★★    | ★★★★☆       | ★★★☆☆            |
 | Pseudoinverse   | ★★★★☆    | ★★☆☆☆       | ★★☆☆☆            |
 | FISTA           | ★★☆☆☆    | ★★★★★       | ★★★★☆            |
 | TV-Norm         | ★★☆☆☆    | ★★★★☆       | ★★★★★            |
@@ -124,6 +163,9 @@ $$
 
 - **Ghost Imaging / Sweep Linear / Hadamard Linear**: native algorithm for
   each mask — quick previews and the fastest path to a reconstruction.
+- **Fourier Inverse**: native algorithm for Fourier masks; strongest at low
+  sampling ratios, where the low-frequency-first ordering concentrates the
+  measurement budget on the coefficients that carry most of the image energy.
 - **Pseudoinverse**: full sampling with low noise; works on every mask.
 - **FISTA**: compressive sensing with sparse signals.
 - **TV-Norm**: natural images with edges, noisy measurements.

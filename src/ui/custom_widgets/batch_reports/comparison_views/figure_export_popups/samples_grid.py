@@ -535,6 +535,12 @@ class SamplesGridPopup(BaseFigureExportPopup):
                 hi = test.get("hadamard_max_idx")
                 if lo is not None and hi is not None:
                     n_patterns = max(0, int(hi) - int(lo))
+            elif mask_type == "fourier":
+                # M = coefficients x phase steps, rounded to whole phase groups.
+                ratio = test.get("fourier_sampling_ratio")
+                steps = int(test.get("fourier_phase_steps") or 4)
+                if ratio is not None and n_pixels:
+                    n_patterns = round(float(ratio) * n_pixels / steps) * steps
 
         if not n_pixels or not n_patterns:
             return None

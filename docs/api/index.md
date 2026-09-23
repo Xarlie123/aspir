@@ -25,7 +25,8 @@ sim = Simulation(logger)
 sim.set_dataset(dataset)
 # reconstruction_method: "native" (default), "pseudoinverse", "fista" or
 # "tv_norm". "native" picks the mask-specific algorithm — Ghost Imaging
-# (Scatter), Sweep Linear (Sweep) or Hadamard Linear (Hadamard / Cal-Sal).
+# (Scatter), Sweep Linear (Sweep), Hadamard Linear (Hadamard / Cal-Sal) or
+# Fourier Inverse (Fourier).
 sim.set_mask(mask, reconstruction_method='fista')
 sim.set_postprocessor(
     dataset, mask, applicator,

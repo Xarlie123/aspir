@@ -15,6 +15,7 @@ from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
 from ui.custom_widgets.mask_control.scatter_control.scatter_control_widget import ScatterControlWidget
 from ui.custom_widgets.mask_control.hadamard_control.hadamard_control_widget import HadamardControlWidget
+from ui.custom_widgets.mask_control.fourier_control.fourier_control_widget import FourierControlWidget
 from ui._2_masks.mask_worker import MaskWorker
 from ui.custom_widgets.visualizers.visual_mask.visual_mask_widget import VisualMaskWidget
 # from ui.utils.widget_helpers import embed_widget  # No longer needed
@@ -46,6 +47,7 @@ class UIMaskHandler(QObject):
         self._setup_sweep_control()
         self._setup_scatter_control()
         self._setup_hadamard_controls()
+        self._setup_fourier_control()
 
         # Create mask preview widget (before menu interface setup)
         self.visual_widget = VisualMaskWidget(parent=None, logger=self.logger)
@@ -80,7 +82,8 @@ class UIMaskHandler(QObject):
             "Hadamard (Natural)",
             "Hadamard (Cake Cutting)",
             "Hadamard (Walsh-Paley)",
-            "Cal/Sal"
+            "Cal/Sal",
+            "Fourier"
         ])
         self.masks_menu.setCurrentRow(0)
         self.masks_menu.currentRowChanged.connect(self._on_menu_selection_changed)
@@ -161,6 +164,10 @@ class UIMaskHandler(QObject):
             page = create_page(title, hadamard_ctrl)
             self.masks_stacked.addWidget(page)
             self.logger.debug("Added page %d: %s", idx + 2, title)
+
+        page6 = create_page("Fourier (FSPI)", self.fourier_control)
+        self.masks_stacked.addWidget(page6)
+        self.logger.debug("Added page 6: Fourier")
 
         # Embed menu into placeholder
         self.logger.debug("Embedding menu into masks_menu_placeholder")
@@ -252,6 +259,12 @@ class UIMaskHandler(QObject):
             self.hadamard_controls.append(w)
             self.logger.debug("%s created", mask_cls.__name__)
 
+    def _setup_fourier_control(self):
+        self.logger.debug("Configuring FourierControlWidget")
+        self.fourier_control = FourierControlWidget(parent=None, logger=self.logger)
+        self.fourier_control.maskReady.connect(self.create_mask)
+        self.logger.debug("FourierControlWidget created and signal maskReady connected")
+
     def create_mask(self, mask_obj):
         """Manages mask creation and worker for selected mask."""
         self.logger.info("Mask creation requested: %s", type(mask_obj).__name__)
@@ -320,6 +333,7 @@ class UIMaskHandler(QObject):
             ctrl.number_patterns_max_hadamard_value.setText(str(max_pat))
             # Use set_range to properly update slider and emit signals
             ctrl.hadamard_slider.set_range(0, max_pat)
+        self.fourier_control.set_img_size(img_size)
         self.logger.debug("Controls updated for img_size=%d", img_size)
 
     def get_content_widget(self):

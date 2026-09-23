@@ -27,6 +27,7 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
         'ApplicatorTV': 'TV-norm',
         'ApplicatorSweep': 'Sweep Linear',
         'ApplicatorHadamard': 'Hadamard Linear',
+        'ApplicatorFourier': 'Fourier Inverse',
         # Legacy class names kept so old saved experiments still render.
         'ApplicatorScatterPseudoinverse': 'Pseudoinverse',
         'ApplicatorScatterFISTA': 'FISTA',
