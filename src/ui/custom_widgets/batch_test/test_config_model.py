@@ -52,6 +52,9 @@ class TestConfiguration:
     fourier_sampling_ratio: float = 0.25
     fourier_phase_steps: int = 4           # 4 = four-step, 3 = three-step
     fourier_spectrum_ordering: str = "circular"   # or "square"
+    # Binary illumination for DMD projection: "none", "floyd_steinberg", "bayer".
+    fourier_binarization: str = "none"
+    fourier_dmd_upsampling: int = 1
 
     # Sweep-specific parameters
     sweep_bar_widths: List[int] = field(default_factory=lambda: [2, 2, 2, 2])
@@ -126,6 +129,8 @@ class TestConfiguration:
             "fourier_sampling_ratio": self.fourier_sampling_ratio,
             "fourier_phase_steps": self.fourier_phase_steps,
             "fourier_spectrum_ordering": self.fourier_spectrum_ordering,
+            "fourier_binarization": self.fourier_binarization,
+            "fourier_dmd_upsampling": self.fourier_dmd_upsampling,
             # Sweep params
             "sweep_bar_widths": self.sweep_bar_widths.copy(),
             "sweep_strides": self.sweep_strides.copy(),
@@ -176,6 +181,8 @@ class TestConfiguration:
             fourier_sampling_ratio=data.get("fourier_sampling_ratio", 0.25),
             fourier_phase_steps=data.get("fourier_phase_steps", 4),
             fourier_spectrum_ordering=data.get("fourier_spectrum_ordering", "circular"),
+            fourier_binarization=data.get("fourier_binarization", "none"),
+            fourier_dmd_upsampling=data.get("fourier_dmd_upsampling", 1),
             # Sweep - support both new list format and legacy single-value format
             sweep_bar_widths=data.get("sweep_bar_widths",
                                       [data["sweep_bar_width"]] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))

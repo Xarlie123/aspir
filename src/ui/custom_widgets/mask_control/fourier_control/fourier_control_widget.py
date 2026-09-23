@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSizePolicy,
+    QSpinBox,
     QVBoxLayout,
 )
 
@@ -22,6 +23,12 @@ RECON_METHOD_CHOICES = ("Fourier Inverse", "Pseudoinverse", "FISTA", "TV-norm")
 
 PHASE_STEP_CHOICES = (("4 (four-step)", 4), ("3 (three-step)", 3))
 ORDERING_CHOICES = (("Circular (radial)", "circular"), ("Square (low-pass block)", "square"))
+
+BINARIZATION_CHOICES = (
+    ("Grayscale", "none"),
+    ("Binary - Floyd-Steinberg", "floyd_steinberg"),
+    ("Binary - Bayer", "bayer"),
+)
 
 
 class FourierControlWidget(QtWidgets.QWidget):
@@ -112,6 +119,45 @@ class FourierControlWidget(QtWidgets.QWidget):
         order_row.addStretch()
         self.main_layout.addLayout(order_row)
 
+        # --- DMD illumination -------------------------------------------------
+        binar_row = QHBoxLayout()
+        binar_row.setSpacing(10)
+        binar_label = QLabel("DMD illumination:")
+        binar_label.setStyleSheet("font-size: 11px;")
+        binar_row.addWidget(binar_label)
+        self.binarization_combo = QComboBox()
+        for text, _ in BINARIZATION_CHOICES:
+            self.binarization_combo.addItem(text)
+        self.binarization_combo.setToolTip(
+            "Grayscale patterns need pulse-width modulation on a DMD, which is\n"
+            "roughly two orders of magnitude slower than binary switching.\n"
+            "Dithering trades pattern fidelity for that frame rate:\n"
+            "Floyd-Steinberg diffuses the error and keeps the local mean;\n"
+            "Bayer is an ordered dither, far faster to generate but with\n"
+            "structured artefacts that need upsampling to push out of band."
+        )
+        self.binarization_combo.currentIndexChanged.connect(self._on_binarization_changed)
+        binar_row.addWidget(self.binarization_combo)
+        up_label = QLabel("upsampling:")
+        up_label.setStyleSheet("font-size: 11px;")
+        binar_row.addWidget(up_label)
+        self.dmd_upsampling_spinbox = QSpinBox()
+        self.dmd_upsampling_spinbox.setRange(1, 8)
+        self.dmd_upsampling_spinbox.setValue(1)
+        self.dmd_upsampling_spinbox.setPrefix("x ")
+        self.dmd_upsampling_spinbox.setFixedWidth(70)
+        self.dmd_upsampling_spinbox.setEnabled(False)
+        self.dmd_upsampling_spinbox.setToolTip(
+            "Mirror-grid magnification U used before dithering. The scene is\n"
+            "still modelled at the image size, so each pixel integrates the\n"
+            "U x U mirrors covering it and recovers U^2 + 1 grey levels.\n"
+            "Generation cost grows as U^2 with Floyd-Steinberg."
+        )
+        self.dmd_upsampling_spinbox.valueChanged.connect(self._update_count_label)
+        binar_row.addWidget(self.dmd_upsampling_spinbox)
+        binar_row.addStretch()
+        self.main_layout.addLayout(binar_row)
+
         # --- live pattern budget --------------------------------------------
         self.selected_count_label = QLabel("(patterns: -)")
         self.selected_count_label.setStyleSheet("font-size: 11px; color: #666;")
@@ -171,12 +217,34 @@ class FourierControlWidget(QtWidgets.QWidget):
                 self.spectrum_ordering_combo.setCurrentIndex(idx)
                 return
 
+    def get_binarization(self) -> str:
+        return BINARIZATION_CHOICES[self.binarization_combo.currentIndex()][1]
+
+    def set_binarization(self, value: str):
+        for idx, (_, key) in enumerate(BINARIZATION_CHOICES):
+            if key == str(value).lower():
+                self.binarization_combo.setCurrentIndex(idx)
+                return
+
+    def get_dmd_upsampling(self) -> int:
+        return int(self.dmd_upsampling_spinbox.value())
+
+    def set_dmd_upsampling(self, value: int):
+        self.dmd_upsampling_spinbox.setValue(int(value))
+
     def get_parameters(self) -> dict:
         return {
             "sampling_ratio": self.get_sampling_ratio(),
             "phase_steps": self.get_phase_steps(),
             "spectrum_ordering": self.get_spectrum_ordering(),
+            "binarization": self.get_binarization(),
+            "dmd_upsampling": self.get_dmd_upsampling(),
         }
+
+    def _on_binarization_changed(self, *_):
+        """Upsampling only applies when the patterns are actually dithered."""
+        self.dmd_upsampling_spinbox.setEnabled(self.get_binarization() != "none")
+        self._update_count_label()
 
     def get_reconstruction_method(self) -> str:
         return self.reconstruction_method_combo.currentText()
@@ -197,13 +265,18 @@ class FourierControlWidget(QtWidgets.QWidget):
             sampling_ratio=self.get_sampling_ratio(),
             phase_steps=self.get_phase_steps(),
             spectrum_ordering=self.get_spectrum_ordering(),
+            binarization=self.get_binarization(),
+            dmd_upsampling=self.get_dmd_upsampling(),
             logger=self.logger,
         )
         n_coeff, n_patterns = probe._resolve_counts()
-        self.selected_count_label.setText(
-            f"({n_patterns} patterns = {n_coeff} coefficients x {probe.phase_steps} phases, "
-            f"effective M/N = {probe.effective_sampling_ratio * 100:.1f} %)"
-        )
+        text = (f"({n_patterns} patterns = {n_coeff} coefficients x {probe.phase_steps} phases, "
+                f"effective M/N = {probe.effective_sampling_ratio * 100:.1f} %")
+        if probe.binarization != "none":
+            u = probe.dmd_upsampling
+            text += (f"; binary {u * self._img_size}x{u * self._img_size} DMD frames, "
+                     f"{u * u + 1} grey levels")
+        self.selected_count_label.setText(text + ")")
 
     def set_img_size(self, img_size: int):
         """Set the image size for mask instantiation."""
@@ -224,6 +297,8 @@ class FourierControlWidget(QtWidgets.QWidget):
                 sampling_ratio=self.get_sampling_ratio(),
                 phase_steps=self.get_phase_steps(),
                 spectrum_ordering=self.get_spectrum_ordering(),
+                binarization=self.get_binarization(),
+                dmd_upsampling=self.get_dmd_upsampling(),
                 logger=self.logger,
             )
             mask_obj.applicator_type_scatter = self.get_reconstruction_method()

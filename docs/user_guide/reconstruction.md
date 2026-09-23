@@ -91,6 +91,9 @@ of `numpy.fft.ifft2`.
 - The phase-shift subtraction is itself the differential measurement, so the
   $a$ offset of the patterns — and with it the detector's DC drift —
   cancels without needing complementary $P^+/P^-$ projections
+- Unchanged for binary FSPI: dithered patterns keep the local mean of the
+  sinusoid, so the same demodulation applies to DMD-projectable binary
+  illumination (see {doc}`masks`)
 
 **References**: Zhang, Ma & Zhong, *Nat. Commun.* **6**, 6225 (2015);
 Zhang et al., *Sci. Rep.* **7**, 12029 (2017).

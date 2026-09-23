@@ -79,6 +79,8 @@ def create_mask(config: TestConfiguration, dataset, logger):
             sampling_ratio=config.fourier_sampling_ratio,
             phase_steps=config.fourier_phase_steps,
             spectrum_ordering=config.fourier_spectrum_ordering,
+            binarization=config.fourier_binarization,
+            dmd_upsampling=config.fourier_dmd_upsampling,
             logger=logger
         )
     else:

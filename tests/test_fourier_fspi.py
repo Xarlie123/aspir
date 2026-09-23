@@ -123,10 +123,117 @@ def test_mask_agnostic_solvers_accept_fourier_masks():
     print("  pseudoinverse, FISTA and TV all produced finite images")
 
 
+def test_dmd_frames_are_binary_and_upsampled():
+    """The frame sent to the DMD is strictly two-level at U x the image size."""
+    size = 32
+    for mode in ("floyd_steinberg", "bayer"):
+        for upsampling in (1, 2, 3):
+            mask = MaskFourier(img_size=size, sampling_ratio=0.02, phase_steps=4,
+                               binarization=mode, dmd_upsampling=upsampling)
+            mask.generate_masks()
+            frame = mask.dmd_pattern(len(mask.masks) // 2)
+            assert frame.shape == (size * upsampling, size * upsampling), frame.shape
+            assert set(np.unique(frame)).issubset({0, 1}), np.unique(frame)
+            # The effective pattern the scene integrates has U**2 + 1 levels.
+            levels = np.unique(np.round(mask.masks, 6))
+            assert len(levels) <= upsampling ** 2 + 1, len(levels)
+            assert levels.min() >= 0.0 and levels.max() <= 1.0
+    print("  binary frames, correct shape, and <= U^2+1 effective levels")
+
+
+def test_grayscale_masks_have_no_dmd_frame():
+    """Asking a grayscale mask for a DMD frame is an error, not a silent guess."""
+    mask = MaskFourier(img_size=32, sampling_ratio=0.02)
+    mask.generate_masks()
+    try:
+        mask.dmd_pattern(0)
+    except ValueError:
+        print("  grayscale mask rejects dmd_pattern() as expected")
+    else:
+        raise AssertionError("dmd_pattern() should raise for binarization='none'")
+
+
+def test_dither_preserves_the_pattern_mean():
+    """Error diffusion keeps the local mean, which keeps demodulation unbiased."""
+    size = 32
+    mask = MaskFourier(img_size=size, sampling_ratio=0.05, phase_steps=4,
+                       binarization="floyd_steinberg", dmd_upsampling=2)
+    mask.generate_masks()
+    yy, xx = np.meshgrid(np.arange(size), np.arange(size))
+    for i in range(0, len(mask.masks), 4):
+        u, v = (int(t) for t in mask.freq_indices[i])
+        f_u = u if u <= size // 2 else u - size
+        f_v = v if v <= size // 2 else v - size
+        ideal = 0.5 + 0.5 * np.cos(2 * np.pi * (f_u * xx + f_v * yy) / size + mask.phases[i])
+        assert abs(mask.masks[i].mean() - ideal.mean()) < 0.01, (
+            f"(u,v)=({u},{v}): mean {mask.masks[i].mean():.4f} vs {ideal.mean():.4f}"
+        )
+    print("  dithered patterns match the ideal mean within 0.01")
+
+
+def test_negative_frequencies_render_the_signed_fringe():
+    """Regression: FFT indices must be folded to signed frequencies on the mirror grid.
+
+    On the integer pixel grid v = W-1 and v = -1 describe the same pattern, but
+    on a finer mirror grid they do not. Rendering the raw index produced a
+    near-Nyquist grating instead of the intended low-frequency fringe; block
+    averaging it returned almost nothing, and those coefficients came back at
+    ~3 % of their true value. Checked on the pattern itself so the assertion
+    does not depend on any image.
+    """
+    size = 32
+    mask = MaskFourier(img_size=size, sampling_ratio=0.05, phase_steps=4,
+                       binarization="floyd_steinberg", dmd_upsampling=3)
+    yy, xx = np.meshgrid(np.arange(size), np.arange(size))
+
+    for u, v in [(1, size - 1), (2, size - 2), (1, size - 3), (3, size - 1), (1, 1)]:
+        effective = mask._effective_from_binary(mask._dmd_frame(u, v, 0.0))
+        f_u = u if u <= size // 2 else u - size
+        f_v = v if v <= size // 2 else v - size
+        ideal = 0.5 + 0.5 * np.cos(2 * np.pi * (f_u * xx + f_v * yy) / size)
+
+        a = effective - effective.mean()
+        b = ideal - ideal.mean()
+        corr = float(np.sum(a * b) / np.sqrt(np.sum(a ** 2) * np.sum(b ** 2)))
+        assert corr > 0.9, f"(u,v)=({u},{v}) renders at correlation {corr:.3f}"
+    print("  signed fringes render at correlation > 0.9, negative indices included")
+
+
+def test_binary_fspi_reconstructs_close_to_grayscale():
+    """Dithering costs quality but must not break the reconstruction."""
+    size = 32
+    image = _random_image(size=size, seed=8)
+    # Smooth the noise so the low-frequency budget can actually represent it.
+    kernel = np.outer(*(np.hanning(9),) * 2)
+    kernel /= kernel.sum()
+    padded = np.pad(image, 4, mode="wrap")
+    image = np.array([[np.sum(padded[y:y + 9, x:x + 9] * kernel)
+                       for x in range(size)] for y in range(size)])
+    dataset = _Dataset([image])
+
+    psnrs = {}
+    for mode, upsampling in (("none", 1), ("floyd_steinberg", 1), ("bayer", 2)):
+        mask = MaskFourier(img_size=size, sampling_ratio=0.2, phase_steps=4,
+                           binarization=mode, dmd_upsampling=upsampling)
+        mask.generate_masks()
+        recon = ApplicatorFourier(dataset, mask).process_image(0)
+        recon = (recon - recon.min()) / (recon.max() - recon.min() + 1e-12)
+        ref = (image - image.min()) / (image.max() - image.min() + 1e-12)
+        psnrs[mode] = _psnr(ref, recon)
+
+    for mode in ("floyd_steinberg", "bayer"):
+        assert psnrs[mode] > 15.0, f"{mode}: {psnrs[mode]:.2f} dB"
+        assert psnrs[mode] > psnrs["none"] - 12.0, (
+            f"{mode} {psnrs[mode]:.2f} dB is far below grayscale {psnrs['none']:.2f} dB"
+        )
+    print("  " + ", ".join(f"{k}={v:.1f} dB" for k, v in psnrs.items()))
+
+
 def test_npz_round_trip_preserves_patterns_and_metadata():
     """save_masks / load_masks keep the patterns and the FSPI metadata."""
     mask = MaskFourier(img_size=32, sampling_ratio=0.2, phase_steps=3,
-                       spectrum_ordering="square")
+                       spectrum_ordering="square", binarization="bayer",
+                       dmd_upsampling=2)
     mask.generate_masks()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -143,6 +250,8 @@ def test_npz_round_trip_preserves_patterns_and_metadata():
         assert loaded.num_patterns == mask.num_patterns
         assert loaded.phase_steps == 3
         assert loaded.spectrum_ordering == "square"
+        assert loaded.binarization == "bayer"
+        assert loaded.dmd_upsampling == 2
         assert abs(loaded.sampling_ratio - 0.2) < 1e-12
 
         # The reloaded mask must still reconstruct through the native path.

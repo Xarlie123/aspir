@@ -36,6 +36,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - References: Zhang, Ma & Zhong, *Nat. Commun.* **6**, 6225 (2015) for the
     four-step scheme; Zhang et al., *Sci. Rep.* **7**, 12029 (2017) for the
     three-step variant.
+- **Binary FSPI with dithering for DMD projection.** `MaskFourier` gains
+  `binarization` (`"none"` default, `"floyd_steinberg"`, `"bayer"`) and
+  `dmd_upsampling` (U, default 1). A DMD switches binary frames about two
+  orders of magnitude faster than it renders grayscale by pulse-width
+  modulation, so dithering trades pattern fidelity for frame rate. With U > 1
+  the sinusoid is rendered on a `U*H x U*W` mirror grid before dithering; the
+  scene is still modelled at the image size, so each pixel integrates the
+  `U x U` mirrors covering it and recovers `U**2 + 1` effective levels.
+  `mask.masks` always holds that effective pattern, so every reconstruction
+  algorithm works unchanged, and `mask.dmd_pattern(index)` recomputes the
+  binary frame on demand rather than keeping a full binary stack in memory.
+  On 20 CelebA images at 64x64 and M/N = 0.16 the cost against grayscale
+  patterns is about 0.5 dB. Reference: Zhang et al., *Sci. Rep.* **7**, 12029
+  (2017).
 - **First automated tests in the repository.** `tests/test_fourier_fspi.py`
   covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
   fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers

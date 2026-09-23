@@ -79,14 +79,46 @@ free.
     patterns per coefficient, slightly noisier)
   - **Spectrum ordering**: Circular (radial rings from DC, default) or Square
     (growing square low-pass blocks); both are low-frequency first
+  - **DMD illumination**: Grayscale (default), Binary - Floyd-Steinberg, or
+    Binary - Bayer
+  - **DMD upsampling**: mirror-grid magnification U used before dithering
+    (1-8, only active when the patterns are binarised)
   - **Reconstruction method**: Fourier Inverse (native), Pseudoinverse,
     FISTA, or TV-Norm
 
 - **Pros**: best quality at low sampling ratios; reconstruction is a single
   inverse FFT; patterns are non-negative, so a DMD needs no bipolar trick
-- **Cons**: grayscale patterns (unless binarised by dithering); each
-  coefficient costs 3-4 projections, so at high ratios the orthogonal
-  Hadamard families overtake it
+- **Cons**: each coefficient costs 3-4 projections, so at high ratios the
+  orthogonal Hadamard families overtake it
+
+#### Binary illumination (binary FSPI)
+
+A DMD renders grayscale by pulse-width modulation, roughly two orders of
+magnitude slower than it switches binary frames. Dithering the sinusoids down
+to two levels buys back that frame rate at the cost of some pattern fidelity.
+
+**Upsampling** is what recovers the grey levels the dither gives up. With
+U > 1 the pattern is rendered on a `U*H x U*W` mirror grid before dithering;
+the scene is still modelled at the image size, so each pixel integrates the
+`U x U` mirrors covering it and ends up with `U² + 1` effective levels. ASPIR
+always stores that effective pattern in `mask.masks`, so every reconstruction
+algorithm works unchanged; the binary frame the DMD would project is
+recomputed on demand by `mask.dmd_pattern(index)`.
+
+- **Floyd-Steinberg** diffuses the quantisation error onto mirrors that have
+  not been decided yet. It preserves the local mean — which is what keeps the
+  demodulation unbiased — and pushes its noise to high spatial frequencies,
+  so it already performs well at U = 1. Generation is sequential and costs
+  roughly U² per pattern.
+- **Bayer** is an ordered dither: fully vectorised and far cheaper to
+  generate, but its artefacts are structured and land at lower frequencies,
+  so it needs U ≥ 2 to catch up.
+
+Measured on 20 CelebA images at 64 × 64 and M/N = 0.16, binarisation costs
+about 0.5 dB against grayscale patterns (22.2 dB grayscale; 21.8 dB
+Floyd-Steinberg at U = 1; 21.7 dB Bayer at U = 2).
+
+**Reference**: Zhang et al., *Sci. Rep.* **7**, 12029 (2017).
 
 **References**: Zhang, Ma & Zhong, *Nat. Commun.* **6**, 6225 (2015) —
 four-step; Zhang et al., *Sci. Rep.* **7**, 12029 (2017) — three-step and

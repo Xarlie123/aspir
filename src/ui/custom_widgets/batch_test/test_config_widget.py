@@ -419,6 +419,10 @@ class TestConfigWidget(QWidget):
         self.fourier_control.phase_steps_combo.currentIndexChanged.connect(self._on_value_changed)
         self.fourier_control.spectrum_ordering_combo.currentIndexChanged.connect(
             self._on_value_changed)
+        self.fourier_control.binarization_combo.currentIndexChanged.connect(
+            self._on_value_changed)
+        self.fourier_control.dmd_upsampling_spinbox.valueChanged.connect(
+            self._on_value_changed)
         self.fourier_control.reconstruction_method_combo.currentTextChanged.connect(
             self._on_applicator_changed)
 
@@ -638,6 +642,8 @@ class TestConfigWidget(QWidget):
             self.fourier_control.set_sampling_ratio(config.fourier_sampling_ratio)
             self.fourier_control.set_phase_steps(config.fourier_phase_steps)
             self.fourier_control.set_spectrum_ordering(config.fourier_spectrum_ordering)
+            self.fourier_control.set_binarization(config.fourier_binarization)
+            self.fourier_control.set_dmd_upsampling(config.fourier_dmd_upsampling)
 
             # Reconstruction method - set via scatter applicator
             # Mirror the saved reconstruction method onto each widget's combo.
@@ -828,10 +834,15 @@ class TestConfigWidget(QWidget):
             self._config.fourier_sampling_ratio = self.fourier_control.get_sampling_ratio()
             self._config.fourier_phase_steps = self.fourier_control.get_phase_steps()
             self._config.fourier_spectrum_ordering = self.fourier_control.get_spectrum_ordering()
-            self.logger.debug("[DEBUG]   -> fourier: ratio=%s, phases=%s, ordering=%s",
+            self._config.fourier_binarization = self.fourier_control.get_binarization()
+            self._config.fourier_dmd_upsampling = self.fourier_control.get_dmd_upsampling()
+            self.logger.debug("[DEBUG]   -> fourier: ratio=%s, phases=%s, ordering=%s, "
+                             "binarization=%s, upsampling=%s",
                              self._config.fourier_sampling_ratio,
                              self._config.fourier_phase_steps,
-                             self._config.fourier_spectrum_ordering)
+                             self._config.fourier_spectrum_ordering,
+                             self._config.fourier_binarization,
+                             self._config.fourier_dmd_upsampling)
         elif mask_type == "sweep":
             try:
                 params = self.sweep_control.get_parameters()
