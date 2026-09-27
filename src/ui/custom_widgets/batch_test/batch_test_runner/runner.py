@@ -977,7 +977,10 @@ class BatchTestRunner(QThread):
                 t_reconstruction_ms=results.get("timing_reconstruction_ms"),
             ))
         except Exception as e:
+            # Typically no readable energy counter for that device (e.g. RAPL
+            # is root-only until `chmod a+r`); say so in the report.
             self.logger.warning("Reconstruction energy analysis failed: %s", e)
+            results["energy_reconstruction_error"] = str(e)
 
     def _analyze_results(self, config: TestConfiguration, postprocessor: PostprocessorNN,
                          applicator=None) -> dict[str, Any]:

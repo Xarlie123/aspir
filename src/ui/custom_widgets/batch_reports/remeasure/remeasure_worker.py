@@ -38,7 +38,10 @@ from simulation_engine._5_analyzer.baseline_capture import (
     capture_idle_baseline,
     derive_dynamic_metrics,
 )
-from ui.custom_widgets.batch_test.batch_test_runner._energy import measure_energy
+from ui.custom_widgets.batch_test.batch_test_runner._energy import (
+    measure_energy,
+    measure_reconstruction_energy,
+)
 from ui.custom_widgets.batch_test.batch_test_runner._pipeline import create_applicator
 from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
@@ -475,6 +478,7 @@ class RemeasureWorker(QObject):
             _strip_old_metrics(updated, self.cfg.measure_timing, self.cfg.measure_energy)
             test_config = _make_test_config(test_entry, self.cfg)
 
+            applicator = None
             if self.cfg.measure_timing:
                 # Try to rebuild the dataset + applicator so measure_timing
                 # can populate acquisition + reconstruction times. Falls
@@ -534,6 +538,29 @@ class RemeasureWorker(QObject):
                 except Exception as exc:
                     self.logger.warning("Energy failed for '%s': %s", test_name, exc)
                     updated["energy_error"] = str(exc)
+
+                # Reconstruction-stage energy. _strip_old_metrics removed the
+                # original energy_reconstruction_* keys along with every other
+                # energy_* key, so they must be measured again here. Reusing the
+                # shared analyzer keeps one jtop connection on the Jetson; its
+                # GPU backend follows cfg.use_gpu, as does the reconstruction
+                # device (see _make_test_config).
+                if applicator is None:
+                    _, applicator = _build_remeasure_pipeline(
+                        test_entry, batch_dir, img_size, test_config, self.logger,
+                    )
+                if applicator is not None:
+                    try:
+                        updated.update(measure_reconstruction_energy(
+                            applicator, test_config, self.logger,
+                            image_indices=range(min(3, len(applicator.dataset.data))),
+                            analyzer=shared_analyzer,
+                            t_reconstruction_ms=updated.get("timing_reconstruction_ms"),
+                        ))
+                    except Exception as exc:
+                        self.logger.warning("Reconstruction energy failed for '%s': %s",
+                                            test_name, exc)
+                        updated["energy_reconstruction_error"] = str(exc)
 
                 # Derive dynamic-power columns from the just-measured
                 # energy plus the shared baseline. The helper keeps

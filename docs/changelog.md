@@ -97,6 +97,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the device the reconstruction ran on. Previously only NN inference energy
   was measured.
 
+### Fixed
+- **Re-measure timed TV tests with the wrong algorithm.** Batch reports store
+  the display name of the method (`"TV Norm"`), which the pipeline did not
+  recognise as `tv_norm`, so re-measure silently rebuilt the native linear
+  applicator. Timing and energy of re-measured TV tests produced by earlier
+  versions describe the linear method, not TV, and should be re-measured.
+- **Re-measure dropped the reconstruction energy.** It now measures it again
+  on the device of the pass. When no energy counter is readable for that
+  device (for example RAPL before `chmod a+r`), reports say so in
+  `energy_reconstruction_error` instead of omitting the field silently.
+
 ## [1.2.1] - 2026-09-14
 
 ### Added

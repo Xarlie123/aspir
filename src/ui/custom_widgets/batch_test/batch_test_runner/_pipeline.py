@@ -112,7 +112,10 @@ def create_applicator(config: TestConfiguration, mask, dataset):
     """
     mask.generate_masks()
 
-    method = (config.reconstruction_method or "").lower()
+    # Reports store the display name (RECONSTRUCTION_METHOD, e.g. "TV Norm")
+    # and re-measure feeds it back here, so fold spaces and hyphens: without
+    # this "tv norm" missed "tv_norm" and re-measure timed the native method.
+    method = (config.reconstruction_method or "").strip().lower().replace(" ", "_").replace("-", "_")
     opts = {"device": getattr(config, "reconstruction_device", "auto") or "auto"}
 
     if method == "pseudoinverse":
