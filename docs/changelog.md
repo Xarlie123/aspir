@@ -78,6 +78,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tests/test_gpu_reconstruction.py` checks parity with the legacy path, CUDA
     against CPU, FWHT against the explicit matrix for all four Hadamard
     orderings, and chunked against resident matrix products.
+- **Experimental measurements.** Real single-pixel data can be reconstructed
+  in ASPIR alongside simulated data (see *User Guide / Experimental Data*).
+  - `measured.py`: an `.npz` measurement format (bucket values, patterns,
+    acquisition order, optional reference and flat field, JSON metadata) and
+    `DatasetFromMeasurements`.
+  - `spihim.py`: an adapter for the open SPIHIM collection (OpenSpyrit,
+    CC-BY 4.0). It pairs positive / negative patterns, offers panchromatic,
+    band or single-bin reduction, drops saturated bins, applies the
+    orientation determined from the printed target, and supports an optional
+    flat field. `scripts/download_spihim.py` fetches the data with SHA-256
+    checks; the data are never committed.
+  - `ApplicatorABC.reconstruct(y)` reconstructs measured values with any of
+    the seven algorithms on CPU or CUDA; the simulated path runs the same
+    solver step. `MaskMeasured` holds read-only measured patterns.
+  - `simulation_engine/experimental.py` sub-samples a full Hadamard
+    acquisition in ASPIR's natural, Walsh-Paley, Cake-Cutting or Cal-Sal
+    order (or the instrument's own). It also scales measurements to a
+    unit-peak image so that the FISTA / TV defaults apply, and runs the
+    simulated counterpart on the same rows.
+  - Single Test gains an *Experimental measurements (file)* dataset source.
+    The mask step then shows the measured patterns read-only, Test Masks
+    reconstructs from the measured values, and Post-processing and Reports,
+    which need ground truth, are closed.
+  - `scripts/experimental_spihim_figure.py` reproduces the experimental
+    validation (figures, CSV / Markdown tables) with one command.
+    `scripts/train_stl10_unets.py` retrains the Use Case 2 U-Nets on STL-10
+    for comparison with the CelebA ones. Finally,
+    `tests/test_experimental_data.py` covers the adapter, exact noiseless
+    reconstruction, Cake-Cutting row selection and measured-vs-simulated
+    parity for all seven algorithms.
 - **First automated tests in the repository.** `tests/test_fourier_fspi.py`
   covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
   fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers

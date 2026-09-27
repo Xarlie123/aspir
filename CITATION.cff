@@ -76,6 +76,28 @@ keywords:
   - "Hadamard patterns"
   - "laser beam characterisation"
 
+# Third-party data used in ASPIR's experimental validation (CC-BY 4.0; its
+# licence requires this citation).
+references:
+  - type: article
+    title: "OpenSpyrit: an ecosystem for open single-pixel hyperspectral imaging"
+    authors:
+      - family-names: "Beneti Martins"
+        given-names: "Guilherme"
+      - family-names: "Mahieu-Williame"
+        given-names: "Laurent"
+      - family-names: "Baudier"
+        given-names: "Thomas"
+      - family-names: "Ducros"
+        given-names: "Nicolas"
+    journal: "Optics Express"
+    volume: 31
+    issue: "10"
+    start: 15599
+    year: 2023
+    doi: "10.1364/OE.483937"
+    notes: "SPIHIM experimental single-pixel data, licence CC-BY 4.0"
+
 # -----------------------------------------------------------------------------
 # Preferred citation — once the Intelligent Computing article is published,
 # uncomment this block and fill in the reference so that "Cite this

@@ -56,6 +56,7 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
         self._dataset = []     # list of np.ndarray
         self._masks = []       # list of np.ndarray
         self._applicator = None
+        self._measured_y = None  # (F, M) measured frames when the dataset is experimental
         self._img_idx = 0      # image index for which we will apply the mask
         self._data_format: str = None  # Data format for hover display
 
@@ -167,6 +168,11 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
         self._dataset = list(dataset.data) if getattr(dataset, 'data', None) is not None else []
         self._masks = list(mask.masks) if hasattr(mask, 'masks') and mask.masks is not None else []
         self._applicator = applicator
+        # Experimental datasets carry measured detector values: reconstruct
+        # from them instead of simulating the acquisition of dataset.data.
+        measurements = getattr(dataset, 'measurements', None)
+        self._measured_y = (measurements.y if getattr(dataset, 'is_experimental', False)
+                            and measurements is not None else None)
 
         # Get data format from dataset if available
         self._data_format = getattr(dataset, 'data_format', None)
@@ -242,10 +248,10 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
             base_img_idx = self._img_idx
             for i in range(count):
                 img_idx = base_img_idx + i
-                if img_idx >= len(self._dataset):
+                if img_idx >= self._n_items():
                     break
 
-                applied = self._applicator.apply_mask_range(0, mask_idx, img_idx)
+                applied = self._reconstruct(mask_idx, img_idx)
                 arr = self._normalize(applied)  # uint8 0–255, shape (h,w)
 
                 h, w = arr.shape
@@ -276,6 +282,16 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
             # Notify status manager that reconstruction is finished
             if self.status_manager:
                 self.status_manager.finish_task()
+
+    def _n_items(self) -> int:
+        """Images to browse: dataset images, or measured frames for experimental data."""
+        return len(self._measured_y) if self._measured_y is not None else len(self._dataset)
+
+    def _reconstruct(self, mask_idx: int, img_idx: int) -> np.ndarray:
+        """Reconstruction from masks ``[0, mask_idx)`` of image (or measured frame) ``img_idx``."""
+        if self._measured_y is not None:
+            return self._applicator.reconstruct(self._measured_y[img_idx], 0, mask_idx)
+        return self._applicator.apply_mask_range(0, mask_idx, img_idx)
 
     def update_info(self, applicator_name: str, dataset_type: str, num_masks: int, img_dim: int):
         """Updates info labels within the widget."""
@@ -328,7 +344,7 @@ class VisualApplicatorWidget(QtWidgets.QWidget):
 
         try:
             # Apply mask and get reconstruction at full resolution
-            applied = self._applicator.apply_mask_range(0, mask_idx, self._img_idx)
+            applied = self._reconstruct(mask_idx, self._img_idx)
             arr = self._normalize(applied)
 
             h, w = arr.shape

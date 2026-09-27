@@ -8,6 +8,7 @@ from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamar
 from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamardWalshPaley
 from simulation_engine._2_mask_gen.mask_cal_sal import MaskCalSal
 from simulation_engine._2_mask_gen.mask_fourier import MaskFourier
+from simulation_engine._2_mask_gen.mask_measured import MaskMeasured
 
 # Import applicators
 from simulation_engine._3_applicator.applicator_scatter import ApplicatorScatter
@@ -166,6 +167,9 @@ class Simulation:
                 MaskHadamardWalshPaley,
                 MaskCalSal,
             )):
+                self.applicator = ApplicatorHadamard(self.dataset, self.mask, device=device)
+            elif isinstance(self.mask, MaskMeasured) and self.mask.is_bipolar:
+                # Measured +-1 patterns (e.g. SPIHIM): Hadamard Linear, S^T y / M.
                 self.applicator = ApplicatorHadamard(self.dataset, self.mask, device=device)
             else:
                 raise ValueError(f"Unsupported mask: {cls_name}")

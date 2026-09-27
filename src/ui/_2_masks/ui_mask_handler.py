@@ -2,7 +2,8 @@
 import logging
 import numpy as np
 from PySide6.QtWidgets import (QMessageBox, QListWidget, QStackedWidget, QLabel,
-                               QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QFrame)
+                               QVBoxLayout, QWidget, QScrollArea, QSizePolicy, QFrame,
+                               QComboBox, QFormLayout)
 from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtGui import QFont
 
@@ -11,6 +12,7 @@ from simulation_engine._2_mask_gen.mask_hadamard_walsh_paley import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
+from simulation_engine._2_mask_gen.mask_measured import MaskMeasured
 
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
 from ui.custom_widgets.mask_control.scatter_control.scatter_control_widget import ScatterControlWidget
@@ -186,6 +188,10 @@ class UIMaskHandler(QObject):
         scroll_area.setFrameShape(QFrame.NoFrame)
         scroll_area.setWidget(self.masks_stacked)
         content_layout.addWidget(scroll_area)
+        self.masks_scroll_area = scroll_area
+
+        # Read-only panel shown instead of the generators for measured data
+        content_layout.addWidget(self._build_measured_panel())
 
         # Embed preview widget into masks_preview_placeholder
         self.logger.debug("Embedding preview widget into masks_preview_placeholder")
@@ -322,9 +328,67 @@ class UIMaskHandler(QObject):
             self.simulation.applicator
         )
 
+    # Reconstruction choices for measured patterns: (label, canonical method)
+    MEASURED_METHODS = (("Linear (native)", "native"), ("Pseudoinverse", "pseudoinverse"),
+                        ("FISTA", "fista"), ("TV-norm", "tv_norm"))
+
+    def _build_measured_panel(self):
+        panel = QWidget()
+        panel.setObjectName("contentPanel")
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.addWidget(QLabel("<h3>Measured patterns (read-only)</h3>"))
+        self.measured_info = QLabel("")
+        self.measured_info.setWordWrap(True)
+        layout.addWidget(self.measured_info)
+        form = QFormLayout()
+        self.measured_method = QComboBox()
+        for label, _ in self.MEASURED_METHODS:
+            self.measured_method.addItem(label)
+        self.measured_method.currentIndexChanged.connect(lambda _: self._apply_measured_patterns())
+        form.addRow("Reconstruction method:", self.measured_method)
+        layout.addLayout(form)
+        layout.addStretch()
+        panel.setVisible(False)
+        self.measured_panel = panel
+        return panel
+
+    def _set_measured_mode(self, on: bool):
+        """Swap the pattern generators for the read-only view of measured patterns."""
+        self.masks_menu.setEnabled(not on)
+        self.masks_scroll_area.setVisible(not on)
+        self.measured_panel.setVisible(on)
+        if on:
+            self._apply_measured_patterns()
+        elif isinstance(self.simulation.mask, MaskMeasured):
+            # Measured patterns do not apply to a simulated dataset.
+            self.simulation.mask = None
+            self.simulation.applicator = None
+
+    def _apply_measured_patterns(self):
+        ds = self.simulation.dataset
+        data = getattr(ds, 'measurements', None)
+        if not getattr(ds, 'is_experimental', False) or data is None:
+            return
+        mask = MaskMeasured(data.patterns, logger=self.logger)
+        method = self.MEASURED_METHODS[self.measured_method.currentIndex()][1]
+        if method == "native" and not mask.is_bipolar:
+            method = "pseudoinverse"
+        self.simulation.mask = mask
+        self.simulation.set_applicator(reconstruction_method=method)
+        meta = data.metadata
+        self.measured_info.setText(
+            f"{data.n_patterns} patterns of {data.img_size}x{data.img_size} from "
+            f"{meta.get('source_file', getattr(ds, 'path', ''))}, {data.n_frames} frame(s). "
+            f"Source: {meta.get('source', 'unknown')}"
+            + (f"; licence {meta['licence']}; cite {meta['citation']}" if meta.get('licence') else "")
+            + ". The acquisition is not simulated.")
+        self.mask_created.emit(ds, mask, self.simulation.applicator)
+
     def _on_dataset_changed(self, img_size: int):
         """Updates controls when dataset image size changes."""
         self.logger.debug("Dataset changed, new img_size=%d", img_size)
+        experimental = bool(getattr(self.simulation.dataset, 'is_experimental', False))
         self.sweep_control.set_img_size(img_size)
         self.scatter_control.set_img_size(img_size)
         max_pat = img_size * img_size
@@ -335,6 +399,7 @@ class UIMaskHandler(QObject):
             ctrl.hadamard_slider.set_range(0, max_pat)
         self.fourier_control.set_img_size(img_size)
         self.logger.debug("Controls updated for img_size=%d", img_size)
+        self._set_measured_mode(experimental)
 
     def get_content_widget(self):
         """Return the main container widget for stepper integration."""

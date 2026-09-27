@@ -80,6 +80,10 @@ log/*
 # Project-specific: Large data and results
 # Commit the datasets/ folder itself, but ignore downloaded data
 datasets/tmp_downloaded_datasets/
+# SPIHIM experimental data (scripts/download_spihim.py); never committed
+datasets/spihim/
+# STL-10 images for scripts/train_stl10_unets.py; never committed
+datasets/stl10/
 src/datasets/tmp_downloaded_datasets/
 *.mat
 *.zip

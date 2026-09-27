@@ -159,20 +159,63 @@ class ApplicatorABC(ABC):
         """Algorithm-specific reconstruction of measurements ``Y`` (B, M) -> (B, N)."""
         raise NotImplementedError
 
-    def _torch_reconstruct(self, idx_mask_min, idx_mask_max, indices):
-        """Simulate the detector and reconstruct ``indices``; returns (B, H, W) float64."""
-        self._ensure_patterns()
+    def _mask_range(self, idx_mask_min, idx_mask_max):
         n_total = self._num_patterns()
         idx_min = max(0, int(idx_mask_min))
         idx_max = n_total if idx_mask_max is None else min(int(idx_mask_max), n_total)
-        shape = (len(indices), self.img_size, self.img_size)
+        return idx_min, idx_max
+
+    def _solve_measurements(self, op, Y, key, n):
+        """Run the algorithm on bucket values ``Y`` (n, M); returns (n, H, W) float64."""
+        R = self._torch_solve(op, Y, key)
+        return R.detach().to("cpu").double().numpy().reshape(n, self.img_size, self.img_size)
+
+    def _torch_reconstruct(self, idx_mask_min, idx_mask_max, indices):
+        """Simulate the detector and reconstruct ``indices``; returns (B, H, W) float64."""
+        self._ensure_patterns()
+        idx_min, idx_max = self._mask_range(idx_mask_min, idx_mask_max)
         if idx_max <= idx_min:
-            return np.zeros(shape, dtype=np.float64)
+            return np.zeros((len(indices), self.img_size, self.img_size), dtype=np.float64)
         op = self._operator(idx_min, idx_max)
         X = self._images(indices)
-        Y = op.forward(X)                     # single-pixel detector values
-        R = self._torch_solve(op, Y, (idx_min, idx_max))
-        return R.detach().to("cpu").double().numpy().reshape(shape)
+        Y = op.forward(X)                     # simulated single-pixel detector values
+        return self._solve_measurements(op, Y, (idx_min, idx_max), len(indices))
+
+    def reconstruct(self, y, idx_mask_min=0, idx_mask_max=None):
+        """Reconstruct *measured* bucket values, without simulating the acquisition.
+
+        ``y`` holds one value per pattern of ``self.mask``, in the mask's order:
+        ``(M,)`` for one frame or ``(F, M)`` for several. Rows
+        ``[idx_mask_min, idx_mask_max)`` are used, exactly as for simulated
+        data; the simulated path runs the same solver on the values it
+        computes itself. Returns ``(H, W)`` for 1-D ``y``, else ``(F, H, W)``.
+
+        Runs on the torch backend (either device); the legacy reference path
+        only exists for simulated data.
+        """
+        if self.backend == "legacy":
+            raise NotImplementedError(
+                "Measured data are reconstructed on the torch backend; backend='legacy' "
+                "only reproduces the original simulated pipeline.")
+        import torch
+
+        self._ensure_patterns()
+        y = np.asarray(y, dtype=np.float64)
+        single = y.ndim == 1
+        Y2 = np.atleast_2d(y)
+        if Y2.shape[1] != self._num_patterns():
+            raise ValueError(f"y has {Y2.shape[1]} values per frame but the mask has "
+                             f"{self._num_patterns()} patterns")
+        idx_min, idx_max = self._mask_range(idx_mask_min, idx_mask_max)
+        if idx_max <= idx_min:
+            out = np.zeros((Y2.shape[0], self.img_size, self.img_size), dtype=np.float64)
+        else:
+            op = self._operator(idx_min, idx_max)
+            Yt = torch.as_tensor(Y2[:, idx_min:idx_max], dtype=self.torch_dtype,
+                                 device=self.torch_device)
+            out = self._solve_measurements(op, Yt, (idx_min, idx_max), Y2.shape[0])
+        self.reconstructed_image = out[-1]
+        return out[0] if single else out
 
     def _torch_process_dataset(self, idx_mask_min=0, idx_mask_max=None):
         """Batched torch reconstruction of the whole dataset (one row per image)."""

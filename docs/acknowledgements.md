@@ -11,6 +11,16 @@ This work was developed at the Institute of New Imaging Technologies (INIT) and 
 - [Samuel Ignacio Zapata Valencia](https://www.groc.uji.es/people/)
 - [Heberley Tobón Maya](https://www.groc.uji.es/people/)
 
+## Experimental Data
+
+The experimental validation uses **SPIHIM**, the open single-pixel
+acquisitions of the [OpenSpyrit](https://openspyrit.github.io/) ecosystem
+(CREATIS, Lyon), distributed under CC-BY 4.0:
+
+> G. Beneti Martins, L. Mahieu-Williame, T. Baudier, N. Ducros. *OpenSpyrit:
+> an ecosystem for open single-pixel hyperspectral imaging*. Opt. Express
+> 31(10), 15599 (2023). DOI 10.1364/OE.483937.
+
 ## Third-Party Libraries
 
 ASPIR is built on top of several open-source libraries. We gratefully acknowledge the developers and researchers behind these projects.

@@ -4,8 +4,10 @@ The stepper widget is managed externally (in main_window) for top bar placement.
 Navigation is done by clicking on step indicators.
 """
 import logging
+from typing import ClassVar
+
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QStackedWidget, QSizePolicy
+    QWidget, QVBoxLayout, QStackedWidget, QSizePolicy, QMessageBox
 )
 from PySide6.QtCore import Signal
 
@@ -22,6 +24,14 @@ class SingleTestContainer(QWidget):
     """
     # Signal when step changes (for external tracking)
     step_changed = Signal(int)
+
+    # Steps that need ground-truth images, unavailable with measured data.
+    _NEEDS_GROUND_TRUTH: ClassVar[dict] = {3: "Post-processing", 4: "Reports"}
+    _MEASURED_DATA_NOTE = (
+        "Measured data have no ground-truth images, so a network cannot be trained "
+        "or evaluated here. Reconstructions from the measurements are in 'Test Masks'; "
+        "scripts/experimental_spihim_figure.py applies pre-trained networks to them."
+    )
 
     def __init__(self, simulation, logger=None, status_manager=None, parent=None):
         super().__init__(parent)
@@ -159,6 +169,19 @@ class SingleTestContainer(QWidget):
             dataset_handler.dataset_updated.connect(
                 lambda size: self._invalidate_from_step(1)
             )
+            dataset_handler.dataset_updated.connect(
+                lambda size: self._update_ground_truth_tooltips()
+            )
+
+    def _is_experimental(self) -> bool:
+        return bool(getattr(self.simulation.dataset, 'is_experimental', False))
+
+    def _update_ground_truth_tooltips(self):
+        """Explain on the step indicators why they are closed for measured data."""
+        note = self._MEASURED_DATA_NOTE if self._is_experimental() else ""
+        for index in self._NEEDS_GROUND_TRUTH:
+            if index < len(self.stepper_widget._indicators):
+                self.stepper_widget._indicators[index].setToolTip(note)
 
     def _complete_masks_and_test(self):
         """Complete both Masks (step 2) and Test (step 3) together."""
@@ -190,6 +213,10 @@ class SingleTestContainer(QWidget):
 
     def _on_step_clicked(self, index: int):
         """Handle click on stepper step indicator."""
+        if index in self._NEEDS_GROUND_TRUTH and self._is_experimental():
+            QMessageBox.information(
+                self, f"{self._NEEDS_GROUND_TRUTH[index]} not available", self._MEASURED_DATA_NOTE)
+            return
         if self.state_manager.can_navigate_to(index):
             self.state_manager.set_current_step(index)
 

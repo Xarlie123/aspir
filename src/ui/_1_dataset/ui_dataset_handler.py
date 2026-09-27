@@ -9,6 +9,7 @@ from ui.custom_widgets.dataset_control.select_image.select_image_widget import S
 from ui.custom_widgets.dataset_control.select_image_directory.select_image_directory_widget import SeleccionaCarpetaImagenWidget
 from ui.custom_widgets.dataset_control.generate_dataset_ir_profile.generate_dataset_ir_profile_widget import GeneratesDatasetPerfilIR
 from ui.custom_widgets.dataset_control.generate_dataset_internet.generate_dataset_from_internet_widget import GeneratesDatasetInternetWidget
+from ui.custom_widgets.dataset_control.load_measurements.load_measurements_widget import LoadMeasurementsWidget
 from ui.custom_widgets.visualizers.visual_dataset.visual_dataset_widget import VisualDatasetWidget
 # from ui.utils.widget_helpers import embed_widget  # No longer needed
 from ui.utils.worker_launcher import WorkerLauncher
@@ -51,6 +52,11 @@ class UIDatasetHandler(QObject):
         self.ir_widget = GeneratesDatasetPerfilIR(logger=self.logger)
         self.ir_widget.datasetReady.connect(self.create_dataset)
 
+        # 4b) Experimental measurements (appended last: window.py maps menu indices 0-3)
+        self.logger.debug("Configuring LoadMeasurementsWidget")
+        self.measurements_widget = LoadMeasurementsWidget(logger=self.logger)
+        self.measurements_widget.datasetReady.connect(self.create_dataset)
+
         # 5) Create VisualDatasetWidget (will be embedded in _setup_menu_interface)
         self.logger.debug("Configuring VisualDatasetWidget")
         self.visual_widget = VisualDatasetWidget(logger=self.logger)
@@ -77,7 +83,8 @@ class UIDatasetHandler(QObject):
             "Generate IR Profile",
             "Load Single Image",
             "Load Multiple Images",
-            "Download from Internet"
+            "Download from Internet",
+            "Experimental measurements (file)"
         ])
         self.dataset_menu.setCurrentRow(0)
         self.dataset_menu.currentRowChanged.connect(self._on_menu_selection_changed)
@@ -154,6 +161,10 @@ class UIDatasetHandler(QObject):
         page3 = create_page("Create Dataset from Internet", self.internet_widget)
         self.dataset_stacked.addWidget(page3)
         self.logger.debug("Added page 3: Download from Internet")
+
+        page4 = create_page("Load Experimental Measurements", self.measurements_widget)
+        self.dataset_stacked.addWidget(page4)
+        self.logger.debug("Added page 4: Experimental measurements")
 
         # Embed menu into placeholder
         self.logger.debug("Embedding menu into dataset_menu_placeholder")
