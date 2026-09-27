@@ -23,6 +23,12 @@ from ui.custom_widgets.mask_control.hadamard_control.hadamard_control_widget imp
 from ui.custom_widgets.mask_control.sweep_control.sweep_control_widget import SweepControlWidget
 from ui.custom_widgets.mask_control.fourier_control.fourier_control_widget import FourierControlWidget
 from ui.custom_widgets.common.recon_device_selector import get_recon_device, set_recon_device
+from ui.custom_widgets.batch_test.test_config_model import (
+    FISTA_DEFAULT_ITERATIONS,
+    FISTA_DEFAULT_LAMBDA,
+    TV_DEFAULT_ITERATIONS,
+    TV_DEFAULT_LAMBDA,
+)
 
 # Import mask classes for Hadamard variants
 from simulation_engine._2_mask_gen.mask_hadamard import MaskHadamard
@@ -122,14 +128,14 @@ class TestConfigWidget(QWidget):
         self.recon_lambda_spin.setRange(0.0001, 10.0)
         self.recon_lambda_spin.setDecimals(4)
         self.recon_lambda_spin.setSingleStep(0.01)
-        self.recon_lambda_spin.setValue(0.01)
+        self.recon_lambda_spin.setValue(FISTA_DEFAULT_LAMBDA)
         self.recon_lambda_spin.valueChanged.connect(self._on_value_changed)
         recon_params_layout.addWidget(self.recon_lambda_spin, 0, 1)
 
         recon_params_layout.addWidget(QLabel("Iterations:"), 0, 2)
         self.recon_iter_spin = QSpinBox()
         self.recon_iter_spin.setRange(1, 1000)
-        self.recon_iter_spin.setValue(100)
+        self.recon_iter_spin.setValue(FISTA_DEFAULT_ITERATIONS)
         self.recon_iter_spin.valueChanged.connect(self._on_value_changed)
         recon_params_layout.addWidget(self.recon_iter_spin, 0, 3)
 
@@ -414,6 +420,10 @@ class TestConfigWidget(QWidget):
         self._connect_fourier_signals()
         self.mask_control_stack.addWidget(self.fourier_control)
         self._connect_device_signals()
+        # The batch form has its own lambda / iterations panel below the stack.
+        for w in (self.scatter_control, self.hadamard_control,
+                  self.sweep_control, self.fourier_control):
+            w.solver_params_widget.suppress()
 
     def _device_combos(self):
         """Reconstruction-device selector of every embedded mask widget."""
@@ -554,11 +564,11 @@ class TestConfigWidget(QWidget):
 
         # Update default values based on method
         if method == "fista":
-            self.recon_lambda_spin.setValue(0.01)
-            self.recon_iter_spin.setValue(100)
+            self.recon_lambda_spin.setValue(FISTA_DEFAULT_LAMBDA)
+            self.recon_iter_spin.setValue(FISTA_DEFAULT_ITERATIONS)
         elif method == "tv_norm":
-            self.recon_lambda_spin.setValue(0.1)
-            self.recon_iter_spin.setValue(50)
+            self.recon_lambda_spin.setValue(TV_DEFAULT_LAMBDA)
+            self.recon_iter_spin.setValue(TV_DEFAULT_ITERATIONS)
 
         if self._config:
             self._on_value_changed()

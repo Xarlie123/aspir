@@ -170,7 +170,7 @@ def _make_test_config(test_entry: dict, cfg: RemeasureConfig) -> TestConfigurati
     and reconstruction timing should average across every available
     image instead of just the 10 % that originally fed the loss.
     """
-    return TestConfiguration(
+    config = TestConfiguration(
         name=test_entry.get("name", "test"),
         mask_type=test_entry.get("mask_type", "scatter"),
         reconstruction_method=test_entry.get("reconstruction_method", "conventional"),
@@ -183,6 +183,19 @@ def _make_test_config(test_entry: dict, cfg: RemeasureConfig) -> TestConfigurati
         timing_sampling_rate_khz=cfg.sampling_rate_khz,
         test_split=100,
     )
+    # Solver parameters the test actually ran with (batch reports from R1.3a on).
+    # Older reports lack them; the TestConfiguration defaults are then exactly
+    # the values those runs used.
+    params = test_entry.get("reconstruction_params")
+    if params:
+        method = (config.reconstruction_method or "").strip().lower().replace(" ", "_").replace("-", "_")
+        if method == "fista":
+            config.fista_lambda = float(params["lam"])
+            config.fista_iterations = int(params["iterations"])
+        elif method == "tv_norm":
+            config.tv_lambda = float(params["lam"])
+            config.tv_iterations = int(params["iterations"])
+    return config
 
 
 # Map saved ``mask_type`` strings → the concrete class we instantiate so the

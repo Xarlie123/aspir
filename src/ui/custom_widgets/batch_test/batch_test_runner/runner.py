@@ -28,6 +28,7 @@ from ui.custom_widgets.batch_test.batch_test_runner._export import (
 from ui.custom_widgets.batch_test.batch_test_runner._pipeline import (
     create_applicator,
     create_mask,
+    solver_params_of,
 )
 from ui.custom_widgets.batch_test.batch_test_runner._profiling import profile_model
 from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
@@ -419,6 +420,9 @@ class BatchTestRunner(QThread):
         # Update reconstruction method from applicator (more accurate than config)
         if hasattr(applicator, 'RECONSTRUCTION_METHOD'):
             results["reconstruction_method"] = applicator.RECONSTRUCTION_METHOD
+            params = solver_params_of(applicator)
+            if params is not None:
+                results["reconstruction_params"] = params
 
         self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 10)
 
@@ -770,6 +774,9 @@ class BatchTestRunner(QThread):
             # Update reconstruction method from applicator (more accurate than config)
             if hasattr(applicator, 'RECONSTRUCTION_METHOD'):
                 results["reconstruction_method"] = applicator.RECONSTRUCTION_METHOD
+                params = solver_params_of(applicator)
+                if params is not None:
+                    results["reconstruction_params"] = params
 
             self.phase_progress.emit(index, self.PHASE_RECONSTRUCTION, 10)
 

@@ -98,6 +98,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was measured.
 
 ### Fixed
+- **FISTA and TV parameters now reach the solvers.** The batch runner set
+  attributes the solvers never read, so every FISTA run used lambda = 0.001
+  and 500 iterations and every TV run lambda = 0.1 and 100 iterations,
+  whatever the batch configuration said; Single Test had no controls at all.
+  The values are now passed to the solvers in Batch Test, Single Test (new
+  *Lambda* / *Iterations* controls in every mask panel, shown for FISTA and
+  TV) and re-measure. The defaults are the values that always ran, so default
+  runs reproduce earlier results. Batch configs move to format 2.2: older
+  configs stored values that were never applied, so they load with the
+  historical values and log a warning. Batch reports record the parameters a
+  test used (`reconstruction_params`), and re-measure applies them.
 - **Re-measure timed TV tests with the wrong algorithm.** Batch reports store
   the display name of the method (`"TV Norm"`), which the pipeline did not
   recognise as `tv_norm`, so re-measure silently rebuilt the native linear

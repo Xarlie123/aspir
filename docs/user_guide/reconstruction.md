@@ -129,9 +129,11 @@ $$
 - Assumes signal sparsity
 - Tunable regularization parameter λ
 
-**Parameters**:
-- `lambda`: Regularization strength (default: 0.01)
-- `iterations`: Maximum iterations (default: 100)
+**Parameters** (Batch Test form, or the *Lambda* / *Iterations* controls that
+appear in each Single Test mask panel when FISTA is selected):
+- `lambda`: weight of the l1 term (default: 0.001)
+- `iterations`: number of iterations, run in full — there is no early stop and
+  no tolerance parameter (default: 500)
 
 ### TV-Norm (Total Variation)
 
@@ -146,9 +148,16 @@ $$
 - Removes noise while keeping structure
 - Good for natural images
 
-**Parameters**:
-- `lambda`: Regularization strength (default: 0.1)
-- `iterations`: Maximum iterations (default: 50)
+**Parameters** (as for FISTA):
+- `lambda`: weight of the total-variation term (default: 0.1)
+- `iterations`: number of iterations, run in full — no early stop, no tolerance
+  (default: 100)
+
+The defaults are the values both solvers have always run with. Up to v1.2.1
+the values entered in a batch test were stored but never reached the solvers;
+batch configs from before format 2.2 therefore load with these defaults, and a
+warning says so. Each batch report records the values a test actually used
+(`reconstruction_params`).
 
 ## Comparison
 

@@ -6,11 +6,20 @@ from typing import List, Dict, Any, Optional
 from enum import Enum, auto
 from pathlib import Path
 import json
+import logging
 import yaml  # For legacy file support
 import os
 from datetime import datetime
 
 from ui.utils.file_formats import FileExtensions, BATCH_TESTS_DIR
+from simulation_engine._3_applicator.applicator_fista import (
+    DEFAULT_ITERATIONS as FISTA_DEFAULT_ITERATIONS,
+    DEFAULT_LAMBDA as FISTA_DEFAULT_LAMBDA,
+)
+from simulation_engine._3_applicator.applicator_tv_norm import (
+    DEFAULT_ITERATIONS as TV_DEFAULT_ITERATIONS,
+    DEFAULT_LAMBDA as TV_DEFAULT_LAMBDA,
+)
 
 
 class TestStatus(Enum):
@@ -27,6 +36,33 @@ class ExportLevel(Enum):
     REPORTS_ONLY = auto()           # Only CSV reports
     REPORTS_AND_MODELS = auto()     # Reports + trained models (.pt, ONNX)
     ALL_DATA = auto()               # Reports + models + datasets (images, masks)
+
+
+# Current .batch_config format. 2.2: FISTA / TV lambda and iteration values
+# are applied by the solvers. Before 2.2 they were stored but never used.
+BATCH_CONFIG_FORMAT_VERSION = "2.2"
+
+_log = logging.getLogger("BatchTestConfig")
+
+
+def _solver_params_never_applied(version) -> bool:
+    """True for configs written before 2.2 (or unversioned legacy YAML)."""
+    try:
+        major, minor = (int(p) for p in str(version).split(".")[:2])
+    except (TypeError, ValueError):
+        return True
+    return (major, minor) < (2, 2)
+
+
+def _apply_historical_solver_params(test) -> int:
+    """Replace stored FISTA/TV values with those that actually ran; 1 if any changed."""
+    before = (test.fista_lambda, test.fista_iterations, test.tv_lambda, test.tv_iterations)
+    test.fista_lambda = FISTA_DEFAULT_LAMBDA
+    test.fista_iterations = FISTA_DEFAULT_ITERATIONS
+    test.tv_lambda = TV_DEFAULT_LAMBDA
+    test.tv_iterations = TV_DEFAULT_ITERATIONS
+    after = (test.fista_lambda, test.fista_iterations, test.tv_lambda, test.tv_iterations)
+    return int(before != after)
 
 
 @dataclass
@@ -67,12 +103,13 @@ class TestConfiguration:
     reconstruction_device: str = "auto"
 
     # FISTA-specific parameters
-    fista_lambda: float = 0.01
-    fista_iterations: int = 100
+    # Defaults are the values the solvers have always run with (see R1.3a).
+    fista_lambda: float = FISTA_DEFAULT_LAMBDA
+    fista_iterations: int = FISTA_DEFAULT_ITERATIONS
 
     # TV-norm specific parameters
-    tv_lambda: float = 0.1
-    tv_iterations: int = 50
+    tv_lambda: float = TV_DEFAULT_LAMBDA
+    tv_iterations: int = TV_DEFAULT_ITERATIONS
 
     # DNN configuration
     model_name: str = "u-net"
@@ -199,10 +236,10 @@ class TestConfiguration:
             # Reconstruction
             reconstruction_method=data.get("reconstruction_method", "pseudoinverse"),
             reconstruction_device=data.get("reconstruction_device", "auto"),
-            fista_lambda=data.get("fista_lambda", 0.01),
-            fista_iterations=data.get("fista_iterations", 100),
-            tv_lambda=data.get("tv_lambda", 0.1),
-            tv_iterations=data.get("tv_iterations", 50),
+            fista_lambda=data.get("fista_lambda", FISTA_DEFAULT_LAMBDA),
+            fista_iterations=data.get("fista_iterations", FISTA_DEFAULT_ITERATIONS),
+            tv_lambda=data.get("tv_lambda", TV_DEFAULT_LAMBDA),
+            tv_iterations=data.get("tv_iterations", TV_DEFAULT_ITERATIONS),
             # DNN
             model_name=data.get("model_name", "u-net"),
             epochs=data.get("epochs", 50),
@@ -326,8 +363,21 @@ class BatchTestConfig:
             capture_baseline=data.get("capture_baseline", True),
             baseline_duration_s=int(data.get("baseline_duration_s", 60)),
         )
+        migrate = _solver_params_never_applied(data.get("format_version"))
+        replaced = 0
         for test_data in data.get("tests", []):
-            config.tests.append(TestConfiguration.from_dict(test_data))
+            test = TestConfiguration.from_dict(test_data)
+            if migrate:
+                replaced += _apply_historical_solver_params(test)
+            config.tests.append(test)
+        if replaced:
+            _log.warning(
+                "Batch config format %s predates 2.2: its FISTA/TV lambda and iteration "
+                "values were never applied by the solvers. Using the values that actually "
+                "ran instead (FISTA lambda=%g, %d it; TV lambda=%g, %d it) in %d test(s).",
+                data.get("format_version", "unversioned"),
+                FISTA_DEFAULT_LAMBDA, FISTA_DEFAULT_ITERATIONS,
+                TV_DEFAULT_LAMBDA, TV_DEFAULT_ITERATIONS, replaced)
         return config
 
     def save(self, filepath: str, dataset_info: Optional[Dict[str, Any]] = None) -> bool:
@@ -350,7 +400,7 @@ class BatchTestConfig:
             path.parent.mkdir(parents=True, exist_ok=True)
 
             data = {
-                "format_version": "2.1",
+                "format_version": BATCH_CONFIG_FORMAT_VERSION,
                 **self.to_dict()
             }
 

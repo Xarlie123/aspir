@@ -101,6 +101,19 @@ def _native_applicator_for_mask(mask, dataset, **backend_options):
     raise ValueError(f"Unsupported mask type for applicator: {type(mask)}")
 
 
+def solver_params_of(applicator):
+    """Parameters an iterative solver actually runs with, or None.
+
+    Stored in each test's result as ``reconstruction_params`` so a later
+    re-measure reproduces the same solver.
+    """
+    if isinstance(applicator, ApplicatorFISTA):
+        return {"lam": float(applicator.lam), "iterations": int(applicator.maxit)}
+    if isinstance(applicator, ApplicatorTV):
+        return {"lam": float(applicator.lam), "iterations": int(applicator.niter)}
+    return None
+
+
 def create_applicator(config: TestConfiguration, mask, dataset):
     """Create the applicator for ``mask`` using ``config.reconstruction_method``.
 
@@ -121,14 +134,10 @@ def create_applicator(config: TestConfiguration, mask, dataset):
     if method == "pseudoinverse":
         return ApplicatorPseudoinverse(dataset, mask, **opts)
     if method == "fista":
-        applicator = ApplicatorFISTA(dataset, mask, **opts)
-        applicator.lambda_val = config.fista_lambda
-        applicator.max_iter = config.fista_iterations
-        return applicator
+        return ApplicatorFISTA(dataset, mask, lam=config.fista_lambda,
+                               maxit=config.fista_iterations, **opts)
     if method == "tv_norm":
-        applicator = ApplicatorTV(dataset, mask, **opts)
-        applicator.lambda_val = config.tv_lambda
-        applicator.max_iter = config.tv_iterations
-        return applicator
+        return ApplicatorTV(dataset, mask, lam=config.tv_lambda,
+                            niter=config.tv_iterations, **opts)
 
     return _native_applicator_for_mask(mask, dataset, **opts)

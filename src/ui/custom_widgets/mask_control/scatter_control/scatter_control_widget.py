@@ -9,6 +9,7 @@ from ui.custom_widgets.common.recon_device_selector import (
     get_recon_device,
     set_recon_device,
 )
+from ui.custom_widgets.common.recon_solver_params import SolverParamsWidget
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 
 class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
@@ -39,6 +40,13 @@ class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
         self.reconstruction_device_combo = create_recon_device_combo()
         device_row.addWidget(self.reconstruction_device_combo)
         self.Scatter_Grid_Layout.addLayout(device_row, 2, 2, 1, 2)
+
+        # Lambda / iterations for FISTA and TV, visible only when one is selected.
+        self.solver_params_widget = SolverParamsWidget()
+        self.Scatter_Grid_Layout.addWidget(self.solver_params_widget, 3, 0, 1, 4)
+        self.select_applicator_scatter_list.currentTextChanged.connect(self.solver_params_widget.set_method)
+        self.solver_params_widget.set_method(self.select_applicator_scatter_list.currentText())
+
 
         # connect internal "Generate" button
         self.generate_masks_button.clicked.connect(self._on_generate_clicked)
@@ -86,6 +94,7 @@ class ScatterControlWidget(QtWidgets.QWidget, Ui_Scatter_Control):
             mask = MaskScatter(self._img_size, d, n, s)
             mask.applicator_type_scatter = self.select_applicator_scatter_list.currentText()
             mask.reconstruction_device = self.get_reconstruction_device()
+            mask.solver_params = self.solver_params_widget.params()
             self.logger.info("MaskScatter created: %s", type(mask).__name__)
         except Exception as e:
             QMessageBox.critical(self, "Error creating scatter mask", str(e))

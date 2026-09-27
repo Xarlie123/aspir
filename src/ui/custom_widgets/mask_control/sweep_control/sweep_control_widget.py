@@ -12,6 +12,7 @@ from ui.custom_widgets.common.recon_device_selector import (
     get_recon_device,
     set_recon_device,
 )
+from ui.custom_widgets.common.recon_solver_params import SolverParamsWidget
 
 # Dropdown options for the Sweep "Reconstruction method" selector.
 # The first label names the mask-specific native algorithm; the rest go
@@ -117,6 +118,12 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
             parent_layout.insertLayout(button_index, row)
         else:
             parent_layout.addLayout(row)
+        # Lambda / iterations for FISTA and TV, visible only when one is selected.
+        self.solver_params_widget = SolverParamsWidget()
+        parent_layout.insertWidget(parent_layout.indexOf(self.generate_masks_button),
+                                   self.solver_params_widget)
+        self.reconstruction_method_combo.currentTextChanged.connect(self.solver_params_widget.set_method)
+        self.solver_params_widget.set_method(self.reconstruction_method_combo.currentText())
 
     def get_reconstruction_device(self) -> str:
         return get_recon_device(self.reconstruction_device_combo)
@@ -208,6 +215,7 @@ class SweepControlWidget(QtWidgets.QWidget, Ui_Sweep_Control):
             # getattr(mask, 'applicator_type_scatter', None).
             mask.applicator_type_scatter = self.get_reconstruction_method()
             mask.reconstruction_device = self.get_reconstruction_device()
+            mask.solver_params = self.solver_params_widget.params()
             self.logger.info("MaskSweep created with %d parameters (method=%s)",
                              len(params), mask.applicator_type_scatter)
         except Exception as e:

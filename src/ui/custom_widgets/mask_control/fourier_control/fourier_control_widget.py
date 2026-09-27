@@ -21,6 +21,7 @@ from ui.custom_widgets.common.recon_device_selector import (
     get_recon_device,
     set_recon_device,
 )
+from ui.custom_widgets.common.recon_solver_params import SolverParamsWidget
 
 # First label names the Fourier-specific algorithm; the rest match the generic
 # iterative solvers exposed by every other mask widget.
@@ -188,6 +189,11 @@ class FourierControlWidget(QtWidgets.QWidget):
         recon_row.addWidget(self.reconstruction_device_combo)
         recon_row.addStretch()
         self.main_layout.addLayout(recon_row)
+        # Lambda / iterations for FISTA and TV, visible only when one is selected.
+        self.solver_params_widget = SolverParamsWidget()
+        self.main_layout.addWidget(self.solver_params_widget)
+        self.reconstruction_method_combo.currentTextChanged.connect(self.solver_params_widget.set_method)
+        self.solver_params_widget.set_method(self.reconstruction_method_combo.currentText())
 
         # --- generate --------------------------------------------------------
         self.generate_masks_button = QPushButton("Generate masks")
@@ -319,6 +325,7 @@ class FourierControlWidget(QtWidgets.QWidget):
             )
             mask_obj.applicator_type_scatter = self.get_reconstruction_method()
             mask_obj.reconstruction_device = self.get_reconstruction_device()
+            mask_obj.solver_params = self.solver_params_widget.params()
         except Exception as e:
             QMessageBox.warning(self, "Error", str(e))
             self.logger.error("Error instantiating mask: %s", e)

@@ -4,6 +4,12 @@ import pandas as pd
 import pylops
 import pyproximal
 
+# Defaults every entry point shares (Batch Test, Single Test, re-measure).
+# They are the values TV has always run with: until R1.3a the batch runner
+# set attributes the class never read, so these were in effect.
+DEFAULT_LAMBDA = 1e-1
+DEFAULT_ITERATIONS = 100
+
 
 class ApplicatorTV(ApplicatorABC):
     """
@@ -24,7 +30,8 @@ class ApplicatorTV(ApplicatorABC):
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "TV Norm"
 
-    def __init__(self, dataset, mask, niter=100, lam=1e-1, **backend_options):
+    def __init__(self, dataset, mask, niter=DEFAULT_ITERATIONS, lam=DEFAULT_LAMBDA,
+                 **backend_options):
         """
         Initializes the applicator with a dataset, masks, and TV parameters.
 

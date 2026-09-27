@@ -4,6 +4,12 @@ import pandas as pd
 import pylops
 import pyproximal
 
+# Defaults every entry point shares (Batch Test, Single Test, re-measure).
+# They are the values FISTA has always run with: until R1.3a the batch
+# runner set attributes the class never read, so these were in effect.
+DEFAULT_LAMBDA = 1e-3
+DEFAULT_ITERATIONS = 500
+
 
 class ApplicatorFISTA(ApplicatorABC):
     """
@@ -22,7 +28,8 @@ class ApplicatorFISTA(ApplicatorABC):
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "FISTA"
 
-    def __init__(self, dataset, mask, maxit=500, lam=1e-3, **backend_options):
+    def __init__(self, dataset, mask, maxit=DEFAULT_ITERATIONS, lam=DEFAULT_LAMBDA,
+                 **backend_options):
         super().__init__(dataset, mask, **backend_options)
         self.maxit = maxit
         self.lam = lam  # l1 regularization strength

@@ -98,10 +98,25 @@ class Simulation:
                   or applicator_type_scatter)
         # The mask widgets stash the device choice on the mask, like the method.
         device = getattr(mask, 'reconstruction_device', None) or "auto"
-        self.set_applicator(reconstruction_method=option, device=device)
+        # ...and the FISTA / TV parameters, when the panel exposes them.
+        solver_params = getattr(mask, 'solver_params', None)
+        self.set_applicator(reconstruction_method=option, device=device,
+                            solver_params=solver_params)
+
+    @staticmethod
+    def _solver_kwargs(solver_params, iterations_name):
+        """Map ``{"lam", "iterations"}`` onto an iterative applicator's arguments."""
+        kwargs = {}
+        if solver_params:
+            if solver_params.get("lam") is not None:
+                kwargs["lam"] = float(solver_params["lam"])
+            if solver_params.get("iterations") is not None:
+                kwargs[iterations_name] = int(solver_params["iterations"])
+        return kwargs
 
     def set_applicator(self, reconstruction_method=None,
-                       applicator_type_scatter=None, device="auto"):
+                       applicator_type_scatter=None, device="auto",
+                       solver_params=None):
         """
         Instantiate the applicator implementing ``reconstruction_method`` over
         the current mask. ``"native"`` picks the mask-specific algorithm
@@ -113,6 +128,11 @@ class Simulation:
         available, else CPU), ``"cpu"`` or ``"cuda"`` — the same convention as
         the NN stage, which uses CUDA only when it is both requested and
         available.
+
+        ``solver_params`` sets the iterative solvers' regularisation and
+        iteration count, ``{"lam": float, "iterations": int}``; omitted keys
+        keep the defaults (FISTA lambda 1e-3, 500 iterations; TV lambda 0.1,
+        100 iterations), which are the values the solvers have always used.
         """
         if self.mask is None or self.dataset is None:
             raise RuntimeError("Dataset and mask must be defined.")
@@ -127,9 +147,11 @@ class Simulation:
         if method == "pseudoinverse":
             self.applicator = ApplicatorPseudoinverse(self.dataset, self.mask, device=device)
         elif method == "fista":
-            self.applicator = ApplicatorFISTA(self.dataset, self.mask, device=device)
+            self.applicator = ApplicatorFISTA(self.dataset, self.mask, device=device,
+                                              **self._solver_kwargs(solver_params, "maxit"))
         elif method == "tv_norm":
-            self.applicator = ApplicatorTV(self.dataset, self.mask, device=device)
+            self.applicator = ApplicatorTV(self.dataset, self.mask, device=device,
+                                           **self._solver_kwargs(solver_params, "niter"))
         else:
             # Native: mask-specific default.
             if isinstance(self.mask, MaskScatter):
