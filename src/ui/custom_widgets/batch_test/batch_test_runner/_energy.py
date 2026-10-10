@@ -134,6 +134,13 @@ def measure_energy(
             "efficiency_images_per_joule": eff_per_image,
             # Per-backend breakdown
             "energy_backends": analyzer.available_backends,
+            # Per-block readings, per image: the input of the uncertainty
+            # propagation (baseline_capture.dynamic_energy_uncertainty).
+            "energy_blocks": {
+                "energy_mj": [1000.0 * e / B for e in result.energy_per_image_joules],
+                "power_W": [float(w) for w in result.power_per_image_watts],
+                "time_ms": [float(t) / B for t in result.time_per_image_ms],
+            },
         }
 
         # Add GPU-specific data if available (per-image: the
@@ -171,8 +178,9 @@ def measure_reconstruction_energy(
     image_indices,
     analyzer: EnergyAnalyzer | None = None,
     t_reconstruction_ms: float | None = None,
-    target_seconds: float = 1.0,
+    target_seconds: float = 0.5,
     max_passes: int = 200,
+    n_blocks: int = 10,
 ) -> dict[str, Any]:
     """Measure the energy of the reconstruction stage, per image.
 
@@ -186,6 +194,10 @@ def measure_reconstruction_energy(
     chosen so the window lasts about ``target_seconds`` (energy counters are
     too coarse for millisecond windows), using ``t_reconstruction_ms`` from the
     timing phase when available.
+
+    The measurement is ``n_blocks`` consecutive blocks of that length (5 s in
+    all by default), as inference is split into blocks, so the block-to-block spread enters the uncertainty of
+    the dynamic energy. The totals are the sums over the blocks.
     """
     import math
 
@@ -219,25 +231,39 @@ def measure_reconstruction_energy(
         previous_device = analyzer.device
         analyzer.device = device
 
+    n_blocks = max(1, int(n_blocks))
+    results = []
     try:
-        result = analyzer.measure_reconstruction_energy(
-            one_pass, n_iterations=passes, warmup_iterations=1, cuda_sync=True)
+        for b in range(n_blocks):
+            results.append(analyzer.measure_reconstruction_energy(
+                one_pass, n_iterations=passes, warmup_iterations=1 if b == 0 else 0,
+                cuda_sync=True))
     finally:
         if owns_analyzer:
             analyzer.shutdown()
         else:
             analyzer.device = previous_device
 
-    n_images = passes * len(indices)
-    total_j = result.total_energy_joules
-    gpu_j = sum(r.gpu_energy_joules or 0.0 for r in result.readings)
-    cpu_j = sum(r.cpu_energy_joules or 0.0 for r in result.readings)
+    images_per_block = passes * len(indices)
+    n_images = images_per_block * n_blocks
+    readings = [r for res in results for r in res.readings]
+    total_j = sum(res.total_energy_joules for res in results)
+    total_s = sum(res.execution_time_ms for res in results) / 1000.0
+    gpu_j = sum(r.gpu_energy_joules or 0.0 for r in readings)
+    cpu_j = sum(r.cpu_energy_joules or 0.0 for r in readings)
     out = {
         "energy_reconstruction_mj": 1000.0 * total_j / n_images,
-        "energy_reconstruction_watts": float(result.avg_power_watts),
+        "energy_reconstruction_watts": float(total_j / total_s) if total_s > 0 else 0.0,
         "energy_reconstruction_device": device,
         "energy_reconstruction_images": int(n_images),
-        "energy_reconstruction_backends": [r.device_type.value for r in result.readings],
+        "energy_reconstruction_backends": [r.device_type.value for r in results[0].readings],
+        # Device names, as the idle baseline keys them.
+        "energy_reconstruction_backend_names": [r.device_name for r in results[0].readings],
+        "energy_reconstruction_blocks": {
+            "energy_mj": [1000.0 * res.total_energy_joules / images_per_block for res in results],
+            "power_W": [float(res.avg_power_watts) for res in results],
+            "time_ms": [res.execution_time_ms / images_per_block for res in results],
+        },
     }
     if gpu_j > 0:
         out["energy_reconstruction_gpu_mj"] = 1000.0 * gpu_j / n_images

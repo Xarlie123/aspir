@@ -108,6 +108,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `tests/test_experimental_data.py` covers the adapter, exact noiseless
     reconstruction, Cake-Cutting row selection and measured-vs-simulated
     parity for all seven algorithms.
+- **Uncertainty of the dynamic energy.** Inference and reconstruction energy
+  now report the dynamic energy per image with its uncertainty, next to the
+  totals: E_dyn = (P̄ − P_idle)·t̄ over the measurement blocks.
+  - The idle-baseline term uses the standard deviation of the idle power,
+    not its standard error; the standard-error version is stored too.
+  - The block term propagates the block-to-block spread to first order.
+  - The combined σ and a 95 % bootstrap interval complete the set
+    (`dynamic_energy_sigma_mj`, `dynamic_energy_ci95_mj`, ...;
+    `dynamic_reconstruction_*` for the reconstruction stage).
+  - Report metadata gains `P_idle_mean_w`, `P_idle_std_w`, `P_idle_sem_w` and
+    `n_idle_samples`, per backend and in total, and the per-block readings are
+    stored.
+  - Each stage subtracts the idle power of the backends that measured it
+    only. The reconstruction stage is now measured in 10 blocks.
+  - Existing fields are unchanged. The derivation is in *User Guide /
+    Analysis*, and `tests/test_energy_uncertainty.py` checks it.
 - **First automated tests in the repository.** `tests/test_fourier_fspi.py`
   covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
   fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers
@@ -128,6 +144,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was measured.
 
 ### Fixed
+- **Re-measure loads U-Nets saved before 2026-05-16.** The U-Net decoder
+  changed from `ConvTranspose2d` to `Upsample` + `Conv2d` (4eb6f44), after
+  which re-measure could not load the U-Net weights of older reports, Use
+  Case 2 included. Such checkpoints are now detected and rebuilt with
+  `UNetTranspose`, the previous decoder, which reproduces their stored
+  outputs.
+- **RAPL idle readings across a counter wrap.** The instantaneous-power read
+  used by the idle baseline ignored the counter wrap and divided by the
+  nominal 0.1 s instead of the measured interval.
 - **FISTA and TV parameters now reach the solvers.** The batch runner set
   attributes the solvers never read, so every FISTA run used lambda = 0.001
   and 500 iterations and every TV run lambda = 0.1 and 100 iterations,

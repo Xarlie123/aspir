@@ -73,10 +73,10 @@ Measures power consumption during inference. The energy backend is auto-detected
 |----------|---------|--------------|
 | NVIDIA Desktop GPUs | NVML (`pynvml`) | GPU package power, temperature |
 | NVIDIA Jetson | jtop (`jetson-stats` daemon), with sysfs INA3221 as fallback | Module total power on the shared `VDD_IN` / `POM_5V_IN` rail |
-| Intel CPUs | RAPL (`/sys/class/powercap/intel-rapl`) | Package, core power |
+| Intel and AMD CPUs | RAPL (`/sys/class/powercap/intel-rapl`, which Linux also uses for AMD Zen) | Package energy (top-level zones only; sub-zones such as `core` lie inside the package and are not added again) |
 
 ```{note}
-Intel RAPL energy profiling requires read access to the powercap interface: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`
+RAPL energy profiling requires read access to the powercap interface: `sudo chmod -R a+r /sys/class/powercap/intel-rapl/`. The permission resets at every reboot.
 ```
 
 ```{note}
@@ -109,6 +109,33 @@ Both Batch Test and Re-measure can optionally sample **system idle power** for a
 The intent is to remove the constant pedestal (GUI, background services, idle GPU, RAM refresh) from each measurement so the reported number reflects the actual cost of running inference. The Energy view exposes a *Subtract idle baseline* toggle that switches charts to the dynamic equivalents at display time; the summary panel shows the totals and the dynamic rows side by side when both are available.
 
 Negative dynamic values are intentionally not clipped to zero — a negative number means the SoC was warmer during the test than during the baseline window, and that's a real diagnostic signal worth surfacing.
+
+### Uncertainty of the Dynamic Energy
+
+When most of the energy per image is idle draw (about 87 % on the Jetson GPU path), the dynamic energy is the small difference of two large numbers, so its uncertainty matters. ASPIR reports it next to the totals, for inference and for the reconstruction stage.
+
+**Inputs.** The measurement is split into *B* blocks: inference runs 800 iterations as 10 blocks, and the reconstruction stage runs 10 blocks of about 0.5 s each. Block *b* gives a mean power *P_b* and a time per image *t_b*; the per-image values of every block are stored under `energy_blocks` (`energy_reconstruction_blocks`). The idle baseline gives *P*_idle ± σ_idle from *n* readings, taken only over the backends that took the measurement. For example, a reconstruction on the CPU subtracts only the CPU's idle power.
+
+**Formula.** With *P̄* and *t̄* the means over the blocks,
+
+$$E_\text{dyn} = (\bar P - P_\text{idle})\,\bar t .$$
+
+**Uncertainty components.** Two independent components are reported separately and combined in quadrature:
+
+- **Idle baseline** (`dynamic_energy_sigma_idle_mj`): σ_idle · *t̄*, with σ_idle the *standard deviation* of the idle readings. It is not the standard error σ_idle/√*n*, because the concern is the baseline drifting between the idle window and the run, and the standard error hides that. The standard-error version is stored as `dynamic_energy_sigma_idle_sem_mj` for reference.
+- **Blocks** (`dynamic_energy_sigma_blocks_mj`): first-order propagation of the sampling error of *P̄* and *t̄*, with sample (co)variances over the blocks:
+
+$$\sigma_\text{blocks}^2 = \frac{1}{B}\left[\bar t^{\,2} s_P^2 + (\bar P - P_\text{idle})^2 s_t^2 + 2\,\bar t\,(\bar P - P_\text{idle})\,s_{Pt}\right].$$
+
+- **Combined** (`dynamic_energy_sigma_mj`): $\sqrt{\sigma_\text{idle}^2\bar t^{\,2} + \sigma_\text{blocks}^2}$.
+
+**95 % interval.** `dynamic_energy_ci95_mj` comes from a bootstrap with 2000 draws and a fixed seed. Each draw resamples the blocks with replacement and draws *P*_idle from N(*P*_idle, σ_idle).
+
+**Reconstruction fields.** The reconstruction stage carries the same fields with `dynamic_reconstruction_` and `energy_reconstruction_` prefixes.
+
+**Report metadata.** Each backend's entry in `idle_baseline` stores `P_idle_mean_w`, `P_idle_std_w` (sample standard deviation), `P_idle_sem_w` and `n_idle_samples`, and so does the batch total. Independent sensors add their standard deviations in quadrature.
+
+**Relation to the historical field.** `dynamic_energy_mj` keeps its historical definition, *Ē* − *P*_idle · (*Ē*/*P̄*). It differs from `dynamic_energy_pt_mj` = (*P̄* − *P*_idle) · *t̄* only by how the blocks are averaged. The uncertainty fields refer to the latter, which is also the formula of the paper's analysis.
 
 ### Inference Batch Size
 

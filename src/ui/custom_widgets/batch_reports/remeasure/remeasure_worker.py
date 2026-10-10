@@ -35,6 +35,7 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
 from simulation_engine._5_analyzer.baseline_capture import (
     BaselineResult,
+    add_dynamic_uncertainty,
     capture_idle_baseline,
     derive_dynamic_metrics,
 )
@@ -140,6 +141,19 @@ def _build_model_facade(
         raise FileNotFoundError(f"Model checkpoint not found: {weights_path}")
 
     state = torch.load(weights_path, map_location="cpu")
+    if canonical == "u-net":
+        from simulation_engine._4_postprocessor.models.unet_transpose import (
+            UNetTranspose,
+            is_transpose_unet_state,
+        )
+        # Reports saved before 2026-05-16 hold U-Nets with the ConvTranspose
+        # decoder; rebuild that architecture so their weights load as saved.
+        if is_transpose_unet_state(state):
+            kwargs.pop("img_size", None)
+            kwargs.pop("dropout", None)
+            model = UNetTranspose(**kwargs)
+            logger.info("Checkpoint %s uses the pre-2026-05-16 U-Net decoder "
+                        "(ConvTranspose2d); loading it with UNetTranspose", weights_path.name)
     model.load_state_dict(state)
     model.eval()
 
@@ -570,6 +584,7 @@ class RemeasureWorker(QObject):
                             analyzer=shared_analyzer,
                             t_reconstruction_ms=updated.get("timing_reconstruction_ms"),
                         ))
+                        add_dynamic_uncertainty(updated, baseline, "reconstruction")
                     except Exception as exc:
                         self.logger.warning("Reconstruction energy failed for '%s': %s",
                                             test_name, exc)
@@ -581,6 +596,7 @@ class RemeasureWorker(QObject):
                 # the inference time used to subtract the pedestal
                 # both come from the same energy phase, see
                 # ``derive_dynamic_metrics``).
+                add_dynamic_uncertainty(updated, baseline, "inference")
                 if baseline is not None:
                     dyn = derive_dynamic_metrics(
                         energy_mean_mj=updated.get("energy_mean_mj"),

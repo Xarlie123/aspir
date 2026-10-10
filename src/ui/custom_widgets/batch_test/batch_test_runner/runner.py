@@ -156,11 +156,15 @@ class BatchTestRunner(QThread):
         diagnostic signal that the host warmed up between baseline and
         test, so we surface a WARNING and persist the negative value.
         """
-        if self._baseline is None:
-            return
         from simulation_engine._5_analyzer.baseline_capture import (
+            add_dynamic_uncertainty,
             derive_dynamic_metrics,
         )
+        # Block statistics always; dynamic fields and their uncertainty only
+        # with a baseline.
+        add_dynamic_uncertainty(results, self._baseline, "inference")
+        if self._baseline is None:
+            return
         dyn = derive_dynamic_metrics(
             energy_mean_mj=results.get("energy_mean_mj"),
             energy_mean_watts=results.get("energy_mean_watts"),
@@ -983,6 +987,8 @@ class BatchTestRunner(QThread):
                 image_indices=range(min(5, n)),
                 t_reconstruction_ms=results.get("timing_reconstruction_ms"),
             ))
+            from simulation_engine._5_analyzer.baseline_capture import add_dynamic_uncertainty
+            add_dynamic_uncertainty(results, self._baseline, "reconstruction")
         except Exception as e:
             # Typically no readable energy counter for that device (e.g. RAPL
             # is root-only until `chmod a+r`); say so in the report.

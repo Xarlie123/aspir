@@ -26,10 +26,14 @@ read and must not be reused here.
 from __future__ import annotations
 
 import logging
+import math
 import statistics
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
+
+import numpy as np
 
 from simulation_engine._5_analyzer.energy_backends._monitor import EnergyMonitor
 
@@ -49,14 +53,33 @@ class BackendBaseline:
     n_samples: int
     samples_W: list[float] = field(default_factory=list)
 
+    @property
+    def sample_std_W(self) -> float:
+        """Sample standard deviation (n - 1) of the idle readings.
+
+        ``power_W_std`` is the population form and keeps its historical
+        meaning; the uncertainty propagation uses this one.
+        """
+        if len(self.samples_W) > 1:
+            return float(statistics.stdev(self.samples_W))
+        return float(self.power_W_std)
+
     def to_dict(self) -> dict[str, Any]:
         """Serialisable form for the batch report metadata."""
+        n = int(self.n_samples)
+        std = self.sample_std_W
         return {
             "backend":      self.backend,
             "power_W_mean": float(self.power_W_mean),
             "power_W_std":  float(self.power_W_std),
             "duration_s":   float(self.duration_s),
-            "n_samples":    int(self.n_samples),
+            "n_samples":    n,
+            # Uncertainty fields (R2.2): sample std of the idle power, its
+            # standard error, and the sample count.
+            "P_idle_mean_w":  float(self.power_W_mean),
+            "P_idle_std_w":   std,
+            "P_idle_sem_w":   std / math.sqrt(n) if n > 0 else None,
+            "n_idle_samples": n,
         }
 
 
@@ -86,13 +109,48 @@ class BaselineResult:
             sum(b.power_W_std ** 2 for b in self.per_backend.values()) ** 0.5
         )
 
+    def idle_for(self, backends: Iterable[str] | None = None) -> dict[str, float] | None:
+        """Idle power of the backends that took part in a measurement.
+
+        A measurement must subtract the idle draw of exactly the backends
+        it integrated: a reconstruction on the CPU is read by RAPL alone and
+        must not lose the GPU's idle power. ``backends`` are device names as
+        the energy backends report them; ``None`` means all of them. Means
+        add, sample standard deviations add in quadrature (independent
+        sensors), and ``n`` is the smallest sample count. Returns ``None``
+        when none of the requested backends was captured.
+        """
+        if backends is None:
+            chosen = list(self.per_backend.values())
+        else:
+            wanted = set(backends)
+            chosen = [b for name, b in self.per_backend.items() if name in wanted]
+        if not chosen:
+            return None
+        mean = float(sum(b.power_W_mean for b in chosen))
+        std = float(math.sqrt(sum(b.sample_std_W ** 2 for b in chosen)))
+        n = int(min(b.n_samples for b in chosen))
+        return {
+            "mean_W": mean,
+            "std_W": std,
+            "sem_W": std / math.sqrt(n) if n > 0 else float("nan"),
+            "n": n,
+            "backends": [b.backend for b in chosen],
+        }
+
     def to_dict(self) -> dict[str, Any]:
+        total = self.idle_for(None) or {}
         return {
             "total_power_W":         self.total_power_W,
             "total_power_std_W":     self.total_power_std_W,
             "duration_s":            self.duration_s,
             "requested_duration_s":  self.requested_duration_s,
             "per_backend": [b.to_dict() for b in self.per_backend.values()],
+            # Uncertainty fields (R2.2), summed over backends.
+            "P_idle_mean_w":  total.get("mean_W"),
+            "P_idle_std_w":   total.get("std_W"),
+            "P_idle_sem_w":   total.get("sem_W"),
+            "n_idle_samples": total.get("n"),
         }
 
 
@@ -267,3 +325,159 @@ def derive_dynamic_metrics(
         # downstream loaders would choke on.
 
     return out
+
+
+# ---------------------------------------------------------------------------
+# Uncertainty of the dynamic energy (R2.2)
+# ---------------------------------------------------------------------------
+
+BOOTSTRAP_DRAWS = 2000
+BOOTSTRAP_SEED = 0
+
+
+def dynamic_energy_uncertainty(
+    block_energy_mj,
+    block_power_w,
+    block_time_ms,
+    idle: dict[str, float] | None,
+    draws: int = BOOTSTRAP_DRAWS,
+    seed: int = BOOTSTRAP_SEED,
+) -> dict[str, Any]:
+    r"""Dynamic energy per image with its uncertainty, from per-block readings.
+
+    The measurement is split into :math:`B` blocks. Block :math:`b` gives a
+    mean power :math:`P_b` and a time per image :math:`t_b`
+    (:math:`E_b = P_b t_b` is its energy per image). With
+    :math:`\bar P` and :math:`\bar t` the block means and
+    :math:`P_\text{idle} \pm \sigma_\text{idle}` the idle baseline of the
+    backends that took the measurement,
+
+    .. math::
+
+        E_\text{dyn} = (\bar P - P_\text{idle})\,\bar t .
+
+    Two uncertainty components are reported separately and combined in
+    quadrature (they are independent):
+
+    * **idle baseline**: :math:`\sigma_{E,\text{idle}} = \sigma_\text{idle}\,\bar t`,
+      with :math:`\sigma_\text{idle}` the *standard deviation* of the idle
+      readings, not their standard error. The concern is the baseline drifting
+      between the idle window and the run, which the standard error would
+      hide. The standard-error version, :math:`\sigma_\text{idle}/\sqrt{n}\,\bar t`,
+      is stored as well for reference;
+    * **blocks**: first-order (delta-method) propagation of the sampling error
+      of :math:`\bar P` and :math:`\bar t`, including their covariance,
+
+      .. math::
+
+          \sigma_{E,\text{blocks}}^2 = \frac{1}{B}\left[\bar t^{\,2} s_P^2
+          + (\bar P - P_\text{idle})^2 s_t^2
+          + 2\,\bar t\,(\bar P - P_\text{idle})\,s_{Pt}\right],
+
+      with sample (co)variances over the blocks.
+
+    :math:`\sigma_E = \sqrt{\sigma_{E,\text{idle}}^2 + \sigma_{E,\text{blocks}}^2}`.
+    A 95 % interval comes from a bootstrap that resamples the blocks with
+    replacement and draws :math:`P_\text{idle} \sim N(P_\text{idle},
+    \sigma_\text{idle})` each time; this is the procedure of the paper-side
+    analysis, so both give the same numbers. The seed is fixed.
+
+    Energies in mJ, powers in W, times in ms. Without a baseline only the
+    block statistics of the total energy are returned.
+    """
+    E = np.asarray(block_energy_mj, dtype=float)
+    P = np.asarray(block_power_w, dtype=float)
+    t = np.asarray(block_time_ms, dtype=float)
+    B = int(min(E.size, P.size, t.size))
+    out: dict[str, Any] = {"n_blocks": B}
+    if B == 0:
+        return out
+    E, P, t = E[:B], P[:B], t[:B]
+    out["energy_block_mean_mj"] = float(E.mean())
+    out["energy_block_sem_mj"] = float(E.std(ddof=1) / math.sqrt(B)) if B > 1 else None
+    if idle is None:
+        return out
+
+    p_idle, s_idle = float(idle["mean_W"]), float(idle["std_W"])
+    p_bar, t_bar = float(P.mean()), float(t.mean())
+    p_dyn = p_bar - p_idle
+    e_dyn = p_dyn * t_bar
+    s_idle_term = s_idle * t_bar
+    sem_idle = float(idle.get("sem_W", float("nan")))
+    if B > 1:
+        cov = np.cov(np.vstack([P, t]), ddof=1)
+        var_blocks = (t_bar ** 2 * cov[0, 0] + p_dyn ** 2 * cov[1, 1]
+                      + 2 * t_bar * p_dyn * cov[0, 1]) / B
+        s_blocks = float(math.sqrt(max(var_blocks, 0.0)))
+        s_p_blocks = float(math.sqrt(cov[0, 0] / B))
+    else:
+        s_blocks, s_p_blocks = 0.0, 0.0
+
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, B, size=(draws, B))
+    idle_draws = rng.normal(p_idle, s_idle, size=draws)
+    boot = (P[idx].mean(axis=1) - idle_draws) * t[idx].mean(axis=1)
+    lo, hi = np.percentile(boot, [2.5, 97.5])
+
+    out.update({
+        "idle_power_W": p_idle,
+        "idle_power_std_W": s_idle,
+        "idle_power_sem_W": sem_idle,
+        "n_idle_samples": int(idle.get("n", 0)),
+        "idle_backends": list(idle.get("backends", [])),
+        "dynamic_power_block_W": p_dyn,
+        "dynamic_power_sigma_W": float(math.sqrt(s_idle ** 2 + s_p_blocks ** 2)),
+        "dynamic_energy_pt_mj": e_dyn,
+        "dynamic_energy_sigma_idle_mj": s_idle_term,
+        "dynamic_energy_sigma_idle_sem_mj": sem_idle * t_bar,
+        "dynamic_energy_sigma_blocks_mj": s_blocks,
+        "dynamic_energy_sigma_mj": float(math.sqrt(s_idle_term ** 2 + s_blocks ** 2)),
+        "dynamic_energy_ci95_mj": [float(lo), float(hi)],
+        "idle_share_of_energy": float(p_idle * t_bar / E.mean()) if E.mean() > 0 else None,
+    })
+    return out
+
+
+def uncertainty_fields(stage: str, stats: dict[str, Any]) -> dict[str, Any]:
+    """Report names for the output of :func:`dynamic_energy_uncertainty`.
+
+    ``stage`` is ``"inference"`` (``dynamic_energy_sigma_mj``,
+    ``energy_idle_power_W``, ...) or ``"reconstruction"``
+    (``dynamic_reconstruction_energy_sigma_mj``,
+    ``energy_reconstruction_idle_power_W``, ...), so the two stages never
+    overwrite each other and no existing field changes.
+    """
+    lead = "energy_" if stage == "inference" else f"energy_{stage}_"
+    out = {}
+    for key, value in stats.items():
+        if key.startswith("dynamic_"):
+            name = key if stage == "inference" else f"dynamic_{stage}_" + key[len("dynamic_"):]
+        elif key.startswith("energy_"):
+            name = key if stage == "inference" else lead + key[len("energy_"):]
+        else:
+            name = lead + key
+        out[name] = value
+    return out
+
+
+def add_dynamic_uncertainty(results: dict[str, Any], baseline: BaselineResult | None,
+                            stage: str = "inference") -> dict[str, Any]:
+    """Add the uncertainty fields of one stage to a test's ``results``.
+
+    Uses the per-block readings the energy measurement stored
+    (``energy_blocks`` / ``energy_reconstruction_blocks``) and the idle
+    baseline of the backends that took that measurement. Without a baseline
+    the dynamic fields are left out and the total fields are untouched.
+    Returns the fields that were added.
+    """
+    key, names = (("energy_blocks", "energy_backends") if stage == "inference"
+                  else ("energy_reconstruction_blocks", "energy_reconstruction_backend_names"))
+    blocks = results.get(key)
+    if not blocks:
+        return {}
+    idle = baseline.idle_for(results.get(names)) if baseline is not None else None
+    stats = dynamic_energy_uncertainty(blocks.get("energy_mj", []), blocks.get("power_W", []),
+                                       blocks.get("time_ms", []), idle)
+    fields = uncertainty_fields(stage, stats)
+    results.update(fields)
+    return fields

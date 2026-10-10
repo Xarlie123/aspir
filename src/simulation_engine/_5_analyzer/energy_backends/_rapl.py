@@ -131,13 +131,7 @@ class RAPLBackend(EnergyBackend):
             end_val = self._read_energy_uj(domain)
             start_val = self._start_readings.get(domain, 0)
 
-            # Handle counter overflow
-            if end_val < start_val:
-                energy_uj = (self._max_energy[domain] - start_val) + end_val
-            else:
-                energy_uj = end_val - start_val
-
-            total_energy_uj += energy_uj
+            total_energy_uj += self._delta_uj(domain, start_val, end_val)
 
         energy_joules = total_energy_uj / 1_000_000.0
         avg_power = energy_joules / duration if duration > 0 else 0
@@ -156,13 +150,23 @@ class RAPLBackend(EnergyBackend):
         if not self._is_initialized:
             return 0.0
 
-        # Sample for 100ms
+        # Sample for ~100 ms. The idle baseline is built from these readings,
+        # so the counter wrap is handled here too and the interval is the
+        # measured one, not the nominal sleep.
         start = {d: self._read_energy_uj(d) for d in self._domains}
+        t0 = time.perf_counter()
         time.sleep(0.1)
         end = {d: self._read_energy_uj(d) for d in self._domains}
+        dt = time.perf_counter() - t0
 
-        total_uj = sum(end[d] - start[d] for d in self._domains)
-        return (total_uj / 1_000_000.0) / 0.1  # Convert to Watts
+        total_uj = sum(self._delta_uj(d, start[d], end[d]) for d in self._domains)
+        return (total_uj / 1_000_000.0) / dt if dt > 0 else 0.0  # Convert to Watts
+
+    def _delta_uj(self, domain: str, start_val: int, end_val: int) -> int:
+        """Counter increment, across one wrap at ``max_energy_range_uj``."""
+        if end_val < start_val:
+            return (self._max_energy[domain] - start_val) + end_val
+        return end_val - start_val
 
     def shutdown(self) -> None:
         """No cleanup needed for RAPL."""
