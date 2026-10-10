@@ -66,7 +66,8 @@ def write_table(stem, rows, cols):
     (DATA.parent / f"{stem}.md").write_text("\n".join(lines) + "\n")
 
 
-styles_learned = ("ASPIR (UC2 U-Net)", "SPyRiT (PinvNet + Unet)", "ASPIR retrained, best-validation epoch")
+KEEPBEST = "ASPIR retrained, keep best-validation weights"
+styles_learned = ("ASPIR (UC2 U-Net)", "SPyRiT (PinvNet + Unet)", KEEPBEST)
 
 
 def main():
@@ -106,6 +107,9 @@ def main():
         bv_path = DATA / "aspir_retrained_bestval.npz"
         bv = np.load(bv_path) if bv_path.exists() else None
         bv_log = json.loads((DATA / "aspir_retrain_bestval_log.json").read_text()) if bv is not None else {}
+        kb_path = DATA / "aspir_retrained_keepbest.npz"
+        kb = np.load(kb_path) if kb_path.exists() else None
+        kb_log = json.loads((DATA / "aspir_retrain_keepbest_log.json").read_text()) if kb is not None else {}
         rows = []
         for r in RATIOS:
             entries = [("ASPIR (UC2 U-Net)", alr[f"rec_{r}"], at[f"native_{r}"] + alt[f"unet_{r}"], None),
@@ -117,6 +121,9 @@ def main():
                 entries.append(("ASPIR retrained today, run 2, last epoch", bv[f"last_{r}"], "", ""))
                 entries.append((f"ASPIR retrained today, run 2, best-validation epoch "
                                 f"({bv_log[str(r)]['best_epoch']})", bv[f"best_{r}"], "", ""))
+            if kb is not None:
+                entries.append((f"{KEEPBEST} (epoch {kb_log[str(r)]['kept_epoch']})", kb[f"rec_{r}"], "",
+                                kb_log[str(r)]["train_minutes"]))
             for tool, est, ms, tmin in entries:
                 s = summary(score(gt, est))
                 rows.append({"M/N": r, "tool": tool,
@@ -124,8 +131,7 @@ def main():
                              "ssim": s["ssim_mean"], "ssim_std": s["ssim_std"],
                              "lpips": s["lpips_mean"], "lpips_std": s["lpips_std"],
                              "ms_per_image": ms, "train_minutes": "" if tmin is None else tmin})
-                key = ("ASPIR retrained, best-validation epoch" if tool.startswith(
-                    "ASPIR retrained today, run 2, best-validation") else tool)
+                key = KEEPBEST if tool.startswith(KEEPBEST) else tool
                 if key in styles_learned:
                     curves.setdefault(key, []).append((r, s["psnr_mean"], s["psnr_std"]))
         write_table("parity_learned", rows, list(rows[0]))
@@ -136,7 +142,7 @@ def main():
     fig, ax = plt.subplots(figsize=(5.2, 3.6))
     styles = {"ASPIR linear": ("C0", "-", "o"), "SPyRiT pinv": ("C1", "--", "s"),
               "ASPIR (UC2 U-Net)": ("C0", "-", "^"), "SPyRiT (PinvNet + Unet)": ("C1", "--", "v"),
-              "ASPIR retrained, best-validation epoch": ("C2", ":", "D")}
+              KEEPBEST: ("C2", ":", "D")}
     for name, pts in curves.items():
         x, y, e = map(np.array, zip(*pts, strict=True))
         c, ls, mk = styles[name]

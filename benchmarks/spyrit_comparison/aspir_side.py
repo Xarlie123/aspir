@@ -129,11 +129,13 @@ def part_learned():
     print("learned done", check, {k: round(v, 3) for k, v in timing.items()})
 
 
-def part_retrain():
+def part_retrain(keep_best_val=False):
     """Supplementary: retrain the UC2 recipe with today's ASPIR on this GPU, for training time.
 
     Same images, split, rows and hyper-parameters as UC2 (batch config), through Simulation /
     PostprocessorNN as Batch Test does; the U-Net is ASPIR's current one (Upsample decoder).
+    With keep_best_val (part `retrain_keepbest`), ASPIR's own *Keep best-validation weights* option
+    selects the weights, as SPyRiT's train_model does.
     """
     from simulation_engine._1_dataset_gen.DatasetFromCelebrities import DatasetFromCelebrities
 
@@ -163,26 +165,28 @@ def part_retrain():
         pp = sim.postprocessor
         sync()
         t0 = time.perf_counter()
-        pp.train_with_metrics(num_epochs=t0cfg["epochs"])
+        pp.train_with_metrics(num_epochs=t0cfg["epochs"], keep_best_val=keep_best_val)
         sync()
         minutes = (time.perf_counter() - t0) / 60
         orig, _, den = (np.asarray(a, dtype=np.float32) for a in pp.test_dataset())
         assert np.abs(orig - test_ref).max() < 1e-6, "test split differs"
         out[f"rec_{ratio}"] = den
         log_[str(ratio)] = {"train_minutes": minutes,
-                            "params": sum(p.numel() for p in pp.model.parameters())}
+                            "params": sum(p.numel() for p in pp.model.parameters()),
+                            "kept_epoch": pp.kept_epoch, "kept_weights": pp.kept_weights}
         print(ratio, log_[str(ratio)], flush=True)
-    np.savez_compressed(DATA / "aspir_retrained.npz", **out)
-    (DATA / "aspir_retrain_log.json").write_text(json.dumps(log_, indent=2))
+    suffix = "_keepbest" if keep_best_val else ""
+    np.savez_compressed(DATA / f"aspir_retrained{suffix}.npz", **out)
+    (DATA / f"aspir_retrain{suffix}_log.json").write_text(json.dumps(log_, indent=2))
 
 
 def part_retrain_bestval():
     """Diagnostic: the same retraining, keeping both the last-epoch and the best-validation weights.
 
-    SPyRiT's train_model returns the weights of the epoch with the lowest validation loss; ASPIR keeps the
+    SPyRiT's train_model returns the weights of the epoch with the lowest validation loss; ASPIR kept the
     last epoch. This trains epoch by epoch (PostprocessorNN.train(1), same optimiser throughout), validates
     after each epoch with PostprocessorNN.validate() and records both, so the effect of that one difference
-    is measured within a single run. ASPIR itself is unchanged.
+    is measured within a single run. It predates ASPIR's own option (part `retrain_keepbest`).
     """
     import copy
 
@@ -231,7 +235,8 @@ def part_retrain_bestval():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["linear", "learned", "retrain", "retrain_bestval"])
+    ap.add_argument("part", choices=["linear", "learned", "retrain", "retrain_keepbest", "retrain_bestval"])
     a = ap.parse_args()
     {"linear": part_linear, "learned": part_learned, "retrain": part_retrain,
+     "retrain_keepbest": lambda: part_retrain(keep_best_val=True),
      "retrain_bestval": part_retrain_bestval}[a.part]()

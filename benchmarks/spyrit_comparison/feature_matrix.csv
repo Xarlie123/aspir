@@ -22,7 +22,7 @@ Reconstruction,Learned unrolled (LPGD),✗,✓ recon.LearnedPGD,—,SPyRiT core/
 Reconstruction,Plug-and-play / pretrained denoiser in the loop,✗,✓ DRUNet denoiser in DC-Net; deepinv bridge,—,SPyRiT external/drunet.py; tutorial/tuto_05_dcnet.py
 Reconstruction,GPU support,✓ all seven algorithms (torch backend; device selectable),✓ all (PyTorch modules),—,ASPIR _3_applicator/torch_backend; SPyRiT core
 Neural networks,Architectures,✓ 10 (autoencoder / DnCNN / U-Net / ResUNet / attention U-Net / residual CNN / Noise2Void / MobileNet / dilated CNN / cGAN),✓ ConvNet / ConvNetBN / DConvNet / Unet / DRUNet,—,ASPIR _4_postprocessor/postprocessor_nn.py MODEL_REGISTRY; SPyRiT core/nnet.py / external/drunet.py
-Neural networks,Training engine,✓ PostprocessorNN (GUI and batch; curves; INT8 calibration export),✓ core/train.train_model (best-validation checkpoint; TensorBoard),—,ASPIR postprocessor_nn.py; SPyRiT core/train.py
+Neural networks,Training engine,✓ PostprocessorNN (GUI and batch; curves; optional best-validation weights; INT8 calibration export),✓ core/train.train_model (best-validation checkpoint; TensorBoard),—,ASPIR postprocessor_nn.py; SPyRiT core/train.py
 Neural networks,Pretrained weights distributed,✗,✓ Creatis warehouse via misc/load_data.download_girder (Pinv-Net / DC-Net / DRUNet),✓,SPyRiT tutorial/tuto_05_dcnet.py; misc/load_data.py
 Noise,Measurement noise (Poisson / Gaussian / Poisson–Gaussian),✗ (simulated acquisition is noiseless; calibrated noise only in the experimental script),✓ noise.Gaussian / Poisson / PoissonGaussian / approximations,—,SPyRiT core/noise.py; ASPIR scripts/experimental_spihim_figure.py
 Noise,Image speckle,✓ speckle_noise on dataset images,✗,—,ASPIR _1_dataset_gen/dataset.py
@@ -40,7 +40,7 @@ Platforms,Windows,✓ (documented install),✓ (CI),—,ASPIR CLAUDE.md / pyproj
 Platforms,macOS,not documented,✓ (CI),—,SPyRiT CI matrix
 Platforms,Docker,✓ docker/Dockerfile (GPU + X11),✗,—,ASPIR docker/
 Platforms,NVIDIA Jetson,✓ jtop / sysfs energy backend; Jetson measurements,not documented,—,ASPIR _5_analyzer/energy_backends/_jetson.py
-Engineering,Automated tests,partial: 5 plain-assert test scripts (37 checks); no test runner,✓ pytest doctests across modules + tutorials executed,—,ASPIR tests/; SPyRiT CI
+Engineering,Automated tests,partial: 6 plain-assert test scripts (45 checks); no test runner,✓ pytest doctests across modules + tutorials executed,—,ASPIR tests/; SPyRiT CI
 Engineering,Continuous integration,✗,✓ GitHub Actions (Ubuntu / Windows / macOS; Python 3.10–3.14; weekly),—,SPyRiT .github/workflows/main.yml
 Engineering,Packaging,partial: pip install from source; archived on Zenodo,✓ PyPI (pip install spyrit),—,ASPIR pyproject.toml / CITATION.cff; SPyRiT pyproject.toml
 Engineering,Documentation,✓ Read the Docs (user guide + API),✓ Read the Docs (API + tutorial gallery),—,ASPIR docs/; SPyRiT docs/
