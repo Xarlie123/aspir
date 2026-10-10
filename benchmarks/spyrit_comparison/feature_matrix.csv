@@ -1,0 +1,47 @@
+group,capability,aspir_v1.3_head,spyrit_3.1.1,openspyrit_ecosystem,evidence
+Interface,Graphical user interface,✓ PySide6 GUI (Single Test wizard / Batch Test / Batch Reports),✗,✗,ASPIR src/ui/main_window/window.py; SPyRiT: library only (README)
+Interface,Python API,✓ simulation_engine (Simulation / applicators / masks),✓ spyrit.core (meas / prep / inverse / recon / nnet / train),—,ASPIR src/simulation_engine/simulation.py; SPyRiT spyrit/core/*.py
+Interface,CLI / scripts,partial: scripts/ for benchmarks and experiments; no general CLI,partial: tutorials as runnable scripts; no CLI,—,ASPIR scripts/*.py; SPyRiT tutorial/*.py
+Interface,Batch experiment orchestration with reports,✓ .batch_config runner + JSON report + comparison views + re-measure,✗ (user writes the loop),—,ASPIR src/ui/custom_widgets/batch_test/batch_test_runner/runner.py; batch_reports/remeasure
+Acquisition,Hadamard natural (Sylvester) order,✓ MaskHadamard,partial: expressible through an order matrix (Walsh / sequency is the native 1D basis),—,ASPIR _2_mask_gen/mask_hadamard.py; SPyRiT core/meas.py HadamSplit2d(order) + core/torch.walsh_matrix
+Acquisition,Walsh–Paley order,✓ MaskHadamardWalshPaley,partial: via order matrix,—,ASPIR mask_hadamard_walsh_paley.py; SPyRiT HadamSplit2d(order)
+Acquisition,Cake-Cutting order,✓ MaskHadamardCakeCutting,✓ define_order(n; 'CC') (same rows as ASPIR at 8–32 %; 161/163 at 4 %),—,ASPIR mask_hadamard_cake_cutting.py; SPyRiT misc/sampling.py define_order
+Acquisition,Cal-Sal order,✓ MaskCalSal,partial: via order matrix,—,ASPIR mask_cal_sal.py
+Acquisition,Other Hadamard orders (sequency / TV / variance-based),✗,✓ define_order 'Sequency' / 'TV' / 'Variance' (ImageNet covariance from the Creatis warehouse),—,SPyRiT misc/sampling.py define_order; core/torch.Cov2Var
+Acquisition,Random / scatter patterns,✓ MaskScatter,✓ any matrix through meas.Linear / FreeformLinear,—,ASPIR mask_scatter.py; SPyRiT core/meas.py Linear
+Acquisition,Sweep (line-scan) patterns,✓ MaskSweep,partial: any matrix through meas.Linear,—,ASPIR mask_sweep.py
+Acquisition,Fourier patterns (phase-shifting FSPI),✓ MaskFourier + ApplicatorFourier (3- and 4-step),partial: Fourier basis in misc/pattern_choice; no FSPI demodulation,—,ASPIR mask_fourier.py / applicator_fourier.py; SPyRiT misc/pattern_choice.py Fourier
+Acquisition,Binary (dithered) Fourier for DMD,✓ Floyd–Steinberg / Bayer with DMD upsampling,✗,—,ASPIR mask_fourier.py binarization
+Acquisition,Split (positive / negative) DMD acquisition,partial: simulation uses bipolar ±1 rows; measured pos/neg pairs ingested (SPIHIM adapter),✓ LinearSplit / HadamSplit2d + prep.Unsplit,—,ASPIR _1_dataset_gen/spihim.py; SPyRiT core/meas.py LinearSplit
+Reconstruction,Linear / pseudoinverse,✓ native linear + Pseudoinverse (CPU / CUDA; FWHT / FFT matrix-free),✓ PseudoInverse (fast Hadamard pinv; rcond / L2 / H1),—,ASPIR _3_applicator/applicator_pseudoinverse.py; SPyRiT core/inverse.py PseudoInverse
+Reconstruction,Tikhonov / regularised linear,partial: pseudoinverse only,✓ Tikhonov / TikhonovMeasurementPriorDiag / TikhoNet,—,SPyRiT core/inverse.py; core/recon.py TikhoNet
+Reconstruction,FISTA (sparsity),✓ ApplicatorFISTA (CPU / CUDA),✗ (not in core; reachable through the deepinv bridge tutorial),deepinv bridge,ASPIR applicator_fista.py; SPyRiT tutorial/wip/tuto_a00_connect_deepinv.py
+Reconstruction,TV regularisation,✓ ApplicatorTV (CPU / CUDA),✗ (not in core),deepinv bridge,ASPIR applicator_tv_norm.py
+Reconstruction,Data-consistency networks (DC-Net),✗,✓ recon.DCNet,—,SPyRiT core/recon.py DCNet; tutorial/tuto_05_dcnet.py
+Reconstruction,Learned unrolled (LPGD),✗,✓ recon.LearnedPGD,—,SPyRiT core/recon.py LearnedPGD
+Reconstruction,Plug-and-play / pretrained denoiser in the loop,✗,✓ DRUNet denoiser in DC-Net; deepinv bridge,—,SPyRiT external/drunet.py; tutorial/tuto_05_dcnet.py
+Reconstruction,GPU support,✓ all seven algorithms (torch backend; device selectable),✓ all (PyTorch modules),—,ASPIR _3_applicator/torch_backend; SPyRiT core
+Neural networks,Architectures,✓ 10 (autoencoder / DnCNN / U-Net / ResUNet / attention U-Net / residual CNN / Noise2Void / MobileNet / dilated CNN / cGAN),✓ ConvNet / ConvNetBN / DConvNet / Unet / DRUNet,—,ASPIR _4_postprocessor/postprocessor_nn.py MODEL_REGISTRY; SPyRiT core/nnet.py / external/drunet.py
+Neural networks,Training engine,✓ PostprocessorNN (GUI and batch; curves; INT8 calibration export),✓ core/train.train_model (best-validation checkpoint; TensorBoard),—,ASPIR postprocessor_nn.py; SPyRiT core/train.py
+Neural networks,Pretrained weights distributed,✗,✓ Creatis warehouse via misc/load_data.download_girder (Pinv-Net / DC-Net / DRUNet),✓,SPyRiT tutorial/tuto_05_dcnet.py; misc/load_data.py
+Noise,Measurement noise (Poisson / Gaussian / Poisson–Gaussian),✗ (simulated acquisition is noiseless; calibrated noise only in the experimental script),✓ noise.Gaussian / Poisson / PoissonGaussian / approximations,—,SPyRiT core/noise.py; ASPIR scripts/experimental_spihim_figure.py
+Noise,Image speckle,✓ speckle_noise on dataset images,✗,—,ASPIR _1_dataset_gen/dataset.py
+Noise,Quantisation (INT8 / INT4 data formats; INT8 deployment calibration),✓,✗,—,ASPIR dataset.py apply_data_format; postprocessor_nn.py
+Datasets,Simulated generators,✓ IR beams (LightPipes) / CelebA / SVHN / folder / single image,partial: STL-10 and ImageNet loaders; other sets through torchvision,—,ASPIR _1_dataset_gen/*.py; SPyRiT misc/statistics.py data_loaders_stl10 / imagenet
+Datasets,Experimental data ingestion,✓ measurement format + SPIHIM adapter (GUI and API),✓ misc/load_data.read_acquisition (SPAS files),✓ SPIHIM / SPAS,ASPIR _1_dataset_gen/measured.py / spihim.py; SPyRiT misc/load_data.py
+Acquisition,Dynamic scenes / deformation fields,✗,✓ DynamicLinear / DynamicHadamSplit2d / warp.DeformationField,—,SPyRiT core/meas.py; core/warp.py; tutorial/tuto_06_*
+Acquisition,Hyperspectral,✗ (spectra reduced to one value per pattern),partial: spectral colorisation and plotting utilities,✓ SPAS hyperspectral acquisition,SPyRiT misc/color.py
+Metrics,PSNR / SSIM,✓,✓ misc/metrics.py,—,ASPIR _5_analyzer/analyzer_noise.py
+Metrics,LPIPS,✓,✗,—,ASPIR analyzer_noise.py
+Metrics,GPU-synchronised timing (stage by stage),✓ reconstruction and inference; warm-up + repeats,✗,—,ASPIR _5_analyzer/analyzer_timing.py; batch_test_runner/_timing.py
+Metrics,Energy measurement,✓ NVML / RAPL / Jetson; idle baseline; dynamic energy with propagated σ and 95 % CI,✗,—,ASPIR _5_analyzer/analyzer_energy.py / baseline_capture.py
+Platforms,Linux,✓,✓ (CI),—,ASPIR README; SPyRiT .github/workflows/main.yml
+Platforms,Windows,✓ (documented install),✓ (CI),—,ASPIR CLAUDE.md / pyproject.toml; SPyRiT CI matrix
+Platforms,macOS,not documented,✓ (CI),—,SPyRiT CI matrix
+Platforms,Docker,✓ docker/Dockerfile (GPU + X11),✗,—,ASPIR docker/
+Platforms,NVIDIA Jetson,✓ jtop / sysfs energy backend; Jetson measurements,not documented,—,ASPIR _5_analyzer/energy_backends/_jetson.py
+Engineering,Automated tests,partial: 5 plain-assert test scripts (37 checks); no test runner,✓ pytest doctests across modules + tutorials executed,—,ASPIR tests/; SPyRiT CI
+Engineering,Continuous integration,✗,✓ GitHub Actions (Ubuntu / Windows / macOS; Python 3.10–3.14; weekly),—,SPyRiT .github/workflows/main.yml
+Engineering,Packaging,partial: pip install from source; archived on Zenodo,✓ PyPI (pip install spyrit),—,ASPIR pyproject.toml / CITATION.cff; SPyRiT pyproject.toml
+Engineering,Documentation,✓ Read the Docs (user guide + API),✓ Read the Docs (API + tutorial gallery),—,ASPIR docs/; SPyRiT docs/
+Engineering,Licence,Apache-2.0,LGPL-3.0,CC-BY 4.0 (SPIHIM data),ASPIR LICENSE; SPyRiT LICENSE.md

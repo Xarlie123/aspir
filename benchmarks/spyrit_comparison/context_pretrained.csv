@@ -1,0 +1,13 @@
+object,method,condition,psnr,ssim,lpips,note
+CelebA UC2 test (300),SPyRiT pinv,"M=1024 variance order, Poisson alpha=100",25.261159545735765,0.7866411528842633,0.22813627123832703,
+CelebA UC2 test (300),SPyRiT DC-Net completion (no denoiser),"M=1024 variance order, Poisson alpha=100",26.525514412379646,0.8256261078867247,0.16758182644844055,
+CelebA UC2 test (300),SPyRiT DC-Net + pretrained U-Net (STL-10),"M=1024 variance order, Poisson alpha=100",25.46471820391911,0.8374191926164848,0.06404107064008713,
+CelebA UC2 test (300),ASPIR UC2 U-Net (CelebA),"M=983 Cake-Cutting, noiseless (parity setting)",27.176412568952795,0.8945191919293695,0.11665540188550949,
+CelebA UC2 test (300),"SPyRiT PinvNet + Unet (CelebA, parity)","M=983 Cake-Cutting, noiseless (parity setting)",29.022642011570824,0.9127533172788247,0.0832642912864685,
+SPIHIM star (10-repeat mean),ASPIR linear (pseudoinverse) on the same rows,"M=1024 variance order (SPyRiT rows), measured",17.011989410097176,0.5703980754215905,, res. limit 0.357 cyc/px (r=15.2 px)
+SPIHIM star (10-repeat mean),SPyRiT pinv,"M=1024 variance order (SPyRiT rows), measured",17.011989380797413,0.570398089450182,, res. limit 0.357 cyc/px (r=15.2 px)
+SPIHIM star (10-repeat mean),SPyRiT DC-Net completion,"M=1024 variance order (SPyRiT rows), measured",17.541459084702527,0.5919405124647735,, res. limit 0.317 cyc/px (r=17.1 px)
+SPIHIM star (10-repeat mean),SPyRiT DC-Net + pretrained U-Net (STL-10),"M=1024 variance order (SPyRiT rows), measured",17.870099565543796,0.6152290483248454,, res. limit 0.322 cyc/px (r=16.8 px)
+SPIHIM star (10-repeat mean),ASPIR linear,"M=983 Cake-Cutting, measured (R1.3b)",16.391122276197144,0.5082917084413586,,res. limit 0.360 cyc/px (r=15.0 px)
+SPIHIM star (10-repeat mean),ASPIR U-Net CelebA (b),"M=983 Cake-Cutting, measured (R1.3b)",16.63920678530355,0.5108985648138682,,res. limit 0.313 cyc/px (r=17.3 px)
+SPIHIM star (10-repeat mean),ASPIR U-Net STL-10 (b),"M=983 Cake-Cutting, measured (R1.3b)",16.596752059351495,0.5204037778615208,,res. limit 0.337 cyc/px (r=16.1 px)

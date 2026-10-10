@@ -1,0 +1,13 @@
+{
+  "format_version": "2.2",
+  "name": "UC2 CelebA Cake-Cutting",
+  "dataset_info": {"type": "DatasetFromCelebrities", "name": "Celebrities", "img_size": 64,
+                   "num_images": 3000, "seed": 10, "data_format": "INT8"},
+  "tests": [
+    {"name": "Celeb - Cake Cutting 4%",  "mask_type": "hadamard_cake_cutting", "hadamard_max_idx": 163},
+    {"name": "Celeb - Cake Cutting 8%",  "mask_type": "hadamard_cake_cutting", "hadamard_max_idx": 327},
+    {"name": "Celeb - Cake Cutting 16%", "mask_type": "hadamard_cake_cutting", "hadamard_max_idx": 655},
+    {"name": "Celeb - Cake Cutting 24%", "mask_type": "hadamard_cake_cutting", "hadamard_max_idx": 983},
+    {"name": "Celeb - Cake Cutting 32%", "mask_type": "hadamard_cake_cutting", "hadamard_max_idx": 1310}
+  ]
+}
