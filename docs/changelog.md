@@ -124,6 +124,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     only. The reconstruction stage is now measured in 10 blocks.
   - Existing fields are unchanged. The derivation is in *User Guide /
     Analysis*, and `tests/test_energy_uncertainty.py` checks it.
+- **Keep the best-validation weights.** A *Keep best-validation weights*
+  checkbox in Single Test (post-processing tab) and in each Batch Test
+  configuration (`keep_best_val` in `.batch_config`).
+  - When checked, training ends by restoring the weights of the epoch with
+    the lowest validation loss instead of keeping the last epoch's. It is the
+    usual practice, and what SPyRiT's `train_model` does.
+  - With a constant learning rate the last epoch can be several dB below the
+    best one. In the SPyRiT comparison (`benchmarks/spyrit_comparison/`) the
+    gap was 3.3 dB at M/N = 0.32.
+  - Off by default, so saved configurations and earlier results reproduce
+    unchanged. With an empty validation split the last epoch is kept and a
+    warning is logged.
+  - The weights copied are the model's whole `state_dict`, BatchNorm buffers
+    included.
+  - Where the kept epoch shows up:
+    - in Single Test, as a dashed line on the training curves;
+    - in Batch Reports, under *Training Summary*;
+    - in the report, as `kept_epoch` and `kept_weights` (`"best_validation"`
+      or `"last"`); `test_config.json` records `keep_best_val`.
+  - Without the training-curves report, Batch Test adds one validation pass
+    per epoch to find the best epoch. `tests/test_best_val_weights.py` checks
+    the restore exactly, on both training paths.
 - **First automated tests in the repository.** `tests/test_fourier_fspi.py`
   covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
   fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers

@@ -37,8 +37,9 @@ class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
     trainProgress   = Signal(int)             # training progress percentage
     trainFinished   = Signal()                # emitted when training is done
     imagesReady     = Signal(list, list, list)  # original, noisy, reconstructed
-    # batch, lr, epochs, model_name, use_gpu, weight_decay, dropout, loss_function, optimizer, arch_config
-    trainRequested  = Signal(int, float, int, str, bool, float, float, str, str, dict)
+    # batch, lr, epochs, model_name, use_gpu, weight_decay, dropout, loss_function, optimizer, arch_config,
+    # keep_best_val
+    trainRequested  = Signal(int, float, int, str, bool, float, float, str, str, dict, bool)
 
     def __init__(self, parent=None, simulation=None, logger=None):
         super().__init__(parent)
@@ -197,14 +198,17 @@ class NNControlWidget(QtWidgets.QWidget, Ui_nn_control):
         loss_function = self.loss_function_combo.currentText()
         optimizer = self.optimizer_combo.currentText()
         arch_config = self.arch_config_widget.get_config()
+        keep_best_val = self.keep_best_val_checkbox.isChecked()
 
         self.logger.info(
             "Train requested: batch_size=%d, lr=%.5f, epochs=%d, model=%s, use_gpu=%s, "
-            "weight_decay=%.6f, dropout=%.2f, loss_function=%s, optimizer=%s, arch_config=%s",
-            batch, lr, epochs, model, use_gpu, weight_decay, dropout, loss_function, optimizer, arch_config
+            "weight_decay=%.6f, dropout=%.2f, loss_function=%s, optimizer=%s, arch_config=%s, "
+            "keep_best_val=%s",
+            batch, lr, epochs, model, use_gpu, weight_decay, dropout, loss_function, optimizer, arch_config,
+            keep_best_val
         )
         self.trainRequested.emit(batch, lr, epochs, model, use_gpu, weight_decay, dropout,
-                                 loss_function, optimizer, arch_config)
+                                 loss_function, optimizer, arch_config, keep_best_val)
 
     def is_gpu_enabled(self) -> bool:
         """Return whether GPU training is enabled."""

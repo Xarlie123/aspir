@@ -206,6 +206,8 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         self.val_psnr = []
         self.val_ssim = []
         self.val_lpips = []
+        # Epoch whose weights were restored after training (None: the last epoch was kept)
+        self.kept_epoch = None
 
         # Slider signal and index label setup
         self.image_slider_value.valueChanged.connect(self._on_slider_changed)
@@ -571,6 +573,13 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
         self._add_to_scene(self._recons_images[idx], self._scene_noise, self.preview_image_noise)
         self._add_to_scene(self._denoised_images[idx], self._scene_recon, self.preview_image_reconstructed)
 
+    def _mark_kept_epoch(self, ax):
+        """Vertical line at the best-validation epoch whose weights were kept."""
+        if self.kept_epoch is not None:
+            # Curves are plotted against the 0-based epoch index
+            ax.axvline(self.kept_epoch - 1, color='0.4', linestyle='--', linewidth=1,
+                       label=f'Weights kept (epoch {self.kept_epoch})')
+
     def plot_losses(self):
         """
         Plot training metrics: Loss evolution on top, PSNR/SSIM/LPIPS evolution below (vertical stacking).
@@ -607,6 +616,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
             ax1.set_xlabel('Epoch')
             ax1.set_ylabel('Loss')
             ax1.set_title('Loss Evolution')
+            self._mark_kept_epoch(ax1)
             ax1.legend(loc='upper right', fontsize='small')
             ax1.grid(True, alpha=0.3)
 
@@ -655,6 +665,7 @@ class VisualPostprocessorWidget(QtWidgets.QWidget, Ui_Visual_Postprocessor):
             ax.set_xlabel('Epoch')
             ax.set_ylabel('Loss')
             ax.set_title('Loss Evolution')
+            self._mark_kept_epoch(ax)
             ax.legend()
             ax.grid(True, alpha=0.3)
 

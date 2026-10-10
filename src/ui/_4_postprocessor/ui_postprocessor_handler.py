@@ -252,7 +252,7 @@ class UIPostprocessorHandler(QObject):
 
     def start_postprocessing(self, batch_size, lr, num_epochs, model_name, use_gpu=True,
                               weight_decay=1e-5, dropout=0.0, loss_function="MSE",
-                              optimizer_name="Adam", arch_overrides=None):
+                              optimizer_name="Adam", arch_overrides=None, keep_best_val=False):
         # Prevent duplicate threads
         if getattr(self, 'worker_thread', None) and self.worker_thread.isRunning():
             self.logger.warning("Postprocessing already running, ignoring request")
@@ -261,9 +261,10 @@ class UIPostprocessorHandler(QObject):
 
         self.logger.info(
             "Starting postprocessing: batch_size=%d, lr=%f, epochs=%d, model=%s, use_gpu=%s, "
-            "weight_decay=%f, dropout=%.2f, loss_function=%s, optimizer=%s, arch_overrides=%s",
+            "weight_decay=%f, dropout=%.2f, loss_function=%s, optimizer=%s, arch_overrides=%s, "
+            "keep_best_val=%s",
             batch_size, lr, num_epochs, model_name, use_gpu, weight_decay, dropout,
-            loss_function, optimizer_name, arch_overrides
+            loss_function, optimizer_name, arch_overrides, keep_best_val
         )
 
         # Notify status manager that task is starting
@@ -321,6 +322,7 @@ class UIPostprocessorHandler(QObject):
             self.simulation.postprocessor,
             mode="train",
             num_epochs=num_epochs,
+            keep_best_val=keep_best_val,
             logger=self.logger
         )
         self._worker.result.connect(self.nn_control.imagesReady.emit)
@@ -537,6 +539,9 @@ class UIPostprocessorHandler(QObject):
         self.visual_pp.val_psnr = val_psnr
         self.visual_pp.val_ssim = val_ssim
         self.visual_pp.val_lpips = val_lpips
+        pp = self.simulation.postprocessor
+        self.visual_pp.kept_epoch = (pp.kept_epoch
+                                     if getattr(pp, "kept_weights", None) == "best_validation" else None)
         self.visual_pp.plot_losses()
 
     def refresh_preview_from_state(self):

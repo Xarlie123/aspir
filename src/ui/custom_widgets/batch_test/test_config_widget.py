@@ -213,11 +213,20 @@ class TestConfigWidget(QWidget):
         self.optimizer_combo.currentTextChanged.connect(self._on_value_changed)
         dnn_layout.addWidget(self.optimizer_combo, 3, 3)
 
-        # Row 4: GPU checkbox
+        # Row 4: GPU checkbox and weight selection
         self.use_gpu_checkbox = QCheckBox("Use GPU (if available)")
         self.use_gpu_checkbox.setChecked(True)
         self.use_gpu_checkbox.stateChanged.connect(self._on_value_changed)
-        dnn_layout.addWidget(self.use_gpu_checkbox, 4, 0, 1, 4)
+        dnn_layout.addWidget(self.use_gpu_checkbox, 4, 0, 1, 2)
+
+        self.keep_best_val_checkbox = QCheckBox("Keep best-validation weights")
+        self.keep_best_val_checkbox.setToolTip(
+            "At the end of training, restore the weights of the epoch with the lowest "
+            "validation loss. Unchecked: keep the last epoch's weights."
+        )
+        self.keep_best_val_checkbox.setChecked(False)
+        self.keep_best_val_checkbox.stateChanged.connect(self._on_value_changed)
+        dnn_layout.addWidget(self.keep_best_val_checkbox, 4, 2, 1, 2)
 
         dnn_layout.setColumnStretch(1, 1)
         dnn_layout.setColumnStretch(3, 1)
@@ -736,6 +745,7 @@ class TestConfigWidget(QWidget):
             self.loss_function_combo.setCurrentText(config.loss_function)
             self.optimizer_combo.setCurrentText(config.optimizer)
             self.use_gpu_checkbox.setChecked(config.use_gpu)
+            self.keep_best_val_checkbox.setChecked(config.keep_best_val)
 
             # Dataset split
             self.train_split_spin.setValue(config.train_split)
@@ -824,6 +834,7 @@ class TestConfigWidget(QWidget):
         self.loss_function_combo.setEnabled(not read_only)
         self.optimizer_combo.setEnabled(not read_only)
         self.use_gpu_checkbox.setEnabled(not read_only)
+        self.keep_best_val_checkbox.setEnabled(not read_only)
         self.arch_config_widget.setEnabled(not read_only)
 
         # Dataset split
@@ -923,6 +934,7 @@ class TestConfigWidget(QWidget):
         self._config.loss_function = self.loss_function_combo.currentText()
         self._config.optimizer = self.optimizer_combo.currentText()
         self._config.use_gpu = self.use_gpu_checkbox.isChecked()
+        self._config.keep_best_val = self.keep_best_val_checkbox.isChecked()
         self._config.architecture_config = self.arch_config_widget.get_config()
 
         # Dataset split

@@ -121,6 +121,8 @@ class TestConfiguration:
     loss_function: str = "MSE"  # MSE, L1, SmoothL1, Huber
     optimizer: str = "Adam"  # Adam, AdamW, SGD, RMSprop
     use_gpu: bool = True  # Use GPU if available
+    # Keep the weights of the epoch with the lowest validation loss (False: last epoch)
+    keep_best_val: bool = False
 
     # Model-specific architecture parameters (e.g. depth, base_channels, ...)
     architecture_config: Dict[str, Any] = field(default_factory=dict)
@@ -191,6 +193,7 @@ class TestConfiguration:
             "loss_function": self.loss_function,
             "optimizer": self.optimizer,
             "use_gpu": self.use_gpu,
+            "keep_best_val": self.keep_best_val,
             "architecture_config": dict(self.architecture_config),
             # Dataset split
             "train_split": self.train_split,
@@ -250,6 +253,7 @@ class TestConfiguration:
             loss_function=data.get("loss_function", "MSE"),
             optimizer=data.get("optimizer", "Adam"),
             use_gpu=data.get("use_gpu", True),
+            keep_best_val=data.get("keep_best_val", False),
             architecture_config=dict(data.get("architecture_config", {})),
             # Dataset split
             train_split=data.get("train_split", 80),

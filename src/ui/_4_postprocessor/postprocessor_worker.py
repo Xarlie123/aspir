@@ -21,16 +21,18 @@ class PostprocessorWorker(QObject):
     PHASE_TRAINING = "Training"
     PHASE_INFERENCE = "Inference"
 
-    def __init__(self, postprocessor, mode, num_epochs=None, index=None, logger=None):
+    def __init__(self, postprocessor, mode, num_epochs=None, index=None, logger=None,
+                 keep_best_val=False):
         """
         Initialize the worker with the given postprocessor, mode, optional epoch count
-        and an optional logger.
+        and an optional logger. ``keep_best_val`` keeps the best-validation weights.
         """
         super().__init__()
         self.postprocessor = postprocessor
         self.mode = mode
         self.num_epochs = num_epochs
         self.index = index
+        self.keep_best_val = keep_best_val
 
         # Set up logger: use provided logger or create a new one
         if logger is not None:
@@ -75,16 +77,17 @@ class PostprocessorWorker(QObject):
                 self.postprocessor.train_with_metrics(
                     num_epochs=self.num_epochs,
                     progress_callback=training_progress_callback,
-                    metrics_callback=lambda v, t, p, s, l: self.metrics.emit(v, t, p, s, l)
+                    metrics_callback=lambda v, t, p, s, l: self.metrics.emit(v, t, p, s, l),
+                    keep_best_val=self.keep_best_val
                 )
                 self.phase_completed.emit(self.PHASE_TRAINING)
 
-                # Compute and log final validation & test losses
+                # Compute and log final validation & test losses (of the weights kept)
                 val_loss  = self.postprocessor.validate()
                 test_loss = self.postprocessor.test_loss()
                 self.logger.info(
-                    "Training finished: val_loss=%.4f, test_loss=%.4f",
-                    val_loss, test_loss
+                    "Training finished: weights of epoch %s, val_loss=%.4f, test_loss=%.4f",
+                    self.postprocessor.kept_epoch, val_loss, test_loss
                 )
 
                 # Emit finished signal

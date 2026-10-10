@@ -463,6 +463,10 @@ class PostprocessorNN(Postprocessor):
                         self.optimizer_name, lr, weight_decay)
 
         self.trained = False
+        # Epoch whose weights the model holds after training, and the rule that chose it
+        # ("last" or "best_validation")
+        self.kept_epoch: int | None = None
+        self.kept_weights: str | None = None
         self.logger.debug("Optimizer and loss function configured")
 
     def _create_loss_function(self, loss_name: str) -> nn.Module:
@@ -599,9 +603,13 @@ class PostprocessorNN(Postprocessor):
         self.optimizer.step()
         return loss
 
-    def train_with_metrics(self, num_epochs: int, progress_callback=None, metrics_callback=None):
+    def train_with_metrics(self, num_epochs: int, progress_callback=None, metrics_callback=None,
+                           keep_best_val: bool = False):
         """
         Train and collect validation & test losses plus PSNR/SSIM/LPIPS, then call metrics_callback.
+
+        With ``keep_best_val`` the model ends with the weights of the epoch with the
+        lowest validation loss instead of the last epoch's (see ``kept_epoch``).
         """
         self.logger.info("Starting train_with_metrics for %d epochs", num_epochs)
         val_losses = []
@@ -609,6 +617,7 @@ class PostprocessorNN(Postprocessor):
         val_psnr = []
         val_ssim = []
         val_lpips = []
+        best = self._start_weight_selection(keep_best_val)
 
         for epoch in range(1, num_epochs + 1):
             self.model.train()
@@ -619,6 +628,7 @@ class PostprocessorNN(Postprocessor):
             if progress_callback:
                 progress_callback(epoch, num_epochs)
             val_loss = self.validate()
+            self._track_best_val(best, epoch, val_loss)
             test_loss = self.test_loss()
             psnr, ssim, lpips_val = self._compute_val_metrics()
             val_losses.append(val_loss)
@@ -631,14 +641,18 @@ class PostprocessorNN(Postprocessor):
                 epoch, num_epochs, val_loss, test_loss, psnr, ssim, lpips_val
             )
 
-        self.trained = True
+        self._finish_training(best, num_epochs)
         if metrics_callback:
             metrics_callback(val_losses, test_losses, val_psnr, val_ssim, val_lpips)
         self.logger.info("Training complete, metrics callback emitted")
 
-    def train(self, num_epochs: int, progress_callback=None):
-        """Train model without collecting full metrics."""
+    def train(self, num_epochs: int, progress_callback=None, keep_best_val: bool = False):
+        """Train model without collecting full metrics.
+
+        ``keep_best_val`` as in ``train_with_metrics``; it adds one validation pass per epoch.
+        """
         self.logger.info("Starting train for %d epochs", num_epochs)
+        best = self._start_weight_selection(keep_best_val)
         for epoch in range(1, num_epochs + 1):
             self.model.train()
             for noisy, clean in self.loaders["train"]:
@@ -646,9 +660,43 @@ class PostprocessorNN(Postprocessor):
                 self._run_training_batch(noisy, clean)
             if progress_callback:
                 progress_callback(epoch, num_epochs)
+            if best is not None:
+                self._track_best_val(best, epoch, self.validate())
             self.logger.debug("Completed epoch %d/%d", epoch, num_epochs)
-        self.trained = True
+        self._finish_training(best, num_epochs)
         self.logger.info("Train finished")
+
+    def _start_weight_selection(self, keep_best_val: bool) -> dict[str, Any] | None:
+        """Tracking state for the best-validation weights, or None to keep the last epoch."""
+        self.kept_epoch = self.kept_weights = None
+        if not keep_best_val:
+            return None
+        if len(self.loaders["val"].dataset) == 0:
+            self.logger.warning(
+                "Best-validation weights requested but the validation split is empty; "
+                "keeping the last epoch"
+            )
+            return None
+        return {"loss": float("inf"), "epoch": None, "state": None}
+
+    def _track_best_val(self, best: dict[str, Any] | None, epoch: int, val_loss: float):
+        """Copy the weights when this epoch has the lowest validation loss so far."""
+        if best is not None and val_loss < best["loss"]:
+            best["loss"], best["epoch"] = val_loss, epoch
+            best["state"] = {k: v.detach().clone() for k, v in self.model.state_dict().items()}
+
+    def _finish_training(self, best: dict[str, Any] | None, num_epochs: int):
+        """Restore the best-validation weights if they were tracked; record the epoch kept."""
+        if best is not None and best["state"] is not None:
+            self.model.load_state_dict(best["state"])
+            self.kept_epoch, self.kept_weights = best["epoch"], "best_validation"
+            self.logger.info(
+                "Kept the weights of epoch %d/%d (lowest validation loss, %.6f)",
+                best["epoch"], num_epochs, best["loss"]
+            )
+        else:
+            self.kept_epoch, self.kept_weights = num_epochs, "last"
+        self.trained = True
 
     def validate(self):
         """Evaluate on validation set."""

@@ -128,7 +128,7 @@ class Ui_nn_control(object):
         self.loss_function_combo.setObjectName("loss_function_combo")
         self.gridLayout.addWidget(self.loss_function_combo, 2, 3)
 
-        # Row 3: Optimizer (left column only)
+        # Row 3: Optimizer | Keep best-validation weights
         self.optimizer_label = QtWidgets.QLabel(nn_control)
         self.optimizer_label.setObjectName("optimizer_label")
         self.gridLayout.addWidget(self.optimizer_label, 3, 0)
@@ -138,6 +138,11 @@ class Ui_nn_control(object):
         self.optimizer_combo.addItems(["Adam", "AdamW", "SGD", "RMSprop"])
         self.optimizer_combo.setObjectName("optimizer_combo")
         self.gridLayout.addWidget(self.optimizer_combo, 3, 1)
+
+        self.keep_best_val_checkbox = QtWidgets.QCheckBox(nn_control)
+        self.keep_best_val_checkbox.setChecked(False)
+        self.keep_best_val_checkbox.setObjectName("keep_best_val_checkbox")
+        self.gridLayout.addWidget(self.keep_best_val_checkbox, 3, 2, 1, 2)
 
         # Set column stretch to make both columns equal width
         self.gridLayout.setColumnStretch(1, 1)
@@ -173,4 +178,9 @@ class Ui_nn_control(object):
         self.dropout_label.setText(_translate("nn_control", "Dropout"))
         self.loss_function_label.setText(_translate("nn_control", "Loss Function"))
         self.optimizer_label.setText(_translate("nn_control", "Optimizer"))
+        self.keep_best_val_checkbox.setText(_translate("nn_control", "Keep best-validation weights"))
+        self.keep_best_val_checkbox.setToolTip(_translate(
+            "nn_control",
+            "At the end of training, restore the weights of the epoch with the lowest "
+            "validation loss. Unchecked: keep the last epoch's weights."))
         self.train_button.setText(_translate("nn_control", "Train Model and Apply Post-processing"))

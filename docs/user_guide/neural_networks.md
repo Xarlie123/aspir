@@ -108,6 +108,30 @@ Conditional Generative Adversarial Network for denoising. A generator network pr
 | Weight decay | L2 regularization | 0 to 1e-4 |
 | Dropout | Regularization | 0 to 0.3 |
 
+### Keep Best-Validation Weights
+
+By default the trained model holds the weights of the **last epoch**. The
+*Keep best-validation weights* checkbox (Single Test, post-processing tab;
+Batch Test, DNN configuration) instead restores the weights of the epoch with
+the **lowest validation loss** when training ends. The validation loss is the
+training loss function evaluated on the validation split.
+
+- **When to use it.** With a constant learning rate the validation loss keeps
+  fluctuating, and the last epoch can be several dB worse than the best one.
+- **Reproducibility.** It is off by default, so configurations saved before
+  the option existed train exactly as before. In a `.batch_config` the key is
+  `keep_best_val` (default `false`).
+- **What it costs.** With training curves on, nothing extra: validation runs
+  every epoch anyway. Without them, Batch Test adds one validation pass per
+  epoch. A copy of the weights is held in memory.
+- **Where to see the kept epoch:**
+  - Single Test: a dashed line on the loss curve marks it.
+  - Batch Reports: *Training Summary* shows "Weights Kept: epoch N (best
+    validation)".
+  - Batch report: the fields `kept_epoch` and `kept_weights`.
+- **Exported models** (`.pt`, ONNX) contain the kept weights, so test metrics,
+  timing and energy all refer to them.
+
 ### Loss Functions
 
 - **MSE**: Mean Squared Error (default)
@@ -125,7 +149,8 @@ Conditional Generative Adversarial Network for denoising. A generator network pr
 ## Training Tips
 
 1. **Start simple**: Begin with default parameters and U-Net
-2. **Monitor validation loss**: Stop if it increases (overfitting)
+2. **Monitor validation loss**: If it rises (overfitting), check *Keep
+   best-validation weights* or reduce the epochs
 3. **Use GPU**: Training is 10-50x faster on GPU
 4. **Adequate data**: At least 100 images recommended
 

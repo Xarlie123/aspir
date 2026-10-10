@@ -328,6 +328,11 @@ class TrainingSummaryPopup(QDialog):
                 else:
                     hyperparams[display_name] = value
 
+        # Weights the exported model holds (reports from before 1.3 do not record it)
+        if test.get("kept_epoch") is not None:
+            rule = "best validation" if test.get("kept_weights") == "best_validation" else "last epoch"
+            hyperparams["Weights Kept"] = f"epoch {test['kept_epoch']} ({rule})"
+
         # Training results from curves
         curves = test.get("training_curves", {})
         if curves:

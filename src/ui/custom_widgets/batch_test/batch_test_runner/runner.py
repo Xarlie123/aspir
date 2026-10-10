@@ -395,6 +395,7 @@ class BatchTestRunner(QThread):
             "loss_function": config.loss_function,
             "optimizer": config.optimizer,
             "use_gpu": config.use_gpu,
+            "keep_best_val": config.keep_best_val,
             "reconstruction_device": config.reconstruction_device,
             "architecture_config": dict(config.architecture_config or {}),
             "train_split": config.train_split,
@@ -453,6 +454,9 @@ class BatchTestRunner(QThread):
             config, mask, applicator, index, reconstructed_data
         )
         self.test_progress.emit(index, 75)
+
+        results["kept_epoch"] = postprocessor.kept_epoch
+        results["kept_weights"] = postprocessor.kept_weights
 
         # Add training curves to results if collected
         if "training_curves" in config.reports and hasattr(postprocessor, '_training_curves'):
@@ -748,6 +752,7 @@ class BatchTestRunner(QThread):
             "loss_function": config.loss_function,
             "optimizer": config.optimizer,
             "use_gpu": config.use_gpu,
+            "keep_best_val": config.keep_best_val,
             "reconstruction_device": config.reconstruction_device,
             "architecture_config": dict(config.architecture_config or {}),
             "train_split": config.train_split,
@@ -808,6 +813,9 @@ class BatchTestRunner(QThread):
                 config, mask, applicator, index, reconstructed_data
             )
             self.test_progress.emit(index, 75)
+
+            results["kept_epoch"] = postprocessor.kept_epoch
+            results["kept_weights"] = postprocessor.kept_weights
 
             # Add training curves to results if collected
             if "training_curves" in config.reports and hasattr(postprocessor, '_training_curves'):
@@ -961,14 +969,16 @@ class BatchTestRunner(QThread):
             postprocessor.train_with_metrics(
                 num_epochs=config.epochs,
                 progress_callback=training_progress,
-                metrics_callback=metrics_callback
+                metrics_callback=metrics_callback,
+                keep_best_val=config.keep_best_val
             )
             # Store training curves for later access
             postprocessor._training_curves = training_curves
         else:
             postprocessor.train(
                 num_epochs=config.epochs,
-                progress_callback=training_progress
+                progress_callback=training_progress,
+                keep_best_val=config.keep_best_val
             )
 
         # Training complete

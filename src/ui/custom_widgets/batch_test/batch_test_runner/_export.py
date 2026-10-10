@@ -256,6 +256,7 @@ def export_datasets(
                     "lo": entry.get("norm_lo"),
                     "span": entry.get("norm_span"),
                 }
+            config_dict["keep_best_val"] = bool(getattr(config, "keep_best_val", False))
             with open(config_path, 'w') as f:
                 json.dump(config_dict, f, indent=2)
 
