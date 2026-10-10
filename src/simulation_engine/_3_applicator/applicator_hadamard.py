@@ -13,10 +13,13 @@ class ApplicatorHadamard(ApplicatorABC):
     Where:
         yᵢ = <x, Hᵢ> = measurement value (inner product with bipolar pattern)
         Hᵢ = Hadamard pattern with values {+1, -1}
-        N = number of measurements (normalization factor)
+        N = number of pixels (H · W)
 
     This exploits the orthogonality property of Hadamard matrices:
-    H · H^T = N · I, therefore H^{-1} = H^T / N
+    H · H^T = N · I, therefore H^{-1} = H^T / N, and for any subset of M rows
+    H^T / N is the pseudoinverse: the output is on the image's scale at every
+    sampling ratio. Before v1.3 the sum was divided by M, which scaled the
+    output by N / M.
 
     Note: Masks must contain bipolar values {+1, -1}, not binary {0, 1}.
     """
@@ -93,7 +96,7 @@ class ApplicatorHadamard(ApplicatorABC):
         return self._torch_process_dataset(idx_mask_min, idx_mask_max)
 
     def _torch_solve(self, op, Y, key):
-        """Hadamard Linear: ``x = S^T y / M`` (a single FWHT for Hadamard masks)."""
+        """Hadamard Linear: ``x = S^T y / N`` (a single FWHT for Hadamard masks)."""
         from simulation_engine._3_applicator.torch_backend.solvers import hadamard_linear
         return hadamard_linear(op, Y)
 
@@ -108,7 +111,7 @@ class ApplicatorHadamard(ApplicatorABC):
         Where:
             yᵢ = <x, Hᵢ> = inner product of image with bipolar pattern {+1, -1}
             Hᵢ = Hadamard pattern (not binarized, keeps {+1, -1} values)
-            N = number of measurements
+            N = number of pixels (the pseudoinverse of the selected rows)
 
         Parameters:
             idx_mask_min: Minimum mask index to apply.
@@ -139,14 +142,13 @@ class ApplicatorHadamard(ApplicatorABC):
             # Accumulate: x̂ += y_i * H_i
             accumulated_image += measurement * pattern
 
-        N = len(measurements)
-        if N == 0:
+        if not measurements:
             self.reconstructed_image = accumulated_image
             return accumulated_image
 
-        # Step 2: Normalize by number of measurements
-        # This implements H^{-1} = H^T / N due to orthogonality
-        result = accumulated_image / N
+        # Step 2: Normalize by the number of pixels N
+        # H^T / N is the pseudoinverse of any subset of rows (H H^T = N I)
+        result = accumulated_image / image.size
 
         # Store the reconstructed image
         self.reconstructed_image = result

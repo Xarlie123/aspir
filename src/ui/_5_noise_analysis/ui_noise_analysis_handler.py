@@ -8,6 +8,7 @@ from ui.custom_widgets.noise_analysis_metric.noise_analysis_metrics_widget impor
 from ui.custom_widgets.visualizers.visual_analysis.visual_analysis_noise_widget import VisualNoiseAnalysisWidget
 
 from simulation_engine._5_analyzer.analyzer import Analyzer
+from simulation_engine._5_analyzer.analyzer_noise import linear_or_recons
 
 
 class UINoiseAnalysisHandler(QObject):
@@ -64,12 +65,7 @@ class UINoiseAnalysisHandler(QObject):
             if post is not None and getattr(post, 'trained', False):
                 self.logger.debug("No validation_results; generating from trained model...")
                 try:
-                    orig, recons, denoised = post.test_dataset()
-                    vr = self.simulation.validation_results = {
-                        'original': orig,
-                        'recons':   recons,
-                        'denoised': denoised
-                    }
+                    vr = self.simulation.validation_results = post.validation_results()
                 except Exception as e:
                     self.logger.error("Could not generate validation preview: %s", e, exc_info=True)
                     QMessageBox.warning(None, "Attention", "Run postprocessing first.")
@@ -86,8 +82,9 @@ class UINoiseAnalysisHandler(QObject):
             len(orig), len(recons), len(denoised)
         )
 
-        # Analyze noise metrics
-        analyzer = Analyzer(orig, recons, denoised)
+        # Analyze noise metrics. The linear stage is scored on its image-scale output;
+        # results loaded from before v1.3 only have the network input.
+        analyzer = Analyzer(orig, linear_or_recons(vr, self.logger), denoised)
         try:
             # FIX: Unpack 6 values (PSNR, SSIM, LPIPS for noise & recon)
             pn, sn, ln, pr, sr, lr = analyzer.analyze_noise()

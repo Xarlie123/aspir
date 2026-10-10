@@ -63,7 +63,10 @@ class MaskHadamardCakeCutting(MaskABC):
             if progress_callback:
                 progress_callback(phase_offset + ii + 1, phase_offset + phase_total)
 
-        I = np.argsort(blocks) if self.cutting_type == 'blocks' else np.argsort(blocks)[::-1]
+        # Stable sort: rows with the same count keep their Sylvester order, so the
+        # rows kept at a cut-off do not depend on the NumPy build (before v1.3 ties
+        # were left to the default introsort).
+        I = np.argsort(blocks if self.cutting_type == 'blocks' else -blocks, kind='stable')
         H_new = H_big[I]
         return H_new, I, blocks
 

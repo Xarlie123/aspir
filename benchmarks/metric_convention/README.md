@@ -7,6 +7,10 @@ This folder only reads stored files. It changes no metric code, no analyser, no 
 experiment output. All numbers come from `experiments/batch_tests/` (paths below) and are recomputed by
 the scripts.
 
+**Status.** The recommended convention (D) is applied in ASPIR as *metric convention 2*, together with the
+Hadamard Linear scale fix and a stable Cake-Cutting order; see `docs/changelog.md`. The scripts here still
+reproduce convention 1, the one behind the R0 numbers.
+
 ## Reproduce (ASPIR venv, from this folder)
 
 ```bash

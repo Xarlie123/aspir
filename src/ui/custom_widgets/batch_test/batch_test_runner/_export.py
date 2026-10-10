@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from simulation_engine._5_analyzer.analyzer_noise import METRIC_CONVENTION
 from ui.custom_widgets.batch_test.test_config_model import BatchTestConfig, ExportLevel
 from ui.utils.file_formats import (
     BATCH_TESTS_DIR,
@@ -14,6 +15,14 @@ from ui.utils.file_formats import (
     FileExtensions,
     safe_test_dirname,
 )
+
+# Divisor of the native back-projections, exported with the normalisation constants
+# so a deployment that recomputes the linear stage applies (lo, span) on the same scale.
+_LINEAR_DIVISOR = {
+    "ApplicatorHadamard": "pixels",   # H^T y / N since v1.3 (H^T y / M before)
+    "ApplicatorSweep": "patterns",    # S^T (y - mean(y)) / M
+    "ApplicatorScatter": "patterns",  # S^T (y - mean(y)) / M
+}
 
 
 def get_unique_output_dir(base_name: str) -> Path:
@@ -73,6 +82,8 @@ def export_results_json(
         "batch_name": batch_name or batch_config.name,  # Use export name from UI
         "batch_description": batch_config.description,
         "export_level": export_level.name,
+        # Quality-metric convention (analyzer_noise.METRIC_CONVENTION); absent = 1
+        "metric_convention": METRIC_CONVENTION,
         "dataset_info": {
             "name": getattr(dataset, 'name', 'unknown'),
             "img_size": getattr(dataset, 'img_size', 0),
@@ -228,13 +239,14 @@ def export_datasets(
                 )
                 logger.debug("Exported masks for %s", safe_name)
 
-            # Export test images: originals, reconstructions (after mask), denoised (after DNN)
-            np.savez_compressed(
-                os.path.join(test_dir, "test_images.npz"),
-                originals=entry["originals"],
-                reconstructions=entry["reconstructions"],
-                denoised=entry["denoised"]
-            )
+            # Export test images: originals, reconstructions (network input: linear output
+            # after the dataset min-max and quantisation), denoised (after DNN) and, since
+            # v1.3, linear (the linear reconstruction on the image's scale, as scored)
+            arrays = {"originals": entry["originals"], "reconstructions": entry["reconstructions"],
+                      "denoised": entry["denoised"]}
+            if entry.get("linear") is not None:
+                arrays["linear"] = entry["linear"]
+            np.savez_compressed(os.path.join(test_dir, "test_images.npz"), **arrays)
             logger.debug("Exported test images for %s", safe_name)
 
             # Export test configuration as JSON for reference
@@ -256,7 +268,13 @@ def export_datasets(
                     "lo": entry.get("norm_lo"),
                     "span": entry.get("norm_span"),
                 }
+                # What the linear back-projection was divided by before (lo, span) were taken:
+                # Hadamard Linear divides by the pixel count since v1.3 (by M before).
+                divisor = _LINEAR_DIVISOR.get(type(entry.get("applicator")).__name__)
+                if divisor:
+                    config_dict["normalization"]["linear_divisor"] = divisor
             config_dict["keep_best_val"] = bool(getattr(config, "keep_best_val", False))
+            config_dict["metric_convention"] = METRIC_CONVENTION
             with open(config_path, 'w') as f:
                 json.dump(config_dict, f, indent=2)
 

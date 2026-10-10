@@ -234,8 +234,10 @@ class Simulation:
         if self.postprocessor is None:
             raise RuntimeError("Configure the postprocessor first.")
         self.logger.debug("Getting data from test_dataset()")
-        orig, recons, denoised = self.postprocessor.test_dataset()
+        orig, _, denoised = self.postprocessor.test_dataset()
+        # The linear stage is scored on its own output, on the image's scale
+        linear = self.postprocessor.test_linear()
         start = perf_counter()
-        self.analyzer = Analyzer(orig, recons, denoised)
+        self.analyzer = Analyzer(orig, linear, denoised)
         elapsed = perf_counter() - start
         self.logger.info("Analyzer created in %.3f s", elapsed)

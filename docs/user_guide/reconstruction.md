@@ -51,12 +51,16 @@ the formula above but interprets the patterns as translating bars.
 Dot-product reconstruction using the orthogonality of Hadamard patterns.
 
 $$
-\hat{x} = \frac{1}{N} S^\top y
+\hat{x} = \frac{1}{N} S^\top y, \qquad N = \text{number of pixels}
 $$
 
 **Characteristics**:
 - Default for **Hadamard** and **Cal-Sal** masks
 - Exact reconstruction when all Hadamard patterns are used
+- With any subset of $M$ rows it is the pseudoinverse ($H H^\top = N I$), so the
+  output is on the image's scale at every sampling ratio. Versions before 1.3
+  divided by $M$, which scaled the output by $N / M$; the network input was not
+  affected, because it is min-max normalised over the dataset.
 
 ### Fourier Inverse
 
@@ -229,7 +233,7 @@ why batching several images into one call helps most there.
 | Algorithm | Formulation on the backend | Operator use |
 |-----------|----------------------------|--------------|
 | Ghost Imaging, Sweep Linear | `x = S^T (y - mean(y)) / M` | one adjoint |
-| Hadamard Linear | `x = S^T y / M` | one adjoint (one FWHT) |
+| Hadamard Linear | `x = S^T y / N` (N = pixels) | one adjoint (one FWHT) |
 | Fourier Inverse | phase-shift demodulation, conjugate fill, `ifft2` | FFT |
 | Pseudoinverse | cached `S^+` for small dense matrices; otherwise CG on `S S^T z = y`, `x = S^T z` (closed form when `S S^T = N I`) | minimum-norm solution |
 | FISTA | proximal gradient with FISTA momentum, step `0.95 / L`, `L` from power iteration on `S^T S` | forward + adjoint per iteration |

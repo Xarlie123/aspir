@@ -123,7 +123,10 @@ def shared(ref, est):
 
 # ------------------------------------------------------------------------------- linear reconstructions
 def hadamard_linear(X, masks):
-    """ASPIR's native Hadamard Linear: x = H_S^T y / M (applicator_hadamard.py), M = number of rows."""
+    """ASPIR's native Hadamard Linear as it was before v1.3: x = H_S^T y / M, M = number of rows.
+
+    v1.3 divides by the number of pixels N instead (the pseudoinverse); the diagnostic reproduces R0.
+    """
     H = masks.reshape(len(masks), -1)
     Y = X.reshape(len(X), -1) @ H.T
     return (Y @ H / len(H)).reshape(X.shape)

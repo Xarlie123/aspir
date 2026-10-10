@@ -28,6 +28,12 @@ class ApplicatorABC(ABC):
                  above it the matrix is streamed in row blocks.
     """
 
+    # True when the reconstruction is on the image's scale (a least-squares or
+    # inverse estimate). Correlation estimators (Sweep Linear, Ghost Imaging)
+    # set it to False: their output has no natural scale, so quality metrics
+    # use them after a gain and offset fitted on the training split.
+    IMAGE_SCALE = True
+
     def __init__(self, dataset, mask, device="auto", dtype="float32", backend="torch",
                  operator="auto", batch_size=32, max_device_bytes=None):
         self.name = dataset.name

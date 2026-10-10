@@ -348,6 +348,11 @@ class PostprocessorNN(Postprocessor):
             noisy_df = applicator.process_dataset()
             noisy_np = noisy_df.to_numpy().astype(np.float32).reshape(-1, self.img_size, self.img_size)
 
+        # The linear reconstruction as the applicator returned it: what the linear
+        # stage's quality metrics score (see test_linear), before the network-input
+        # normalisation below.
+        raw_linear = noisy_np.copy()
+
         # Example global min-max (or your percentile scaling):
         min_val = float(noisy_np.min())
         max_val = float(noisy_np.max())
@@ -423,6 +428,7 @@ class PostprocessorNN(Postprocessor):
         # documentary proof that calibration and evaluation frames are disjoint.
         self.train_indices = list(train_ds.indices)
         self.test_indices = list(test_ds.indices)
+        self._set_test_linear(raw_linear, clean_np, applicator)
 
         self.loaders = {
             "train": DataLoader(train_ds, batch_size=batch_size, shuffle=True),
@@ -752,17 +758,18 @@ class PostprocessorNN(Postprocessor):
 
                 for i in range(outputs_np.shape[0]):
                     # Remove channel dimension if present (B, C, H, W) -> (H, W)
-                    out_img = outputs_np[i].squeeze()
+                    out_img = np.clip(outputs_np[i].squeeze(), 0.0, 1.0)
                     clean_img = clean_np[i].squeeze()
-                    # Compute PSNR and SSIM
-                    psnr = compute_psnr(clean_img, out_img, data_range=clean_img.max() - clean_img.min())
-                    ssim = compute_ssim(clean_img, out_img, data_range=clean_img.max() - clean_img.min())
+                    # PSNR and SSIM, metric convention 2 (analyzer_noise.METRIC_CONVENTION)
+                    psnr = compute_psnr(clean_img, out_img, data_range=1.0)
+                    ssim = compute_ssim(clean_img, out_img, data_range=1.0)
                     psnr_values.append(psnr)
                     ssim_values.append(ssim)
 
                 # Compute LPIPS (batch-wise for efficiency)
                 if self._lpips_model is not None:
                     try:
+                        outputs = outputs.clamp(0.0, 1.0)
                         # Reshape flat outputs to images for non-conv models
                         if not self.is_conv:
                             out_imgs = outputs.view(-1, 1, self.img_size, self.img_size)
@@ -809,6 +816,41 @@ class PostprocessorNN(Postprocessor):
         self.model.eval()
         self.trained = True
         self.logger.info("Model loaded from %s", path)
+
+    def _set_test_linear(self, raw_linear, clean_np, applicator):
+        """Keep the test split's linear reconstructions on the image's scale.
+
+        Inverse and least-squares estimates (Hadamard Linear, pseudoinverse,
+        FISTA, TV, Fourier) already are. Correlation estimators (applicator
+        ``IMAGE_SCALE = False``: Sweep Linear, Ghost Imaging) get one gain and
+        offset, fitted by least squares on the training split against its
+        reference images and recorded in ``linear_calibration``.
+        """
+        test = raw_linear[self.test_indices].astype(np.float32)
+        self.linear_calibration = None
+        if not getattr(applicator, "IMAGE_SCALE", True) and self.train_indices:
+            x = raw_linear[self.train_indices].astype(np.float64).ravel()
+            ref = clean_np[self.train_indices].astype(np.float64).ravel()
+            (gain, offset), *_ = np.linalg.lstsq(np.stack([x, np.ones_like(x)], axis=1), ref, rcond=None)
+            test = (gain * test + offset).astype(np.float32)
+            self.linear_calibration = {"gain": float(gain), "offset": float(offset), "fitted_on": "train split"}
+            self.logger.info("Linear output calibrated on the train split: gain %.4g, offset %.4g", gain, offset)
+        self._test_linear = test
+
+    def test_linear(self):
+        """Linear reconstructions of the test split on the image's scale.
+
+        Same order as ``test_dataset()``. This is what the linear stage's quality
+        metrics score; ``test_dataset()``'s second list is the network input
+        (dataset-wide min-max normalisation plus the data-format quantisation).
+        """
+        return list(self._test_linear)
+
+    def validation_results(self) -> dict:
+        """Test-split arrays for previews and metrics: original, recons (network input),
+        denoised and linear (the linear reconstruction on the image's scale)."""
+        orig, recons, denoised = self.test_dataset()
+        return {"original": orig, "recons": recons, "denoised": denoised, "linear": self.test_linear()}
 
     def test_dataset(self):
         """Return lists of orig, noisy, recon from test set."""

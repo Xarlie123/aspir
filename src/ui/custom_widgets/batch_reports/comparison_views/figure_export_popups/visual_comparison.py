@@ -370,7 +370,8 @@ class VisualComparisonPopup(BaseFigureExportPopup):
     def _compute_psnr(self, original: np.ndarray, reconstructed: np.ndarray) -> float:
         """Compute PSNR between original and reconstructed images."""
         original = np.asarray(original, dtype=np.float64)
-        reconstructed = np.asarray(reconstructed, dtype=np.float64)
+        # Metric convention 2 (analyzer_noise.METRIC_CONVENTION): clip, data range 1
+        reconstructed = np.clip(np.asarray(reconstructed, dtype=np.float64), 0.0, 1.0)
 
         # Ensure same shape
         if original.shape != reconstructed.shape:

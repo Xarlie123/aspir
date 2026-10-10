@@ -507,10 +507,13 @@ class UIPostprocessorHandler(QObject):
             "Images ready: original=%d, recons=%d, denoised=%d",
             len(orig), len(recons), len(denoised)
         )
+        post = self.simulation.postprocessor
         self.simulation.validation_results = {
             'original': orig,
             'recons':   recons,
-            'denoised': denoised
+            'denoised': denoised,
+            # Linear reconstruction on the image's scale: what the quality metrics score
+            'linear':   post.test_linear() if hasattr(post, 'test_linear') else None,
         }
 
         # Read model param count if present

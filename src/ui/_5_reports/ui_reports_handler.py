@@ -15,6 +15,7 @@ from ui.custom_widgets.energy_analysis.energy_analysis_page import EnergyAnalysi
 from ui.custom_widgets.energy_analysis.energy_worker import EnergyMeasurementWorker
 
 from simulation_engine._5_analyzer.analyzer import Analyzer
+from simulation_engine._5_analyzer.analyzer_noise import linear_or_recons
 
 
 class UIReportsHandler(QObject):
@@ -220,12 +221,7 @@ class UIReportsHandler(QObject):
             if post is not None and getattr(post, 'trained', False):
                 self.logger.debug("No validation_results; generating from trained model...")
                 try:
-                    orig, recons, denoised = post.test_dataset()
-                    vr = self.simulation.validation_results = {
-                        'original': orig,
-                        'recons': recons,
-                        'denoised': denoised
-                    }
+                    vr = self.simulation.validation_results = post.validation_results()
                 except Exception as e:
                     self.logger.error("Could not generate validation preview: %s", e, exc_info=True)
                     if self.status_manager:
@@ -246,8 +242,8 @@ class UIReportsHandler(QObject):
             len(orig), len(recons), len(denoised)
         )
 
-        # Analyze quality metrics
-        analyzer = Analyzer(orig, recons, denoised)
+        # Analyze quality metrics (linear stage on its image-scale output)
+        analyzer = Analyzer(orig, linear_or_recons(vr, self.logger), denoised)
         try:
             # Unpack 6 values (PSNR, SSIM, LPIPS for noisy & reconstructed)
             pn, sn, ln, pr, sr, lr = analyzer.analyze_noise()
@@ -452,7 +448,8 @@ class UIReportsHandler(QObject):
         self.simulation.validation_results = {
             'original': origs,
             'recons': recons,
-            'denoised': denoised
+            'denoised': denoised,
+            'linear': post.test_linear(),
         }
 
         # Calculate acquisition time
@@ -639,12 +636,7 @@ class UIReportsHandler(QObject):
         if not vr:
             self.logger.debug("No validation_results; generating from trained model...")
             try:
-                orig, recons, denoised = post.test_dataset()
-                vr = self.simulation.validation_results = {
-                    'original': orig,
-                    'recons': recons,
-                    'denoised': denoised
-                }
+                vr = self.simulation.validation_results = post.validation_results()
             except Exception as e:
                 self.logger.error("Could not generate validation preview: %s", e, exc_info=True)
                 if self.status_manager:

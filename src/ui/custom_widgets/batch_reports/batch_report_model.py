@@ -37,6 +37,11 @@ class LoadedExperiment:
         """Get the experiment timestamp."""
         return self.metadata.get('timestamp', '')
 
+    @property
+    def metric_convention(self) -> int:
+        """Quality-metric convention of the report (analyzer_noise.METRIC_CONVENTION; 1 if absent)."""
+        return int(self.metadata.get('metric_convention', 1))
+
     def get_test_names(self) -> List[str]:
         """Get list of test names in this experiment."""
         return [r.get('test_name', f'Test {i}') for i, r in enumerate(self.results)]
@@ -120,6 +125,10 @@ class BatchReportModel(QObject):
         except Exception as e:
             self.logger.error("Failed to load experiment from %s: %s", path, e)
             return None
+
+    def metric_conventions(self) -> List[int]:
+        """Distinct quality-metric conventions among the loaded experiments."""
+        return sorted({e.metric_convention for e in self._experiments})
 
     def remove_experiment(self, index: int) -> bool:
         """

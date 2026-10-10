@@ -23,7 +23,7 @@ Structured orthogonal patterns based on Hadamard matrices. Requires image size t
 
 - **Variants**:
   - **Natural**: Standard Hadamard order
-  - **Cake-Cutting**: Frequency-ordered patterns, sampling from low to high frequencies
+  - **Cake-Cutting**: Frequency-ordered patterns, sampling from low to high frequencies (patterns with the same block count keep their natural order, so the selection is the same on every machine)
   - **Walsh-Paley**: Sequential ordering based on Walsh functions
 
 - **Parameters**:

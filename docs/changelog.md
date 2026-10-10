@@ -164,8 +164,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   add `energy_reconstruction_mj` (per image) and its CPU/GPU split, attributed
   to the device the reconstruction ran on. Previously only NN inference energy
   was measured.
+- **Quality metrics follow convention 2.** Every batch result and the report
+  metadata record `metric_convention: 2`; Batch Reports warns when loaded
+  reports mix conventions. Quality numbers are not comparable with earlier
+  reports; timing and energy are unaffected. The diagnosis of convention 1 is
+  in `benchmarks/metric_convention/`.
+  - Estimates are clipped to [0, 1], and PSNR / SSIM use a data range of 1,
+    instead of each reference image's max − min. This is the same in
+    analysis, reports, training curves and figure export.
+  - The linear level (`psnr_recons`, `ssim_recons`, `lpips_recons`,
+    `quality_per_image.*_noisy`) now scores the linear reconstruction on the
+    image's scale (`PostprocessorNN.test_linear`).
+    - It used to score the network input: the linear output min-max
+      normalised over the dataset and quantised. That input is still
+      reported, as `psnr_network_input` / `ssim_network_input`.
+    - Correlation estimators (Sweep Linear, Ghost Imaging) have no natural
+      scale. They are scored after a gain and offset fitted on the training
+      split (`linear_calibration`; applicator attribute `IMAGE_SCALE`).
+  - Exports add the image-scale linear reconstructions to `test_images.npz`
+    (`linear`), and `metric_convention` plus `normalization.linear_divisor`
+    to `test_config.json`.
+  - Single Test saves them in `test_results.npz`.
+- **Cake-Cutting order is stable.** Patterns with the same block count keep
+  their Sylvester order, so the rows chosen at a cut-off no longer depend on
+  the NumPy build. Masks saved by earlier versions may differ by a few tied
+  rows (UC2's saved masks: one row at 4 %, 8 % and 24 %; ≤ 0.05 dB linear PSNR).
 
 ### Fixed
+- **Hadamard Linear returns the image's scale.**
+  - It now computes Hᵀy / N (N = pixels), the pseudoinverse of any subset of
+    Sylvester rows. Before, it divided by the number of patterns M, which
+    scaled the output by N / M, contrary to its own derivation.
+  - The network input was unaffected, since it is min-max normalised. The
+    exported `normalization` constants (`lo`, `span`) of Hadamard tests are now
+    on the new scale, and `test_config.json` says so
+    (`linear_divisor: "pixels"`).
 - **Omitted keys in a `.batch_config` now take the GUI defaults.** When a test
   entry left out `reconstruction_method` or `timing_warmup_runs`, loading gave
   the pseudoinverse and 5 warm-up runs instead of the native method and 20.

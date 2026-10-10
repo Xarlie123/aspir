@@ -167,12 +167,10 @@ def save_experiment(window):
         try:
             vr = getattr(window.simulation, "validation_results", None)
             if vr and all(k in vr for k in ("original", "recons", "denoised")):
-                np.savez(
-                    str(results_path),
-                    original=np.asarray(vr["original"], dtype=np.float32),
-                    recons=np.asarray(vr["recons"], dtype=np.float32),
-                    denoised=np.asarray(vr["denoised"], dtype=np.float32),
-                )
+                arrays = {k: np.asarray(vr[k], dtype=np.float32) for k in ("original", "recons", "denoised")}
+                if vr.get("linear") is not None:
+                    arrays["linear"] = np.asarray(vr["linear"], dtype=np.float32)
+                np.savez(str(results_path), **arrays)
                 ok_test_results = True
                 window.logger.info("Test results saved to %s", results_path)
         except Exception as e:

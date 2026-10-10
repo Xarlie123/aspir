@@ -10,11 +10,56 @@ DATA_FORMAT_FP32 = "FP32"
 DATA_FORMAT_INT8 = "INT8"
 DATA_FORMAT_INT4 = "INT4"
 
+# Quality-metric convention, recorded in every batch result.
+#   1 (before v1.3): data range = each reference image's max - min, estimate not clipped;
+#     the "reconstructed" level scored the network input (dataset-wide min-max of the
+#     linear output), not the reconstruction.
+#   2: estimate clipped to [0, 1], data range 1, mean of per-image values; the linear
+#     level scores the reconstruction on the image's scale (PostprocessorNN.test_linear).
+METRIC_CONVENTION = 2
+
+
+def clip_unit(images):
+    """Estimates are compared on the images' range: clip to [0, 1]."""
+    return np.clip(np.asarray(images, dtype=np.float32), 0.0, 1.0)
+
+
+def psnr_ssim(reference, target):
+    """PSNR and SSIM of one image under the current convention."""
+    reference = np.asarray(reference, dtype=np.float32)
+    target = clip_unit(target)
+    psnr = peak_signal_noise_ratio(reference, target, data_range=1.0)
+    ssim = structural_similarity(reference, target, multichannel=(reference.ndim == 3), data_range=1.0)
+    return psnr, ssim
+
+
+def linear_or_recons(validation_results, logger=None):
+    """The linear-stage images to score from a ``validation_results`` dict.
+
+    Since v1.3 it carries ``linear`` (the reconstruction on the image's scale).
+    Results saved before only have ``recons``, the network input, which is then
+    scored instead, with a warning.
+    """
+    linear = validation_results.get("linear")
+    if linear is not None and len(linear):
+        return linear
+    if logger is not None:
+        logger.warning("No image-scale linear reconstructions in these results (saved before v1.3); "
+                       "scoring the network input for the linear stage")
+    return validation_results["recons"]
+
+
+def mean_psnr_ssim(references, targets):
+    """Mean of per-image PSNR and SSIM (no LPIPS) under the current convention."""
+    pairs = [psnr_ssim(r, t) for r, t in zip(references, targets, strict=True)]
+    return float(np.mean([p for p, _ in pairs])), float(np.mean([s for _, s in pairs]))
+
 
 class NoiseAnalyzer:
     """
     Computes per-image and average PSNR/SSIM/LPIPS for noisy vs reconstructions.
-    Supports different data formats for embedded system testing.
+    Supports different data formats for embedded system testing. Convention:
+    see METRIC_CONVENTION.
     """
 
     def __init__(self, originals, noisy, reconstructions, data_format=None):
@@ -42,20 +87,13 @@ class NoiseAnalyzer:
 
     def _compute_metrics(self, reference, target):
         """
-        Compute PSNR and SSIM between reference and target.
-        """
-        data_range = reference.max() - reference.min()
-        # Fallback if constant image (data_range=0)
-        if data_range == 0:
-            data_range = 1.0
+        Compute PSNR and SSIM between reference and target (convention 2).
 
-        psnr = peak_signal_noise_ratio(reference, target, data_range=data_range)
-        ssim = structural_similarity(
-            reference, target,
-            multichannel=(reference.ndim == 3),
-            data_range=data_range
-        )
-        return psnr, ssim
+        Images are in [0, 1]: the target is clipped to that range and the data
+        range is 1 for every image, so a PSNR does not depend on the reference
+        image's own contrast.
+        """
+        return psnr_ssim(reference, target)
 
     def _compute_lpips_batch(self, refs, preds, batch_size=32):
         """
@@ -65,9 +103,9 @@ class NoiseAnalyzer:
         vals = []
         n_samples = len(refs)
 
-        # Convert entire list to tensor first (cpu)
+        # Convert entire list to tensor first (cpu); estimates clipped to [0, 1]
         t_refs_all = torch.from_numpy(np.array(refs)).float()
-        t_preds_all = torch.from_numpy(np.array(preds)).float()
+        t_preds_all = torch.from_numpy(clip_unit(np.array(preds))).float()
 
         # Process in batches
         with torch.no_grad():

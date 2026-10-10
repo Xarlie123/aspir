@@ -4,12 +4,43 @@ ASPIR provides comprehensive analysis tools for evaluating reconstruction qualit
 
 ## Quality Metrics
 
+### What is compared (metric convention 2, ASPIR 1.3)
+
+Every test image is scored at two levels against its reference (the clean
+image, after the dataset's data-format quantisation):
+
+| Level | Estimate | Report fields |
+|-------|----------|---------------|
+| Linear reconstruction | the reconstruction algorithm's output **on the image's scale** | `psnr_recons`, `ssim_recons`, `lpips_recons` |
+| Post-processed | the network output | `psnr_denoised`, `ssim_denoised`, `lpips_denoised` |
+
+- **Clipping and data range.** Estimates are clipped to [0, 1], and PSNR and SSIM use a data range of 1 for
+  every image. Values are the mean of the per-image values.
+- **Image scale.** Hadamard Linear, Pseudoinverse, FISTA, TV-Norm and Fourier Inverse return images on the
+  reference's scale. Ghost Imaging and Sweep Linear are correlation estimators with no natural scale. Their
+  output is scored after one gain and offset fitted by least squares on the **training** split, recorded as
+  `linear_calibration`.
+- **Network input.** The network does not see the linear output directly: it is min-max normalised over
+  the dataset and quantised to the data format. Its PSNR and SSIM are kept apart as `psnr_network_input` and
+  `ssim_network_input`.
+- **The convention is recorded** as `metric_convention: 2` in the report metadata and in every result.
+  Batch Reports warns when loaded reports mix conventions.
+
+**Convention 1 (before 1.3)** differs in three ways:
+- the data range was each reference image's own max − min;
+- estimates were not clipped;
+- the "reconstructed" level scored the network input instead of the reconstruction.
+
+On a CelebA Cake-Cutting task this put the linear PSNR 4.9–9.7 dB lower and the network gain correspondingly
+higher (`benchmarks/metric_convention/`). Quality numbers are only comparable within one convention; timing
+and energy are not affected.
+
 ### PSNR (Peak Signal-to-Noise Ratio)
 
 Measures pixel-wise reconstruction accuracy.
 
 $$
-PSNR = 10 \cdot \log_{10}\left(\frac{MAX^2}{MSE}\right)
+PSNR = 10 \cdot \log_{10}\left(\frac{MAX^2}{MSE}\right), \qquad MAX = 1
 $$
 
 - **Interpretation**: Higher is better

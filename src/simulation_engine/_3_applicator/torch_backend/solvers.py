@@ -25,8 +25,13 @@ def correlation(op, Y):
 
 
 def hadamard_linear(op, Y):
-    """Hadamard Linear: ``x = S^T y / M``."""
-    return op.adjoint(Y) / op.shape[0]
+    """Hadamard Linear: ``x = S^T y / N``, N = number of pixels.
+
+    Rows of a Sylvester Hadamard matrix satisfy ``H H^T = N I``, so this is the
+    pseudoinverse of any subset of them: the image's scale at every M. Before
+    v1.3 it divided by M, which scaled the output by N / M.
+    """
+    return op.adjoint(Y) / op.shape[1]
 
 
 def fourier_groups(freq_indices, phases, coeff_ids, idx_min, idx_max, img_size,

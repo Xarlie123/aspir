@@ -282,10 +282,12 @@ def load_experiment(window):
                     orig = npz["original"]
                     rec  = npz["recons"]
                     den  = npz["denoised"]
+                    lin  = npz["linear"] if "linear" in npz.files else None   # saved since v1.3
                 window.simulation.validation_results = {
                     "original": list(orig),
                     "recons":   list(rec),
-                    "denoised": list(den)
+                    "denoised": list(den),
+                    "linear":   list(lin) if lin is not None else None,
                 }
                 viz = getattr(window.ui_postprocessor_handler, "visual_pp", None)
                 if viz is not None:
@@ -327,12 +329,9 @@ def load_experiment(window):
             if not getattr(window.simulation, "validation_results", None):
                 pp = getattr(window.simulation, "postprocessor", None)
                 if pp is not None and getattr(pp, "trained", False):
-                    orig, recons, denoised = pp.test_dataset()
-                    window.simulation.validation_results = {
-                        "original": orig,
-                        "recons":   recons,
-                        "denoised": denoised
-                    }
+                    window.simulation.validation_results = pp.validation_results()
+                    orig, recons, denoised = (window.simulation.validation_results[k]
+                                              for k in ("original", "recons", "denoised"))
                     viz = getattr(window.ui_postprocessor_handler, "visual_pp", None)
                     if viz is not None:
                         viz.set_images(orig, recons, denoised)

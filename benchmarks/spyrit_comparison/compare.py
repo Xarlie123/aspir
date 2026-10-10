@@ -87,7 +87,8 @@ def main():
             "M/N": r, "M": m,
             "max_abs_diff_pinv": float(diff.max()),
             "psnr_between_tools_db": float(10 * np.log10(1 / np.mean(diff ** 2))),
-            "max_abs_diff_native_x_M_over_N": float(np.abs(s_pinv - a_nat * m / N).max()),
+            # ASPIR's native Hadamard Linear is the pseudoinverse since v1.3 (H^T y / N)
+            "max_abs_diff_native": float(np.abs(s_pinv - a_nat).max()),
             "aspir_psnr": sa["psnr_mean"], "spyrit_psnr": ss["psnr_mean"],
             "aspir_ssim": sa["ssim_mean"], "spyrit_ssim": ss["ssim_mean"],
             "aspir_ms_per_image": at[f"pinv_{r}"], "spyrit_ms_per_image": st[str(r)],

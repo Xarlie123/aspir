@@ -116,10 +116,10 @@ def subsample(data: MeasuredData, ordering, ratio, cache_dir=None) -> MeasuredDa
 def subsample_as(data: MeasuredData, patterns, note=None) -> MeasuredData:
     """The rows of ``data`` that reproduce ``patterns`` (e.g. a saved ``masks.npz``), in order.
 
-    Use it to match a network to the exact rows it was trained with. ASPIR's
-    Cake-Cutting order sorts by block count with ``numpy.argsort``, which does
-    not fix the order of equal counts, so two NumPy builds can pick different
-    rows among ties at the cut-off ratio.
+    Use it to match a network to the exact rows it was trained with. Before
+    v1.3, ASPIR's Cake-Cutting order did not fix the order of equal block
+    counts, so masks saved by older versions may hold different rows among
+    ties at the cut-off ratio than today's stable order.
     """
     idx, sgn = hadamard_rows(patterns)
     return _take_rows(data, idx, sgn, note or f"as given patterns (M={len(idx)})")

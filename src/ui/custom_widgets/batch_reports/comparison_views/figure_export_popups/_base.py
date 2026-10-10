@@ -114,7 +114,11 @@ class BaseFigureExportPopup(QDialog):
         try:
             data = np.load(str(test_images_path))
             originals = data.get("originals")
-            reconstructions = data.get("reconstructions")
+            # Since v1.3 the linear reconstruction on the image's scale is stored as
+            # "linear" (what psnr_recons scores); older reports only have the network input.
+            reconstructions = data.get("linear")
+            if reconstructions is None:
+                reconstructions = data.get("reconstructions")
             denoised = data.get("denoised")
             self.logger.debug("Loaded images from %s", test_images_path)
             return originals, reconstructions, denoised

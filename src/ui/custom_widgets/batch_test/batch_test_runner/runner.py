@@ -14,7 +14,6 @@ from typing import Any
 from PySide6.QtCore import QThread, Signal
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
-from simulation_engine._5_analyzer.analyzer import Analyzer
 from ui.custom_widgets.batch_test.batch_test_runner._energy import (
     measure_energy,
     measure_reconstruction_energy,
@@ -31,6 +30,7 @@ from ui.custom_widgets.batch_test.batch_test_runner._pipeline import (
     solver_params_of,
 )
 from ui.custom_widgets.batch_test.batch_test_runner._profiling import profile_model
+from ui.custom_widgets.batch_test.batch_test_runner._quality import quality_results
 from ui.custom_widgets.batch_test.batch_test_runner._timing import measure_timing
 from ui.custom_widgets.batch_test.test_config_model import (
     BatchTestConfig,
@@ -470,43 +470,9 @@ class BatchTestRunner(QThread):
         self.status_update.emit(f"Basic analysis: {config.name}")
         self.phase_progress.emit(index, self.PHASE_ANALYSIS, 0)
 
-        # Get test outputs
-        orig, recons, denoised = postprocessor.test_dataset()
-        analyzer = Analyzer(orig, recons, denoised)
-        analyzer.analyze_noise()
-
-        # Collect quality metrics (PSNR, SSIM, LPIPS)
-        if "quality" in config.reports:
-            results["quality_metrics"] = {}
-
-            # PSNR (mean values)
-            results["psnr_recons"] = analyzer.noise.psnr_noise_mean
-            results["psnr_denoised"] = analyzer.noise.psnr_rec_mean
-            results["quality_metrics"]["psnr"] = analyzer.noise.psnr_rec_mean
-
-            # SSIM (mean values)
-            results["ssim_recons"] = analyzer.noise.ssim_noise_mean
-            results["ssim_denoised"] = analyzer.noise.ssim_rec_mean
-            results["quality_metrics"]["ssim"] = analyzer.noise.ssim_rec_mean
-
-            # LPIPS (mean values)
-            try:
-                results["lpips_recons"] = analyzer.noise.lpips_noise_mean
-                results["lpips_denoised"] = analyzer.noise.lpips_rec_mean
-                results["quality_metrics"]["lpips"] = analyzer.noise.lpips_rec_mean
-            except Exception as e:
-                self.logger.warning("LPIPS computation failed: %s", e)
-                results["lpips_error"] = str(e)
-
-            # Per-image metrics for detailed charts
-            results["quality_per_image"] = {
-                "psnr_noisy": list(analyzer.noise.psnr_noise),
-                "psnr_denoised": list(analyzer.noise.psnr_rec),
-                "ssim_noisy": list(analyzer.noise.ssim_noise),
-                "ssim_denoised": list(analyzer.noise.ssim_rec),
-                "lpips_noisy": list(analyzer.noise.lpips_noise),
-                "lpips_denoised": list(analyzer.noise.lpips_rec),
-            }
+        # Linear stage and network output vs the test references
+        quality, (orig, recons, denoised) = quality_results(postprocessor, config.reports, self.logger)
+        results.update(quality)
 
         # Check if we need timing/energy analysis later
         needs_timing_energy = any(r in config.reports for r in ["timing", "energy"])
@@ -552,6 +518,7 @@ class BatchTestRunner(QThread):
                         "denoised": denoised,
                         "config": config,
                         **self._calibration_payload(postprocessor),
+                        **self._linear_payload(postprocessor),
                     }
                 self._all_results.append(results)
 
@@ -580,6 +547,15 @@ class BatchTestRunner(QThread):
             }
         except Exception as e:
             self.logger.warning("Failed to collect calibration data: %s", e)
+            return {}
+
+    def _linear_payload(self, postprocessor: PostprocessorNN) -> dict:
+        """The test split's linear reconstructions on the image's scale, for export."""
+        try:
+            return {"linear": postprocessor.test_linear(),
+                    "linear_image_scale": getattr(postprocessor, "linear_calibration", None) is None}
+        except Exception as e:
+            self.logger.warning("Failed to collect linear reconstructions: %s", e)
             return {}
 
     def _run_analysis_phase(self, index: int, config: TestConfiguration):
@@ -679,6 +655,7 @@ class BatchTestRunner(QThread):
                     "denoised": denoised,
                     "config": config,
                     **self._calibration_payload(postprocessor),
+                    **self._linear_payload(postprocessor),
                 }
 
             self._all_results.append(results)
@@ -861,6 +838,7 @@ class BatchTestRunner(QThread):
                         "denoised": denoised,
                         "config": config,
                         **self._calibration_payload(postprocessor),
+                        **self._linear_payload(postprocessor),
                     }
 
                 self._all_results.append(results)
@@ -1010,47 +988,9 @@ class BatchTestRunner(QThread):
         """Analyze test results based on configured reports."""
         results = {}
 
-        # Get test outputs
-        orig, recons, denoised = postprocessor.test_dataset()
-
-        # Create analyzer for metrics (orig, noisy=recons, reconstructions=denoised)
-        analyzer = Analyzer(orig, recons, denoised)
-
-        # Run noise analysis to compute all metrics
-        analyzer.analyze_noise()
-
-        # Collect quality metrics (PSNR, SSIM, LPIPS)
-        if "quality" in config.reports:
-            results["quality_metrics"] = {}
-
-            # PSNR: psnr_noise_mean = recons vs orig, psnr_rec_mean = denoised vs orig
-            results["psnr_recons"] = analyzer.noise.psnr_noise_mean
-            results["psnr_denoised"] = analyzer.noise.psnr_rec_mean
-            results["quality_metrics"]["psnr"] = analyzer.noise.psnr_rec_mean
-
-            # SSIM
-            results["ssim_recons"] = analyzer.noise.ssim_noise_mean
-            results["ssim_denoised"] = analyzer.noise.ssim_rec_mean
-            results["quality_metrics"]["ssim"] = analyzer.noise.ssim_rec_mean
-
-            # LPIPS
-            try:
-                results["lpips_recons"] = analyzer.noise.lpips_noise_mean
-                results["lpips_denoised"] = analyzer.noise.lpips_rec_mean
-                results["quality_metrics"]["lpips"] = analyzer.noise.lpips_rec_mean
-            except Exception as e:
-                self.logger.warning("LPIPS computation failed: %s", e)
-                results["lpips_error"] = str(e)
-
-            # Per-image metrics for detailed charts
-            results["quality_per_image"] = {
-                "psnr_noisy": list(analyzer.noise.psnr_noise),
-                "psnr_denoised": list(analyzer.noise.psnr_rec),
-                "ssim_noisy": list(analyzer.noise.ssim_noise),
-                "ssim_denoised": list(analyzer.noise.ssim_rec),
-                "lpips_noisy": list(analyzer.noise.lpips_noise),
-                "lpips_denoised": list(analyzer.noise.lpips_rec),
-            }
+        # Linear stage and network output vs the test references
+        quality, _ = quality_results(postprocessor, config.reports, self.logger)
+        results.update(quality)
 
         if "timing" in config.reports:
             # Note: Timing analysis runs sequentially for accuracy

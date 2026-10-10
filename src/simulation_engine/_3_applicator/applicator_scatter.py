@@ -7,6 +7,8 @@ class ApplicatorScatter(ApplicatorABC):
 
     # Reconstruction method identifier for reports
     RECONSTRUCTION_METHOD = "Ghost Imaging"
+    # Correlation estimator S^T (y - mean(y)) / M: not on the image's scale
+    IMAGE_SCALE = False
 
     def __init__(self, dataset, mask, **backend_options):
         """

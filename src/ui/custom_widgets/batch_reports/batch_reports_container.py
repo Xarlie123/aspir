@@ -341,6 +341,28 @@ class BatchReportsContainer(QWidget):
             experiment = self.model.load_experiment(Path(file_path))
             if experiment is None:
                 QMessageBox.warning(self, "Load Error", "Failed to load batch report.")
+            else:
+                self._warn_mixed_metric_conventions()
+
+    def _warn_mixed_metric_conventions(self):
+        """Quality numbers from reports scored under different conventions are not comparable."""
+        conventions = self.model.metric_conventions()
+        if len(conventions) < 2:
+            return
+        self.logger.warning("Loaded reports use metric conventions %s", conventions)
+        QMessageBox.information(
+            self,
+            "Different quality-metric conventions",
+            "The loaded reports were scored under different quality-metric conventions "
+            f"({', '.join(map(str, conventions))}).\n\n"
+            "Convention 1 (before ASPIR 1.3): PSNR / SSIM data range = each reference "
+            "image's max - min, no clipping, and the 'reconstructed' level scored the "
+            "network input.\n"
+            "Convention 2: clipped to [0, 1], data range 1, and the linear level scores "
+            "the reconstruction on the image's scale.\n\n"
+            "Quality numbers are only comparable within one convention; timing and energy "
+            "are not affected."
+        )
 
     def _on_load_last_session(self):
         """Handle load last session button click."""
@@ -366,6 +388,7 @@ class BatchReportsContainer(QWidget):
             QMessageBox.warning(self, "Load Error", "Failed to load the last session report.")
         else:
             self.logger.info(f"Loaded last session report: {self._last_session_path}")
+            self._warn_mixed_metric_conventions()
 
     def set_last_session_path(self, path: str):
         """
