@@ -234,7 +234,7 @@ class TestConfiguration:
                                    else [4] * len(data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]))),
             sweep_angles=data.get("sweep_angles", [0.0, 45.0, 90.0, 135.0]),
             # Reconstruction
-            reconstruction_method=data.get("reconstruction_method", "pseudoinverse"),
+            reconstruction_method=data.get("reconstruction_method", "conventional"),
             reconstruction_device=data.get("reconstruction_device", "auto"),
             fista_lambda=data.get("fista_lambda", FISTA_DEFAULT_LAMBDA),
             fista_iterations=data.get("fista_iterations", FISTA_DEFAULT_ITERATIONS),
@@ -258,7 +258,7 @@ class TestConfiguration:
             reports=data.get("reports", ["training_curves", "quality", "timing", "energy"]),
             include_datasets=data.get("include_datasets", True),
             # Timing analysis
-            timing_warmup_runs=data.get("timing_warmup_runs", 5),
+            timing_warmup_runs=data.get("timing_warmup_runs", 20),
             timing_measurement_runs=data.get("timing_measurement_runs", 800),
             timing_sampling_rate_khz=data.get("timing_sampling_rate_khz", 10.752),
         )

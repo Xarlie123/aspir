@@ -144,6 +144,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was measured.
 
 ### Fixed
+- **Omitted keys in a `.batch_config` now take the GUI defaults.** When a test
+  entry left out `reconstruction_method` or `timing_warmup_runs`, loading gave
+  the pseudoinverse and 5 warm-up runs instead of the native method and 20.
+  Configs saved by the GUI always contain both keys, so no saved experiment
+  changes.
 - **Re-measure loads U-Nets saved before 2026-05-16.** The U-Net decoder
   changed from `ConvTranspose2d` to `Upsample` + `Conv2d` (4eb6f44), after
   which re-measure could not load the U-Net weights of older reports, Use

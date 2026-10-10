@@ -266,6 +266,17 @@ def test_simulation_and_single_test_panels():
     print("  set_applicator/set_mask apply solver_params; all four panels show, default and emit them")
 
 
+def test_missing_config_keys_take_the_gui_defaults():
+    """A hand-written .batch_config may omit keys; they must get the same defaults as the GUI."""
+    import dataclasses
+
+    gui, loaded = TestConfiguration(), TestConfiguration.from_dict({})
+    differ = [f.name for f in dataclasses.fields(TestConfiguration)
+              if f.compare and f.name != "name" and getattr(gui, f.name) != getattr(loaded, f.name)]
+    assert not differ, f"from_dict defaults differ from the GUI's: {differ}"
+    print("  omitted keys load with the GUI defaults")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in globals().items() if k.startswith("test_")]
     failures = 0
