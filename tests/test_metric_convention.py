@@ -7,7 +7,7 @@ Self-contained script in the style of tests/test_solver_parameters.py:
 Before v1.3 the "reconstructed" quality level scored the network input (the
 linear output min-max normalised over the dataset), Hadamard Linear returned the
 pseudoinverse times N/M, PSNR / SSIM used each reference image's own range and
-estimates were not clipped (benchmarks/metric_convention/ has the diagnosis).
+estimates were not clipped (the ASPIR paper's analysis has the diagnosis).
 These checks pin the convention that replaced it.
 """
 

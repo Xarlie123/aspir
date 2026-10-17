@@ -33,7 +33,7 @@ image, after the dataset's data-format quantisation):
 - the "reconstructed" level scored the network input instead of the reconstruction.
 
 On a CelebA Cake-Cutting task this put the linear PSNR 4.9–9.7 dB lower and the network gain correspondingly
-higher (`benchmarks/metric_convention/`). Quality numbers are only comparable within one convention; timing
+higher (diagnosis in the ASPIR paper's analysis). Quality numbers are only comparable within one convention; timing
 and energy are not affected.
 
 ### PSNR (Peak Signal-to-Noise Ratio)

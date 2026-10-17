@@ -110,10 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     The mask step then shows the measured patterns read-only, Test Masks
     reconstructs from the measured values, and Post-processing and Reports,
     which need ground truth, are closed.
-  - `scripts/experimental_spihim_figure.py` reproduces the experimental
-    validation (figures, CSV / Markdown tables) with one command.
-    `scripts/train_stl10_unets.py` retrains the Use Case 2 U-Nets on STL-10
-    for comparison with the CelebA ones. Finally,
+  - `scripts/download_spihim.py` fetches the SPIHIM data. Finally,
     `tests/test_experimental_data.py` covers the adapter, exact noiseless
     reconstruction, Cake-Cutting row selection and measured-vs-simulated
     parity for all seven algorithms.
@@ -140,8 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the lowest validation loss instead of keeping the last epoch's. It is the
     usual practice, and what SPyRiT's `train_model` does.
   - With a constant learning rate the last epoch can be several dB below the
-    best one. In the SPyRiT comparison (`benchmarks/spyrit_comparison/`) the
-    gap was 3.3 dB at M/N = 0.32.
+    best one. In the SPyRiT comparison of the ASPIR paper the gap was 3.3 dB
+    at M/N = 0.32.
   - Off by default, so saved configurations and earlier results reproduce
     unchanged. With an empty validation split the last epoch is kept and a
     warning is logged.
@@ -162,6 +159,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`.venv/bin/python tests/test_fourier_fspi.py`) with no new dependency.
 
 ### Changed
+- **The paper's analyses live with the paper.** `benchmarks/metric_convention/`,
+  `benchmarks/spyrit_comparison/`, `scripts/experimental_spihim_figure.py` and
+  `scripts/train_stl10_unets.py` analysed the results of the ASPIR paper and
+  have moved out of the repository. It keeps the software, the batch
+  configurations that reproduce the paper's experiments (`examples/paper/`),
+  the SPIHIM download (`scripts/download_spihim.py`) and the reconstruction
+  scaling benchmark (`scripts/bench_reconstruction_scaling.py`).
 - **Reconstruction timing is device-synchronised.** `timing_reconstruction_ms`
   now uses the NN stage's protocol — synchronisation before and after each
   call, warm-up, repeats — and batch reports add
@@ -177,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metadata record `metric_convention: 2`; Batch Reports warns when loaded
   reports mix conventions. Quality numbers are not comparable with earlier
   reports; timing and energy are unaffected. The diagnosis of convention 1 is
-  in `benchmarks/metric_convention/`.
+  part of the ASPIR paper's analysis.
   - Estimates are clipped to [0, 1], and PSNR / SSIM use a data range of 1,
     instead of each reference image's max − min. This is the same in
     analysis, reports, training curves and figure export.

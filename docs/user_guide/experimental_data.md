@@ -147,9 +147,10 @@ After loading:
 - **Test Masks** reconstructs from the measured values; the slider selects how
   many of the measured patterns to use.
 - **Post-processing** and **Reports** need ground-truth images to train and
-  evaluate, so they are closed for measured data.
-  `scripts/experimental_spihim_figure.py` shows how to apply a pre-trained
-  network to measured reconstructions.
+  evaluate, so they are closed for measured data. A network trained on
+  simulated data can still be applied to a measured reconstruction outside
+  the GUI: normalise the reconstruction with the constants the export stores
+  (`normalization` in `test_config.json`) and load the checkpoint.
 
 Batch Test does not accept measured data yet. It would need:
 
@@ -159,22 +160,13 @@ Batch Test does not accept measured data yet. It would need:
 - reports that tolerate a missing ground truth, or that take the file's
   reference image with the metric definitions made explicit.
 
-## Reproducing the experimental validation
+## Getting the SPIHIM data
 
 ```bash
 python scripts/download_spihim.py
-python scripts/experimental_spihim_figure.py     # writes experiments/experimental_spihim/
 ```
 
-`python scripts/train_stl10_unets.py` (run before the figure script) trains
-the same U-Nets on STL-10 instead of CelebA, with the Use Case 2 recipe. It
-streams only the STL-10 train split, about 0.4 GB, into the git-ignored
-`datasets/stl10/`, and the figure script adds those networks as extra
-columns.
-
-The script runs the Cake-Cutting sub-sampling at M/N = 0.04 ... 0.32 of the
-star targets through Hadamard Linear, FISTA, TV and the Use Case 2 U-Nets. It
-also runs ASPIR's simulated acquisition of the same scene, a simulation with
-noise calibrated on the ten repeats, and an optical-density sweep. Its module
-docstring lists every choice the numbers depend on: reference, affine fit
-before PSNR / SSIM, contrast threshold, and the network input normalisation.
+The experimental validation of the ASPIR paper (Cake-Cutting sub-sampling of
+the star targets through every reconstruction method and the Use Case 2
+U-Nets, against ASPIR's simulation of the same scene) is part of the paper's
+analysis, not of this repository.
