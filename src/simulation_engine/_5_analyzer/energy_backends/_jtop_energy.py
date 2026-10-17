@@ -14,6 +14,11 @@ reading is therefore reported into **both** ``cpu_energy_joules`` and
 value: it's the only physically truthful answer, and it lets the UI
 populate the CPU column when the user runs CPU-only inference (which
 otherwise stays blank because the backend used to fill GPU only).
+
+jtop refreshes its power reading about once a second, and this backend
+reads it only at the two ends of a measurement, so a block shorter than
+about a second gets no reading of its own. It is only the fallback for
+:class:`JetsonSysfsBackend`, which samples the same rail at 200 Hz.
 """
 from __future__ import annotations
 

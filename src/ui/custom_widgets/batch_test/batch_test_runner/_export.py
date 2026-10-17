@@ -58,6 +58,7 @@ def export_results_json(
     logger,
     output_dir: Path,
     idle_baseline: Optional[dict[str, Any]] = None,
+    platform: Optional[dict[str, Any]] = None,
 ) -> str:
     """Export all results to JSON file with .batch_analysis_report extension.
 
@@ -67,6 +68,10 @@ def export_results_json(
     the report metadata under ``idle_baseline``; absent keys mean
     "no baseline captured" and the per-test ``dynamic_*`` columns
     will be ``None`` on every test.
+
+    ``platform`` holds the :func:`platform_state` snapshots taken at the
+    start and at the end of the run (``{"start": ..., "end": ...}``); it
+    lands under ``platform_state``.
     """
     filename = f"results{FileExtensions.BATCH_ANALYSIS_REPORT}"
     filepath = output_dir / filename
@@ -92,6 +97,8 @@ def export_results_json(
     }
     if idle_baseline is not None:
         metadata["idle_baseline"] = idle_baseline
+    if platform is not None:
+        metadata["platform_state"] = platform
 
     # Use the BatchAnalysisReport handler
     BatchAnalysisReport.save(

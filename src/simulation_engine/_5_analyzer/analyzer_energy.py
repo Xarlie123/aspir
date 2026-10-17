@@ -27,6 +27,15 @@ from .energy_backends import (
 )
 
 
+def sampling_rate(readings: List[EnergyReading]) -> Optional[float]:
+    """Mean power-sampling rate over the readings that carry one, weighted by duration."""
+    timed = [r for r in readings if r.sampling_hz and r.duration_seconds > 0]
+    total_s = sum(r.duration_seconds for r in timed)
+    if total_s <= 0:
+        return None
+    return float(sum(r.sampling_hz * r.duration_seconds for r in timed) / total_s)
+
+
 @dataclass
 class EnergyAnalysisResult:
     """Complete results from energy analysis."""
@@ -55,6 +64,11 @@ class EnergyAnalysisResult:
     # Breakdown by component (if available)
     gpu_energy_joules: Optional[float] = None
     cpu_energy_joules: Optional[float] = None
+
+    # Power samples per block and the mean sampling rate, for backends that
+    # sample the power themselves (the Jetson INA3221 backend)
+    samples_per_block: Optional[List[int]] = None
+    sampling_hz: Optional[float] = None
 
     @property
     def energy_per_image_mj(self) -> List[float]:
@@ -230,6 +244,7 @@ class EnergyAnalyzer:
         # mis-attributed energy when callers passed multiple images
         # for variance.)
         all_readings = []
+        sample_counts = []
 
         # Define inference function
         def run_inference(tensor):
@@ -281,6 +296,7 @@ class EnergyAnalyzer:
             time_readings.append(avg_time)
             power_readings.append(avg_power)
             all_readings.extend(result.readings)
+            sample_counts.append(sum(r.n_samples or 0 for r in result.readings))
 
             # Get temperature if available
             for reading in result.readings:
@@ -342,7 +358,9 @@ class EnergyAnalyzer:
             temperature_per_image=temp_readings if temp_readings else None,
             mean_temperature=float(np.mean(temp_readings)) if temp_readings else None,
             gpu_energy_joules=gpu_energy,
-            cpu_energy_joules=cpu_energy
+            cpu_energy_joules=cpu_energy,
+            samples_per_block=sample_counts if any(sample_counts) else None,
+            sampling_hz=sampling_rate(all_readings),
         )
 
         self._last_result = analysis_result

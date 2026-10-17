@@ -39,6 +39,11 @@ class EnergyReading:
     # Temperature data (if available)
     temperature_celsius: Optional[float] = None
 
+    # Power samples integrated and the rate achieved, for backends that
+    # sample the power themselves (the Jetson INA3221 backend)
+    n_samples: Optional[int] = None
+    sampling_hz: Optional[float] = None
+
     @property
     def energy_mj(self) -> float:
         """Energy in millijoules."""
@@ -127,6 +132,15 @@ class EnergyBackend(ABC):
     def shutdown(self) -> None:
         """Clean up resources."""
         pass
+
+    def start_sampling(self) -> bool:
+        """Keep sampling between measurements, so that ``get_current_power``
+        returns the mean since its previous call. Returns False for backends
+        that do not sample on their own (the default)."""
+        return False
+
+    def stop_sampling(self) -> None:
+        """Undo :meth:`start_sampling`."""
 
     def measure_function(
         self,

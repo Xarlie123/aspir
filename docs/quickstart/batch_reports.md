@@ -57,7 +57,7 @@ Useful workflow: train a batch on a workstation (slow) and only measure latency 
 - A **Run both compute paths** checkbox that executes the entire job twice — once with `use_gpu=False` (CPU pass) and once with `use_gpu=True` (GPU pass) — with a 30 s thermal cooldown between passes. Each pass writes its own report file with a `-cpu` / `-gpu` tag and auto-loads next to the original.
 - A "Device label" field tagged into the output filename so several re-measurements on different hosts stay distinguishable.
 
-The action is enabled only for experiments exported with model checkpoints (export level *Reports + models* or higher); on Jetson the daemon must be running (`sudo systemctl enable --now jtop`) — see {doc}`../installation` for the one-time setup.
+The action is enabled only for experiments exported with model checkpoints (export level *Reports + models* or higher). On a Jetson, pin the clocks first (`sudo jetson_clocks`) — see {doc}`../installation` for the one-time setup and the measurement session.
 
 ## Configuring Charts
 

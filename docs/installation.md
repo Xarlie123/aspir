@@ -193,28 +193,46 @@ on the device. Likewise, do **not** install the x86 Docker image on Jetson;
 the CUDA layer is host-specific and the build will fail on the first
 ``apt-get install``.
 
-#### Enable jtop for GPU / energy monitoring
+#### Enable jtop for GPU monitoring
 
-ASPIR reads Jetson GPU utilisation, VRAM and power through the
-``jetson-stats`` daemon (``jtop``). Enable it once per machine:
+ASPIR reads Jetson GPU utilisation and VRAM through the ``jetson-stats``
+daemon (``jtop``). Enable it once per machine:
 
 ```bash
 sudo pip install -U jetson-stats        # installs the jtop CLI + service
 sudo systemctl enable --now jtop        # starts the background daemon
 ```
 
-Without this service the batch-test Resource Monitor shows GPU "--" and
-the Energy report comes back as 0 mJ / 0 W. ``jetson-stats`` is the
-**primary** energy backend on Jetson; the pure-sysfs INA3221 reader
-exists only as a fallback for hosts where the daemon isn't running, and
-its sensor paths differ per board so it isn't always able to discover
-the right rails on its own.
+Without this service the batch-test Resource Monitor shows GPU "--".
+Energy does not need it: ASPIR reads the module input rail of the
+on-module INA3221 sensor straight from sysfs, at 200 Hz, and falls back to
+``jtop`` (which refreshes about once a second) only when those files
+cannot be read.
+
+#### Pin the clocks before measuring
+
+Timing and energy depend on the power mode and on the frequency governors.
+For a measurement session, keep one power mode and pin the clocks at its
+maximum:
+
+```bash
+sudo nvpmodel -q                # power mode in use; keep the same one for every run
+sudo jetson_clocks --store      # once: save the current clock settings
+sudo jetson_clocks              # pin CPU, GPU and memory clocks (also runs the fan at full speed)
+# ... measure ...
+sudo jetson_clocks --restore    # back to the saved settings
+```
+
+``jetson_clocks`` does not survive a reboot. Every report stores the
+platform state at the start and at the end of the run (``platform_state``
+in its metadata), so a run can be checked afterwards; see
+{doc}`user_guide/analysis`.
 
 ```{important}
 **Jetson shared rail.** The Orin / Xavier / Nano / TX2 modules expose a
 single combined power rail (``VDD_IN`` / ``POM_5V_IN``) that feeds CPU,
-GPU, RAM and the rest of the SoC together. ``jtop`` reports the total;
-ASPIR populates both ``energy_cpu_mj`` and ``energy_gpu_mj`` with that
+GPU, RAM and the rest of the SoC together. ASPIR integrates that total
+and populates both ``energy_cpu_mj`` and ``energy_gpu_mj`` with that
 same number. The honest CPU vs GPU comparison on Jetson is therefore
 two separate measurement passes (with ``use_gpu=False`` and
 ``use_gpu=True``), which is what *Run both compute paths* in

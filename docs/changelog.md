@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Platform state in every report.** Batch Test and Re-measure record the
+  machine's state at the start and at the end of a run under
+  `platform_state` in the report metadata: frequency governor and limits of
+  every CPU cluster, whether the clocks are pinned, the Jetson power mode
+  (`nvpmodel`), GPU clock and fan, the desktop GPU's clocks and
+  performance state (`nvidia-smi`), the temperatures, and the torch version
+  and thread count. A run can then be checked afterwards, for example that
+  `jetson_clocks` held throughout. Read without root; the memory clock is not
+  read.
 - **Fourier Single-Pixel Imaging (mask family + native reconstruction).**
   ASPIR gains a seventh mask family and a seventh reconstruction algorithm,
   wired through the same `MaskABC` / `ApplicatorABC` pipeline, Single Test
@@ -205,6 +214,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rows (UC2's saved masks: one row at 4 %, 8 % and 24 %; ≤ 0.05 dB linear PSNR).
 
 ### Fixed
+- **Jetson energy is sampled at 200 Hz instead of read twice per block.**
+  - The jtop backend multiplied the mean of two power readings, one at each
+    end of a block, by the block's duration. jtop refreshes about once a
+    second, so a GPU block of 80 inferences (about 0.6 s) got no reading of
+    its own, and the readings could predate the block.
+  - The Jetson backend now reads the module input rail (`VDD_IN`, or
+    `POM_5V_IN`) of the INA3221 from sysfs at 200 Hz while a measurement is
+    open, and integrates it with the trapezoidal rule (about 130 samples per
+    GPU block on an Orin NX). The energy is scaled to the timed loop at the
+    mean power measured. jtop is only the fallback.
+  - The sub-rails (`VDD_CPU_GPU_CV`, `VDD_SOC`) are never added to the input
+    rail. Before, the sysfs fallback summed every rail it found.
+  - The sampler is paused outside measurements, so it does not run during the
+    timing pass.
+  - The idle baseline keeps the sampler running on the Jetson and stores 1 s
+    means. Other backends are polled as before.
+  - Reports carry the samples of each block (`energy_blocks.n_samples`,
+    `energy_reconstruction_blocks.n_samples`) and the rate achieved
+    (`energy_sampling_hz`, `energy_reconstruction_sampling_hz`).
+  - Jetson energy measured by earlier versions rests on these two-point
+    readings and should be re-measured. `tests/test_jetson_energy.py` (8/8).
 - **Hadamard Linear returns the image's scale.**
   - It now computes Hᵀy / N (N = pixels), the pseudoinverse of any subset of
     Sylvester rows. Before, it divided by the number of patterns M, which

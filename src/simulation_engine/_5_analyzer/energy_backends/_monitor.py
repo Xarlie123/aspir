@@ -153,12 +153,12 @@ class EnergyMonitor:
         platform_info = self.detect_platform()
         self.logger.info(f"Detected platform: {platform_info}")
 
-        # Try Jetson first. Prefer the jtop-based backend (handles every
-        # Orin / Xavier / Nano / TX2 variant via the jetson-stats daemon)
-        # and fall back to the pure-sysfs scanner only if jtop isn't
-        # available or its daemon isn't running.
+        # Try Jetson first. Prefer the INA3221 sysfs backend, which samples
+        # the module input rail at 200 Hz during each measurement; jtop
+        # refreshes about once a second and is only the fallback (no
+        # readable INA3221 files).
         if self._enable_jetson and platform_info["is_jetson"]:
-            for cls in (JtopEnergyBackend, JetsonSysfsBackend):
+            for cls in (JetsonSysfsBackend, JtopEnergyBackend):
                 backend = cls(logger=self.logger)
                 if backend.initialize():
                     self._backends.append(backend)
@@ -209,6 +209,15 @@ class EnergyMonitor:
             backend.device_name: backend.get_current_power()
             for backend in self._backends
         }
+
+    def start_sampling(self) -> bool:
+        """Ask the backends that sample on their own to keep sampling (see
+        :meth:`EnergyBackend.start_sampling`). True if any of them does."""
+        return any([backend.start_sampling() for backend in self._backends])
+
+    def stop_sampling(self) -> None:
+        for backend in self._backends:
+            backend.stop_sampling()
 
     def measure(
         self,
@@ -274,6 +283,19 @@ class EnergyMonitor:
         readings = self.stop_measurement()
 
         execution_time_ms = (t_end - t_start) * 1000.0
+        # A sampling backend integrates from its first to its last sample,
+        # which bracket the timed loop by one sensor read at each end: scale
+        # its energy to the loop's duration at the mean power it measured.
+        loop_s = t_end - t_start
+        for r in readings:
+            if r.n_samples and r.duration_seconds > 0 and loop_s > 0:
+                scale = loop_s / r.duration_seconds
+                r.energy_joules *= scale
+                if r.cpu_energy_joules is not None:
+                    r.cpu_energy_joules *= scale
+                if r.gpu_energy_joules is not None:
+                    r.gpu_energy_joules *= scale
+                r.duration_seconds = loop_s
 
         return EnergyMeasurementResult(
             readings=readings,

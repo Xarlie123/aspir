@@ -2,7 +2,8 @@
 
 Supported backends:
 - :class:`NVMLBackend` — NVIDIA GPUs (desktop/workstation) via pynvml
-- :class:`JetsonSysfsBackend` — NVIDIA Jetson devices via sysfs (pure Python, no PMLib needed)
+- :class:`JetsonSysfsBackend` — NVIDIA Jetson module input rail (INA3221) sampled from sysfs at 200 Hz
+- :class:`JtopEnergyBackend` — NVIDIA Jetson via jtop, the fallback (refreshes about once a second)
 - :class:`RAPLBackend` — Intel CPUs via RAPL (Running Average Power Limit)
 
 The :class:`EnergyMonitor` class auto-detects available backends and provides a

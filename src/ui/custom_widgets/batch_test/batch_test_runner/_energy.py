@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
-from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
+from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer, sampling_rate
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
 
 
@@ -142,6 +142,10 @@ def measure_energy(
                 "time_ms": [float(t) / B for t in result.time_per_image_ms],
             },
         }
+        if result.samples_per_block:
+            # Power samples behind each block, and the rate achieved
+            energy_data["energy_blocks"]["n_samples"] = list(result.samples_per_block)
+            energy_data["energy_sampling_hz"] = result.sampling_hz
 
         # Add GPU-specific data if available (per-image: the
         # analyzer's component fields are also per-iteration so they
@@ -265,6 +269,10 @@ def measure_reconstruction_energy(
             "time_ms": [res.execution_time_ms / images_per_block for res in results],
         },
     }
+    counts = [sum(r.n_samples or 0 for r in res.readings) for res in results]
+    if any(counts):
+        out["energy_reconstruction_blocks"]["n_samples"] = counts
+        out["energy_reconstruction_sampling_hz"] = sampling_rate(readings)
     if gpu_j > 0:
         out["energy_reconstruction_gpu_mj"] = 1000.0 * gpu_j / n_images
     if cpu_j > 0:

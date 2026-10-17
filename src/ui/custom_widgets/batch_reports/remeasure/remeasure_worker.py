@@ -33,6 +33,7 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
     resolve_model_name,
 )
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
+from simulation_engine._5_analyzer.platform_state import platform_state
 from simulation_engine._5_analyzer.baseline_capture import (
     BaselineResult,
     add_dynamic_uncertainty,
@@ -448,6 +449,7 @@ class RemeasureWorker(QObject):
                  shared_analyzer: Optional[EnergyAnalyzer] = None,
                  baseline: Optional[BaselineResult] = None) -> int:
         outcome = RemeasureOutcome(job=job, success=False)
+        state_start = platform_state()
         try:
             with open(job.source_report, "r", encoding="utf-8") as fh:
                 report = json.load(fh)
@@ -642,6 +644,9 @@ class RemeasureWorker(QObject):
         # baseline" toggle for that experiment.
         if baseline is not None:
             report["metadata"]["idle_baseline"] = baseline.to_dict()
+        # Clocks, power mode and temperatures at the start and the end of
+        # this job, so the run can be checked afterwards.
+        report["metadata"]["platform_state"] = {"start": state_start, "end": platform_state()}
 
         try:
             self._write_report(job.destination_report, job.source_report, report)

@@ -104,7 +104,7 @@ Measures power consumption during inference. The energy backend is auto-detected
 | Platform | Backend | Measurements |
 |----------|---------|--------------|
 | NVIDIA Desktop GPUs | NVML (`pynvml`) | GPU package power, temperature |
-| NVIDIA Jetson | jtop (`jetson-stats` daemon), with sysfs INA3221 as fallback | Module total power on the shared `VDD_IN` / `POM_5V_IN` rail |
+| NVIDIA Jetson | INA3221 read from sysfs at 200 Hz, with jtop (`jetson-stats` daemon) as fallback | Module input power on the shared `VDD_IN` / `POM_5V_IN` rail |
 | Intel and AMD CPUs | RAPL (`/sys/class/powercap/intel-rapl`, which Linux also uses for AMD Zen) | Package energy (top-level zones only; sub-zones such as `core` lie inside the package and are not added again) |
 
 ```{note}
@@ -112,9 +112,21 @@ RAPL energy profiling requires read access to the powercap interface: `sudo chmo
 ```
 
 ```{note}
+**Jetson sampling.** While a measurement is open, a background thread reads
+the voltage and current of the module input rail from the INA3221 files in
+sysfs at 200 Hz and integrates the power with the trapezoidal rule. Each
+block stores its sample count (`energy_blocks.n_samples`) and the report the
+rate achieved (`energy_sampling_hz`). The thread is paused outside
+measurements, so the timing pass runs without it. jtop refreshes its reading
+about once a second, too slowly for blocks shorter than a second; it is used
+only when the INA3221 files cannot be read.
+```
+
+```{note}
 **Jetson shared rail.** Tegra modules expose a single combined power rail
-that feeds CPU + GPU + RAM + the rest of the SoC together. jtop reports
-the total; ASPIR populates both `energy_cpu_mj` and `energy_gpu_mj` with
+that feeds CPU + GPU + RAM + the rest of the SoC together. The sub-rails
+(`VDD_CPU_GPU_CV`, `VDD_SOC` on an Orin NX) lie inside it and are not added.
+ASPIR integrates the total and populates both `energy_cpu_mj` and `energy_gpu_mj` with
 that total so any downstream view that gates on either field stays
 non-empty. The honest comparison on Jetson is therefore *CPU run vs GPU
 run* — i.e. two separate measurement passes with `use_gpu=False` and
@@ -132,7 +144,7 @@ toggle in Batch Reports → Re-measure are designed around this.
 
 ### Idle Baseline & Dynamic Energy
 
-Both Batch Test and Re-measure can optionally sample **system idle power** for a configurable window (30–300 s, default 60 s) before the first test. The mean of that window is persisted at report metadata level under `idle_baseline` and used to derive three additional per-test columns:
+Both Batch Test and Re-measure can optionally sample **system idle power** for a configurable window (30–300 s, default 60 s) before the first test. Backends are polled once a second; on a Jetson each poll is the mean of the 200 Hz samples of the past second. The mean of that window is persisted at report metadata level under `idle_baseline` and used to derive three additional per-test columns:
 
 - `dynamic_power_W` = `energy_mean_watts` − `baseline_power_W`
 - `dynamic_energy_mj` = `energy_mean_mj` − `baseline_power_W` · *t* · 1000  (where *t* is the per-image inference time from the same energy phase, so the subtraction is consistent with the integration window)
@@ -164,6 +176,8 @@ $$\sigma_\text{blocks}^2 = \frac{1}{B}\left[\bar t^{\,2} s_P^2 + (\bar P - P_\te
 **95 % interval.** `dynamic_energy_ci95_mj` comes from a bootstrap with 2000 draws and a fixed seed. Each draw resamples the blocks with replacement and draws *P*_idle from N(*P*_idle, σ_idle).
 
 **Reconstruction fields.** The reconstruction stage carries the same fields with `dynamic_reconstruction_` and `energy_reconstruction_` prefixes.
+
+**Platform state.** Timing and energy depend on how the machine is set up, so the report metadata also stores `platform_state`, a snapshot at the start and at the end of the run: frequency governor and limits of each CPU cluster and whether they are pinned, the Jetson power mode (`nvpmodel`), GPU clock and fan, the desktop GPU's clocks (`nvidia-smi`), the temperatures, and the torch version and thread count. On a Jetson, pin the clocks with `sudo jetson_clocks` before measuring; `platform_state` then shows `"pinned": true` for the CPU and the GPU at both ends of the run.
 
 **Report metadata.** Each backend's entry in `idle_baseline` stores `P_idle_mean_w`, `P_idle_std_w` (sample standard deviation), `P_idle_sem_w` and `n_idle_samples`, and so does the batch total. Independent sensors add their standard deviations in quadrature.
 

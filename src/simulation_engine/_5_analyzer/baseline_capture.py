@@ -10,13 +10,16 @@ time. This module owns the capture logic; the subtraction lives in
 the report serializer so the totals on disk stay untouched.
 
 The module is hardware-agnostic: it consumes an already-initialised
-:class:`EnergyMonitor` and asks each backend for its instantaneous
-power reading on a 1 Hz schedule. Backends sample at their own
-native rate (jtop ~1 Hz, NVML ~10 Hz, RAPL ~1 kHz internally) — the
-1 Hz outer poll is a deliberate compromise: high enough to catch
-short transients, low enough that the polling python loop itself
-stays well under 1 % CPU and doesn't bias the very baseline it's
-trying to measure.
+:class:`EnergyMonitor` and asks each backend for its power reading on
+a 1 Hz schedule. Backends sample at their own native rate (NVML
+~10 Hz, RAPL ~1 kHz internally) — the 1 Hz outer poll is a deliberate
+compromise: high enough to catch short transients, low enough that
+the polling python loop itself stays well under 1 % CPU and doesn't
+bias the very baseline it's trying to measure. A backend that samples
+on its own (the Jetson INA3221 backend, 200 Hz) keeps sampling for the
+whole window and returns the mean since the previous poll, so each of
+its baseline samples is a 1 s mean; the first poll then waits one
+interval.
 
 The "10.752 kHz" figure that lives elsewhere in the codebase is
 the **DMD sampling rate** for the simulated single-pixel
@@ -211,27 +214,33 @@ def capture_idle_baseline(
     samples: dict[str, list[float]] = {
         name: [] for name in monitor.available_backends
     }
+    continuous = monitor.start_sampling()
     t0 = time.perf_counter()
-    next_tick = t0
-    while True:
-        if cancel_check is not None and cancel_check():
-            log.info("Idle baseline cancelled by caller after %.1f s",
-                     time.perf_counter() - t0)
-            break
-        readings = monitor.get_current_power()
-        for name, watts in readings.items():
-            samples.setdefault(name, []).append(float(watts))
-        elapsed = time.perf_counter() - t0
-        if progress_callback is not None:
-            progress_callback(elapsed, duration_s)
-        if elapsed >= duration_s:
-            break
-        # Sleep until the next tick. Using a target time rather than a
-        # fixed sleep keeps the cadence even under jitter from the
-        # backend reads themselves.
-        next_tick += _BASELINE_POLL_INTERVAL_S
-        delay = max(0.0, next_tick - time.perf_counter())
-        time.sleep(delay)
+    # A continuously sampling backend reports the mean since the previous
+    # poll: the first poll comes one interval in, so it averages a full one.
+    next_tick = t0 + (_BASELINE_POLL_INTERVAL_S if continuous else 0.0)
+    try:
+        while True:
+            delay = max(0.0, next_tick - time.perf_counter())
+            time.sleep(delay)
+            if cancel_check is not None and cancel_check():
+                log.info("Idle baseline cancelled by caller after %.1f s",
+                         time.perf_counter() - t0)
+                break
+            readings = monitor.get_current_power()
+            for name, watts in readings.items():
+                samples.setdefault(name, []).append(float(watts))
+            elapsed = time.perf_counter() - t0
+            if progress_callback is not None:
+                progress_callback(elapsed, duration_s)
+            if elapsed >= duration_s:
+                break
+            # Sleep until the next tick. Using a target time rather than a
+            # fixed sleep keeps the cadence even under jitter from the
+            # backend reads themselves.
+            next_tick += _BASELINE_POLL_INTERVAL_S
+    finally:
+        monitor.stop_sampling()
 
     real_duration = time.perf_counter() - t0
     per_backend: dict[str, BackendBaseline] = {}

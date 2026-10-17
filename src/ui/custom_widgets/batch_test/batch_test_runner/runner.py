@@ -14,6 +14,7 @@ from typing import Any
 from PySide6.QtCore import QThread, Signal
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
+from simulation_engine._5_analyzer.platform_state import platform_state
 from ui.custom_widgets.batch_test.batch_test_runner._energy import (
     measure_energy,
     measure_reconstruction_energy,
@@ -114,12 +115,14 @@ class BatchTestRunner(QThread):
         self._test_data: dict[int, dict] = {}  # Store test data for export
         self._results_lock = Lock()  # Thread safety for results
         self._baseline = None  # set by _capture_baseline_phase if enabled
+        self._platform_start = None  # platform_state() when the run starts
 
     def run(self):
         """Execute all tests in the batch (sequential or parallel based on config)."""
         self.logger.info("Starting batch test run with %d tests", len(self.batch_config.tests))
         self._cancel_requested = False
         self._all_results = []
+        self._platform_start = platform_state()
 
         try:
             # Capture system idle power before any test starts so the
@@ -1086,6 +1089,7 @@ class BatchTestRunner(QThread):
             self.batch_config, self.export_level, self.logger, results_dir,
             idle_baseline=(self._baseline.to_dict()
                            if self._baseline is not None else None),
+            platform={"start": self._platform_start, "end": platform_state()},
         )
         self.logger.info("Exported analysis report: %s", report_path)
         self.phase_progress.emit(-1, self.PHASE_EXPORT, 40)
