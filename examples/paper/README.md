@@ -108,3 +108,9 @@ Run one pass per row:
 
 On the Jetson wheel the BLAS default is 8 OpenBLAS threads. The default CPU row is flagged as oversubscribed;
 see *User Guide / Analysis → CPU Threads*.
+
+**Acquisition time** is modelled, not measured: the DMD frames divided by the sampling rate, 10.752 kHz in
+these configurations. Since ASPIR 1.3 a bipolar Cake-Cutting pattern counts two frames (P⁺ and P⁻), so
+UC2 Cake-Cutting gives 30.32 / 60.83 / 121.84 / 182.85 / 243.68 ms at 4 / 8 / 16 / 24 / 32 %. The R1 batch
+reports, written before this change, store half of that. Grey-level FSPI counts one frame per pattern:
+15.25 / 30.51 / 61.01 / 91.52 / 122.02 ms, at the binary rate, which is optimistic for grey levels.

@@ -13,6 +13,12 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt
 
+from ui.custom_widgets.acquisition_controls import (
+    make_grey_rate_spin,
+    make_projection_combo,
+    restrict_projection_combo,
+    set_projection_combo,
+)
 from ui.custom_widgets.batch_test.test_config_model import (
     TestConfiguration, BatchTestConfig
 )
@@ -381,6 +387,18 @@ class TestConfigWidget(QWidget):
         cpu_threads_row.addWidget(self.cpu_blas_threads_spin)
         timing_params_layout.addLayout(cpu_threads_row, 1, 3)
 
+        # Modelled acquisition: projections per stored pattern (only the
+        # schemes that apply to the selected mask family are enabled) and
+        # the DMD rate for grey-level patterns.
+        timing_params_layout.addWidget(QLabel("Projections:"), 2, 0)
+        self.projection_scheme_combo = make_projection_combo()
+        self.projection_scheme_combo.currentIndexChanged.connect(self._on_value_changed)
+        timing_params_layout.addWidget(self.projection_scheme_combo, 2, 1)
+        timing_params_layout.addWidget(QLabel("Grey-level rate:"), 2, 2)
+        self.grey_rate_spin = make_grey_rate_spin()
+        self.grey_rate_spin.valueChanged.connect(self._on_value_changed)
+        timing_params_layout.addWidget(self.grey_rate_spin, 2, 3)
+
         timing_params_layout.setColumnStretch(1, 1)
         timing_params_layout.setColumnStretch(3, 1)
 
@@ -623,6 +641,7 @@ class TestConfigWidget(QWidget):
         }
         index = type_to_index.get(mask_type, 0)
         self.mask_control_stack.setCurrentIndex(index)
+        self._restrict_projection_schemes()
 
         # Re-evaluate which reconstruction method is active, so the FISTA/TV
         # params panel reflects the currently-visible combo rather than the
@@ -636,6 +655,13 @@ class TestConfigWidget(QWidget):
         # Also trigger value change
         self._on_value_changed()
 
+
+    def _restrict_projection_schemes(self):
+        """Enable only the projection schemes that apply to the selected mask family."""
+        if not hasattr(self, "projection_scheme_combo") or not hasattr(self, "fourier_control"):
+            return   # still building the UI
+        restrict_projection_combo(self.projection_scheme_combo, self.mask_type_combo.currentText(),
+                                  self.fourier_control.get_binarization())
 
     def _on_timing_checkbox_changed(self):
         """Show/hide timing parameters based on timing checkbox."""
@@ -793,6 +819,9 @@ class TestConfigWidget(QWidget):
             self.timing_sampling_spin.setValue(config.timing_sampling_rate_khz)
             self.cpu_torch_threads_spin.setValue(config.cpu_torch_threads or 0)
             self.cpu_blas_threads_spin.setValue(config.cpu_blas_threads or 0)
+            set_projection_combo(self.projection_scheme_combo, config.projection_scheme)
+            self.grey_rate_spin.setValue(config.grey_level_rate_khz or 0.0)
+            self._restrict_projection_schemes()
 
             # Update stack widgets
             self._on_mask_type_changed(config.mask_type)
@@ -883,6 +912,8 @@ class TestConfigWidget(QWidget):
         self.timing_sampling_spin.setReadOnly(read_only)
         self.cpu_torch_threads_spin.setReadOnly(read_only)
         self.cpu_blas_threads_spin.setReadOnly(read_only)
+        self.projection_scheme_combo.setEnabled(not read_only)
+        self.grey_rate_spin.setReadOnly(read_only)
 
     def _on_value_changed(self):
         """Handle value change in any field."""
@@ -988,5 +1019,7 @@ class TestConfigWidget(QWidget):
         self._config.timing_sampling_rate_khz = self.timing_sampling_spin.value()
         self._config.cpu_torch_threads = self.cpu_torch_threads_spin.value() or None
         self._config.cpu_blas_threads = self.cpu_blas_threads_spin.value() or None
+        self._config.projection_scheme = self.projection_scheme_combo.currentData()
+        self._config.grey_level_rate_khz = self.grey_rate_spin.value() or None
 
         self.config_changed.emit()

@@ -16,6 +16,7 @@ from ui.custom_widgets.energy_analysis.energy_worker import EnergyMeasurementWor
 
 from simulation_engine._5_analyzer.analyzer import Analyzer
 from simulation_engine._5_analyzer.analyzer_noise import linear_or_recons
+from simulation_engine._5_analyzer.acquisition import acquisition_for_mask
 from simulation_engine._5_analyzer.cpu_threads import cpu_threads
 
 
@@ -455,8 +456,13 @@ class UIReportsHandler(QObject):
 
         # Calculate acquisition time
         num_masks = len(getattr(self.simulation.mask, 'masks', []))
-        t_acq_single_s = 1.0 / (sampling_rate_khz * 1e3) if sampling_rate_khz > 0 else 0.0
-        t_acq_ms = t_acq_single_s * num_masks * 1000.0
+        acquisition = acquisition_for_mask(
+            self.simulation.mask, num_masks, sampling_rate_khz, self.timing_page.projection_scheme,
+            self.timing_page.grey_level_rate_khz, logger=self.logger)
+        t_acq_ms = acquisition["timing_acquisition_ms"]
+        self.logger.info("Modelled acquisition: %s patterns -> %s projections (%s), %.2f ms",
+                         num_masks, acquisition["timing_num_projections"],
+                         acquisition["timing_projection_scheme"], t_acq_ms)
 
         # Measure CPU times
         self.logger.info("Measuring CPU inference times...")
@@ -518,6 +524,7 @@ class UIReportsHandler(QObject):
             'denoise_times_cpu_ms': denoise_times_cpu_ms,
             'denoise_times_gpu_ms': denoise_times_gpu_ms if denoise_times_gpu_ms else [],
             'cpu_threads': cpu_threads_state,
+            'acquisition': acquisition,
         }
 
         # Update the timing page with data

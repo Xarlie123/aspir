@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (
     QMenu, QFileDialog
 )
 from PySide6.QtCore import Qt, Signal
+
+from ui.custom_widgets.acquisition_controls import make_grey_rate_spin, make_projection_combo
 from PySide6.QtGui import QFont
 
 try:
@@ -133,6 +135,13 @@ class TimingAnalysisPage(QWidget):
         self.sampling_rate_spinbox.setValue(10.752)
         self.sampling_rate_spinbox.setSuffix(" kHz")
         params_layout.addRow("Sampling rate:", self.sampling_rate_spinbox)
+
+        # Modelled acquisition: projections per stored pattern and the DMD
+        # rate for grey-level patterns (simulation_engine/_5_analyzer/acquisition.py)
+        self.projection_scheme_combo = make_projection_combo()
+        params_layout.addRow("Projections:", self.projection_scheme_combo)
+        self.grey_rate_spinbox = make_grey_rate_spin()
+        params_layout.addRow("Grey-level rate:", self.grey_rate_spinbox)
 
         # Warmup runs — 20 to match the unified app default
         # (Batch Test, Re-measure dialog and the energy analysis page
@@ -488,6 +497,16 @@ class TimingAnalysisPage(QWidget):
     def measurement_runs(self) -> int:
         """Return the number of measurement runs."""
         return self.measurement_spinbox.value()
+
+    @property
+    def projection_scheme(self):
+        """Projections per stored pattern, or None for the family default."""
+        return self.projection_scheme_combo.currentData()
+
+    @property
+    def grey_level_rate_khz(self):
+        """DMD rate for grey-level patterns, or None for the binary rate."""
+        return self.grey_rate_spinbox.value() or None
 
     @property
     def cpu_torch_threads(self):

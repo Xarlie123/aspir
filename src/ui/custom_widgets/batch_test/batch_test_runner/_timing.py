@@ -5,6 +5,7 @@ import time
 from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
+from simulation_engine._5_analyzer.acquisition import acquisition_for_mask
 from simulation_engine._5_analyzer.analyzer_timing import time_reconstruction
 from simulation_engine._5_analyzer.cpu_threads import cpu_threads_for, threads_fields
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
@@ -56,7 +57,12 @@ def measure_timing(
         elif hasattr(mask, 'patterns') and mask.patterns is not None:
             num_patterns = len(mask.patterns)
 
-    t_acquisition_ms = num_patterns / sampling_rate_khz if sampling_rate_khz > 0 else 0
+    # Modelled acquisition: physical projections of the stored patterns at the
+    # DMD rate (simulation_engine/_5_analyzer/acquisition.py)
+    acquisition = acquisition_for_mask(
+        mask, num_patterns, sampling_rate_khz, getattr(config, "projection_scheme", None),
+        getattr(config, "grey_level_rate_khz", None), mask_type=getattr(config, "mask_type", ""),
+        logger=logger, name=getattr(config, "name", ""))
 
     # Measure reconstruction time if applicator is available.
     # Same image set as before (the test-split share of the dataset), now with
@@ -141,7 +147,7 @@ def measure_timing(
         "timing_warmup_runs": warmup_runs,
         "timing_measurement_runs": measurement_runs,
         "timing_sampling_rate_khz": sampling_rate_khz,
-        "timing_acquisition_ms": float(t_acquisition_ms),
+        **acquisition,
         "timing_reconstruction_ms": float(t_reconstruction_ms),
         "timing_num_patterns": num_patterns,
         "timing_batch_size": B,

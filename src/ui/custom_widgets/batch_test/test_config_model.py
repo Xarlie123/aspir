@@ -55,6 +55,17 @@ def _thread_count(value) -> Optional[int]:
     return count
 
 
+def _projection_scheme(value) -> Optional[str]:
+    """A saved projection scheme, or None for the family default."""
+    from simulation_engine._5_analyzer.acquisition import SCHEMES
+
+    if value in (None, "", "default"):
+        return None
+    if value not in SCHEMES:
+        raise ValueError(f"projection_scheme must be one of {SCHEMES} or unset, got {value!r}")
+    return value
+
+
 def _solver_params_never_applied(version) -> bool:
     """True for configs written before 2.2 (or unversioned legacy YAML)."""
     try:
@@ -166,6 +177,13 @@ class TestConfiguration:
     cpu_torch_threads: Optional[int] = None
     cpu_blas_threads: Optional[int] = None
 
+    # Modelled acquisition: projections per stored pattern (None = the family's
+    # default: differential for bipolar Hadamard patterns, one per pattern
+    # otherwise) and an optional DMD rate for grey-level patterns (None = the
+    # binary rate). See simulation_engine/_5_analyzer/acquisition.py.
+    projection_scheme: Optional[str] = None
+    grey_level_rate_khz: Optional[float] = None
+
     # Runtime state (not saved to config)
     status: TestStatus = field(default=TestStatus.PENDING, compare=False)
     progress: int = field(default=0, compare=False)
@@ -226,6 +244,9 @@ class TestConfiguration:
             # CPU thread pools (None = library default)
             "cpu_torch_threads": self.cpu_torch_threads,
             "cpu_blas_threads": self.cpu_blas_threads,
+            # Modelled acquisition (None = family default / binary rate)
+            "projection_scheme": self.projection_scheme,
+            "grey_level_rate_khz": self.grey_level_rate_khz,
         }
 
     @classmethod
@@ -289,6 +310,10 @@ class TestConfiguration:
             # CPU thread pools
             cpu_torch_threads=_thread_count(data.get("cpu_torch_threads")),
             cpu_blas_threads=_thread_count(data.get("cpu_blas_threads")),
+            # Modelled acquisition
+            projection_scheme=_projection_scheme(data.get("projection_scheme")),
+            grey_level_rate_khz=(float(data["grey_level_rate_khz"])
+                                 if data.get("grey_level_rate_khz") else None),
         )
 
     def copy(self) -> "TestConfiguration":

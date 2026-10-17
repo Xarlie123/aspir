@@ -134,6 +134,32 @@ $$
 
 For example, a 64×64 image (4096 pixels) with 512 patterns has CR = 8. Higher compression ratios require fewer measurements but produce noisier reconstructions.
 
+## Projections per Pattern
+
+The sampling ratio counts stored patterns. For the Hadamard families, that is the number of coefficients.
+The modelled acquisition time counts the frames a binary DMD would project, which depends on the pattern
+values:
+
+| Family | Pattern values | Default projections | Also available |
+|---|---|---|---|
+| Hadamard natural, Walsh–Paley, Cake-Cutting, Cal-Sal | ±1 (bipolar) | **2 per pattern** (differential: P⁺ and P⁻) | 1 per pattern; M + 1 (P⁺ plus one all-on frame) |
+| Scatter, Sweep, binary FSPI | 0 / 1 | 1 per pattern | — |
+| Grey-level FSPI | grey levels | 1 per pattern (every phase step is already a pattern) | — |
+
+**Why differential is the default for Hadamard.** A DMD cannot project −1, so real systems project the
+positive and the negative half of each pattern and subtract them. The SPIHIM recordings, for example, hold
+8192 frames for 4096 coefficients.
+- M + 1 (P⁺ plus one all-on frame) gives the same values only because ASPIR's simulation is noiseless.
+- One frame per pattern is what ASPIR 1.2 and earlier counted.
+
+**Grey-level patterns.** A DMD renders grey levels by pulse-width modulation, much more slowly than it
+switches binary frames. Set *Grey-level rate* to that rate; by default the binary rate is used, which is
+optimistic.
+
+**Where to set it.** *Projections* and *Grey-level rate* are in Batch Test (per test), Re-measure and Single
+Test → Timing. Only the schemes that apply to the selected family can be chosen; a hand-written
+`.batch_config` with one that does not apply falls back to the family default, with a log line.
+
 ## Choosing Patterns
 
 | Scenario                     | Recommended Mask + Reconstruction            |

@@ -32,6 +32,7 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
     MODEL_REGISTRY,
     resolve_model_name,
 )
+from simulation_engine._5_analyzer.acquisition import acquisition_fields, polarity_of_type
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
 from simulation_engine._5_analyzer.baseline_capture import (
     BaselineResult,
@@ -80,6 +81,10 @@ class RemeasureConfig:
     # simulation_engine/_5_analyzer/cpu_threads.py.
     cpu_torch_threads: Optional[int] = None
     cpu_blas_threads: Optional[int] = None
+    # Modelled acquisition (None = each test's family default / the binary
+    # rate); see simulation_engine/_5_analyzer/acquisition.py.
+    projection_scheme: Optional[str] = None
+    grey_level_rate_khz: Optional[float] = None
 
 
 @dataclass
@@ -203,6 +208,8 @@ def _make_test_config(test_entry: dict, cfg: RemeasureConfig) -> TestConfigurati
         test_split=100,
         cpu_torch_threads=cfg.cpu_torch_threads,
         cpu_blas_threads=cfg.cpu_blas_threads,
+        projection_scheme=cfg.projection_scheme,
+        grey_level_rate_khz=cfg.grey_level_rate_khz,
     )
     # Solver parameters the test actually ran with (batch reports from R1.3a on).
     # Older reports lack them; the TestConfiguration defaults are then exactly
@@ -616,9 +623,11 @@ class RemeasureWorker(QObject):
                         prev = test_entry.get("timing_num_patterns")
                         if prev and self.cfg.sampling_rate_khz > 0:
                             timing["timing_num_patterns"] = int(prev)
-                            timing["timing_acquisition_ms"] = (
-                                float(prev) / self.cfg.sampling_rate_khz
-                            )
+                            # No patterns at hand: their values follow from the family
+                            timing.update(acquisition_fields(
+                                int(prev), polarity_of_type(test_entry.get("mask_type", "")),
+                                self.cfg.sampling_rate_khz, self.cfg.projection_scheme,
+                                self.cfg.grey_level_rate_khz, logger=self.logger, name=test_name))
                     updated.update(timing)
                     timing_metrics = updated.get("timing_metrics") or {}
                     timing_metrics["inference_time_ms"] = timing.get("timing_mean_ms", 0.0)

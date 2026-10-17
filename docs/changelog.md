@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Projections per pattern in the modelled acquisition.** The acquisition time counts the frames a DMD
+  would project, not the stored patterns.
+  - Bipolar ±1 Hadamard patterns (natural, Walsh–Paley, Cake-Cutting, Cal-Sal) default to differential
+    acquisition, P⁺ and P⁻: two frames per pattern. `reference` (P⁺ plus one all-on frame, M + 1) and
+    `per_pattern` (the old count) remain available.
+  - Binary patterns (Scatter, Sweep, binary FSPI) and grey-level FSPI count one frame per pattern. An
+    optional *Grey-level rate* gives the DMD rate for grey-level patterns.
+  - Set it per test in Batch Test (`projection_scheme`, `grey_level_rate_khz` in `.batch_config`), in
+    Re-measure and in Single Test → Timing. A scheme that does not apply falls back to the family default,
+    with a log line.
+  - Reports add `timing_num_projections`, `timing_projection_scheme` and `timing_pattern_polarity`.
+  - The latency chart's *Mask projection* becomes *Acquisition (modelled)*, and Batch Reports warns when
+    loaded reports mix schemes.
+  - **New reports show twice the previous acquisition time for every Hadamard-family test.** At the same
+    sampling ratio, UC2 Cake-Cutting at 16 % goes from 60.92 ms (655 frames) to 121.84 ms (1310 frames).
+  - Stored reports are unchanged; without a scheme they read as one frame per pattern. The sampling ratio
+    M/N is unchanged.
+  - `tests/test_acquisition_model.py` (8/8).
 - **CPU threads setting.** Batch Test (per test, saved in `.batch_config`), Re-measure and Single Test →
   Timing gain *CPU threads: torch / BLAS*.
   - *Default* keeps each library's own choice, as before.

@@ -130,6 +130,15 @@ class BatchReportModel(QObject):
         """Distinct quality-metric conventions among the loaded experiments."""
         return sorted({e.metric_convention for e in self._experiments})
 
+    def bipolar_projection_schemes(self) -> List[str]:
+        """Distinct projection schemes of the timed bipolar (Hadamard-family) tests loaded.
+
+        Reports before ASPIR 1.3 counted one projection per pattern (``per_pattern``).
+        """
+        from simulation_engine._5_analyzer.acquisition import BIPOLAR, polarity_of_type, report_scheme
+        return sorted({report_scheme(r) for e in self._experiments for r in e.results
+                       if "timing_acquisition_ms" in r and polarity_of_type(r.get("mask_type", "")) == BIPOLAR})
+
     def remove_experiment(self, index: int) -> bool:
         """
         Remove an experiment by index.

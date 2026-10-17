@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
+from simulation_engine._5_analyzer.acquisition import report_scheme
 from ui.custom_widgets.batch_reports.comparison_views.chart_config_popup import (
     ChartConfigPopup, CustomNavigationToolbar
 )
@@ -305,7 +306,7 @@ class TimingView(QWidget):
         # Create summary labels
         self._summary_labels = {}
         rows = [
-            ("T_mask_projection:", "t_acq"),
+            ("T_acquisition (modelled):", "t_acq"),
             ("T_reconstruction:", "t_recon"),
             ("T_inference:", "t_inf"),
             ("T_total:", "t_total"),
@@ -423,7 +424,7 @@ class TimingView(QWidget):
         )
 
         rows = [
-            ("T_mask_projection:", "t_acq"),
+            ("T_acquisition (modelled):", "t_acq"),
             ("T_reconstruction:",  "t_recon"),
             ("T_inference:",       "t_inf"),
             ("T_total:",           "t_total"),
@@ -538,8 +539,12 @@ class TimingView(QWidget):
         t_total_gpu = t_acq + t_recon + t_inf_gpu if t_inf_gpu > 0 else 0
 
         # Update T_acquisition (same for CPU and GPU, only show GPU if GPU timing exists)
-        self._summary_labels["t_acq_cpu"].setText(f"{t_acq:.2f} ms" if t_acq > 0 else "-")
-        self._summary_labels["t_acq_gpu"].setText(f"{t_acq:.2f} ms" if t_inf_gpu > 0 else "-")
+        # Modelled acquisition, with the projections it counts (reports before
+        # ASPIR 1.3 have no count: one projection per pattern)
+        frames = test.get("timing_num_projections") or test.get("timing_num_patterns")
+        acq_text = f"{t_acq:.2f} ms ({frames} proj., {report_scheme(test)})" if frames else f"{t_acq:.2f} ms"
+        self._summary_labels["t_acq_cpu"].setText(acq_text if t_acq > 0 else "-")
+        self._summary_labels["t_acq_gpu"].setText(acq_text if t_inf_gpu > 0 else "-")
         self._summary_labels["t_acq_speedup"].setText("1.00x" if t_acq > 0 and t_inf_gpu > 0 else "-")
 
         # Update T_reconstruction (same for both - runs on CPU)
@@ -891,7 +896,7 @@ class TimingView(QWidget):
             inf = [d[2] for d in bar_data]
 
             # Acquisition and Reconstruction (same color for all)
-            ax.bar(x, acq, width, label='Mask projection', color=self.COLOR_ACQUISITION, edgecolor='white')
+            ax.bar(x, acq, width, label='Acquisition (modelled)', color=self.COLOR_ACQUISITION, edgecolor='white')
             ax.bar(x, recon, width, bottom=acq, label='Reconstruction', color=self.COLOR_RECONSTRUCTION, edgecolor='white')
 
             # Inference - different colors for CPU vs GPU
@@ -945,7 +950,7 @@ class TimingView(QWidget):
             recon = [d[1] for d in cpu_data]
             inf = [d[2] for d in cpu_data]
 
-            ax.bar(x, acq, width, label='Mask projection', color=self.COLOR_ACQUISITION, edgecolor='white')
+            ax.bar(x, acq, width, label='Acquisition (modelled)', color=self.COLOR_ACQUISITION, edgecolor='white')
             ax.bar(x, recon, width, bottom=acq, label='Reconstruction', color=self.COLOR_RECONSTRUCTION, edgecolor='white')
             ax.bar(x, inf, width, bottom=np.array(acq) + np.array(recon),
                    label='Inference (CPU)', color=self.COLOR_INFERENCE_CPU, edgecolor='white')

@@ -74,7 +74,7 @@ Measures inference performance on CPU and GPU.
 
 | Stage | Description |
 |-------|-------------|
-| Mask projection | Simulated single-pixel acquisition time, derived from the number of patterns and the configured DMD sampling rate (kHz). The Pipeline Latency Breakdown chart in Batch Reports labels this column "Mask projection"; the underlying field name in the report (`timing_acquisition_ms`) is preserved for backward compatibility. |
+| Acquisition (modelled) | Not measured: the frames a DMD would project for the stored patterns, divided by the configured rate (kHz). Bipolar Hadamard patterns count two frames each by default (P⁺ and P⁻); binary and grey-level patterns count one. See *Masks → Projections per Pattern*. Reports carry `timing_acquisition_ms`, `timing_num_projections`, `timing_projection_scheme` and `timing_pattern_polarity`, plus `timing_grey_level_rate_khz` when it is set. `timing_num_patterns` keeps the stored pattern count. Reports from ASPIR 1.2 and earlier have no scheme and counted one frame per pattern. Batch Reports warns when loaded reports mix schemes for Hadamard tests. |
 | Reconstruction | Classical algorithm time (Ghost Imaging, Hadamard linear, FISTA, …). On Jetson with NumPy this scales roughly linearly with pattern count and can dominate wall time at high `M/N`. |
 | Inference | Neural network forward pass. Measured separately on CPU and GPU when both devices are available. |
 

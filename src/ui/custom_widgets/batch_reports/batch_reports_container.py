@@ -346,6 +346,7 @@ class BatchReportsContainer(QWidget):
 
     def _warn_mixed_metric_conventions(self):
         """Quality numbers from reports scored under different conventions are not comparable."""
+        self._warn_mixed_projection_schemes()
         conventions = self.model.metric_conventions()
         if len(conventions) < 2:
             return
@@ -362,6 +363,24 @@ class BatchReportsContainer(QWidget):
             "the reconstruction on the image's scale.\n\n"
             "Quality numbers are only comparable within one convention; timing and energy "
             "are not affected."
+        )
+
+    def _warn_mixed_projection_schemes(self):
+        """Hadamard acquisition times counted under different projection schemes are not comparable."""
+        schemes = self.model.bipolar_projection_schemes()
+        if len(schemes) < 2:
+            return
+        self.logger.warning("Loaded reports count Hadamard projections as %s", schemes)
+        QMessageBox.information(
+            self,
+            "Different projection schemes",
+            "The loaded reports model the acquisition of bipolar Hadamard patterns with "
+            f"different projection schemes ({', '.join(schemes)}).\n\n"
+            "per_pattern: one projection per pattern (ASPIR 1.2 and earlier).\n"
+            "differential: P\u207a and P\u207b, two projections per pattern (default since 1.3).\n"
+            "reference: P\u207a plus one all-on frame (M + 1).\n\n"
+            "Modelled acquisition times are only comparable within one scheme; the sampling "
+            "ratio, quality, inference timing and energy are not affected."
         )
 
     def _on_load_last_session(self):

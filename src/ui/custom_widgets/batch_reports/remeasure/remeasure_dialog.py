@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ui.custom_widgets.acquisition_controls import make_grey_rate_spin, make_projection_combo
 from ui.custom_widgets.batch_reports.remeasure.remeasure_worker import (
     RemeasureConfig,
     RemeasureJob,
@@ -243,6 +244,14 @@ class RemeasureDialog(QDialog):
         threads_row.addStretch(1)
         knobs_form.addRow("CPU threads:", threads_row)
 
+        # Modelled acquisition. "Family default" resolves per test (differential
+        # for bipolar Hadamard patterns); a scheme that does not apply to a
+        # test's patterns falls back to its family default, with a log line.
+        self._cmb_projection = make_projection_combo()
+        knobs_form.addRow("Projections:", self._cmb_projection)
+        self._spn_grey_rate = make_grey_rate_spin()
+        knobs_form.addRow("Grey-level rate:", self._spn_grey_rate)
+
         self._chk_gpu = QCheckBox("Use GPU when available")
         self._chk_gpu.setChecked(True)
         knobs_form.addRow(self._chk_gpu)
@@ -370,6 +379,8 @@ class RemeasureDialog(QDialog):
             inference_batch_size=int(self._spn_batch.value()),
             cpu_torch_threads=int(self._spn_cpu_torch.value()) or None,
             cpu_blas_threads=int(self._spn_cpu_blas.value()) or None,
+            projection_scheme=self._cmb_projection.currentData(),
+            grey_level_rate_khz=float(self._spn_grey_rate.value()) or None,
         )
         if self._chk_both_paths.isChecked():
             queue.append((
