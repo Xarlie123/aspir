@@ -21,12 +21,18 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtWidgets import QApplication
 from scipy.ndimage import gaussian_filter
 
 from simulation_engine._2_mask_gen.mask_scatter import MaskScatter
 from simulation_engine._3_applicator.applicator_fista import ApplicatorFISTA
 from simulation_engine._3_applicator.applicator_tv_norm import ApplicatorTV
 from simulation_engine.simulation import Simulation
+
+# The ui package sets matplotlib's Qt backend on import. Without a display (over
+# SSH, e.g. on a Jetson) matplotlib accepts it only once a Qt application exists.
+_APP = QApplication.instance() or QApplication([])
+
 from ui.custom_widgets.batch_reports.remeasure.remeasure_worker import (
     RemeasureConfig,
     _make_test_config,
@@ -153,7 +159,12 @@ def test_old_configs_migrate_to_the_values_that_ran():
             self.records.append(record)
 
     cap = _Capture()
-    logging.getLogger("BatchTestConfig").addHandler(cap)
+    config_log = logging.getLogger("BatchTestConfig")
+    # basicConfig(level=ERROR) above raises the root level only when nothing
+    # configured logging first, so pin this logger's level for the capture.
+    previous_level = config_log.level
+    config_log.setLevel(logging.WARNING)
+    config_log.addHandler(cap)
     try:
         with tempfile.TemporaryDirectory() as tmp:
             results = {}
@@ -169,7 +180,8 @@ def test_old_configs_migrate_to_the_values_that_ran():
                 results[version] = ((t.fista_lambda, t.fista_iterations, t.tv_lambda, t.tv_iterations),
                                     len([r for r in cap.records if r.levelno == logging.WARNING]))
     finally:
-        logging.getLogger("BatchTestConfig").removeHandler(cap)
+        config_log.removeHandler(cap)
+        config_log.setLevel(previous_level)
 
     migrated = (*HISTORICAL["fista"], *HISTORICAL["tv"])
     assert results["2.1"] == (migrated, 1), results["2.1"]

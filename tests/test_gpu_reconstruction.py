@@ -162,40 +162,71 @@ def test_torch_cpu_matches_legacy():
                   f"PSNR={psnr:6.1f} dB")
 
 
+def _cuda_linalg():
+    """Whether torch.linalg works on CUDA in this torch build, and why not.
+
+    Some Jetson wheels (torch 2.8.0 from Jetson AI Lab on JetPack 6.2) are linked
+    against a newer cuSOLVER than the system's, so every torch.linalg call on
+    CUDA fails to load its library. The pseudoinverse (pinv) and TV (Cholesky)
+    need it; the other methods do not.
+    """
+    if not CUDA:
+        return False, "no CUDA device"
+    try:
+        torch.linalg.cholesky(torch.eye(2, device="cuda"))
+        torch.linalg.pinv(torch.ones(2, 3, device="cuda"))
+    except RuntimeError as exc:
+        return False, str(exc).splitlines()[0][:200]
+    return True, ""
+
+
+NEEDS_CUDA_LINALG = {"pseudoinverse", "tv"}
+
+
 def test_cuda_matches_cpu():
     """Same torch code on two devices.
 
-    Direct methods: relative error < 1e-4 in float32. Iterative methods: after
-    hundreds of iterations float32 alone already differs from float64 by ~1e-3
-    on a single device (TV's per-pixel projection is non-smooth and amplifies
-    round-off), so no device pair can be closer than that. For them the check
-    is split: float64 must agree to 1e-8 (same code, same result), and in
-    float32 the device may add no error beyond float32's own.
+    The check is split for every method: float64 must agree to 1e-8 (same code,
+    same result), and in float32 the device may add no more than a small
+    multiple of float32's own error (float32 vs float64 on the CPU), and never
+    less than 1e-4. Iterative methods: after hundreds of iterations float32
+    alone already differs from float64 by ~1e-3 on a single device (TV's
+    per-pixel projection is non-smooth and amplifies round-off). Direct
+    methods: Ghost Imaging's correlation cancels, so its float32 error is
+    ~6e-5 and a GPU with another summation order lands above 1e-4.
+
+    Methods that need torch.linalg on CUDA are not run when this torch build
+    cannot load it (see ``_cuda_linalg``); the test reports which.
     """
     if not CUDA:
         raise SkippedError("no CUDA device")
+    linalg_ok, linalg_why = _cuda_linalg()
     image = _image(seed=1)
     dataset = _Dataset([image])
+    not_run = []
     for name, cls, build in ALGORITHMS:
+        if name in NEEDS_CUDA_LINALG and not linalg_ok:
+            not_run.append(name)
+            continue
         mask = build()
         gpu_app = cls(dataset, mask, device="cuda")
         gpu = gpu_app.process_image(0)
         assert gpu_app.reconstruction_device == "cuda"
         cpu = cls(dataset, mask, device="cpu").process_image(0)
         rel = _rel(gpu, cpu)
-        if name in ("fista", "tv"):
-            c64 = cls(dataset, mask, device="cpu", dtype="float64").process_image(0)
-            g64 = cls(dataset, mask, device="cuda", dtype="float64").process_image(0)
-            e64 = _rel(g64, c64)
-            intrinsic = _rel(cpu, c64)
-            assert e64 < 1e-8, f"{name}: float64 CUDA vs CPU {e64:.2e}"
-            assert rel < max(1e-4, 2.0 * intrinsic), (
-                f"{name}: float32 CUDA vs CPU {rel:.2e} exceeds float32's own {intrinsic:.2e}")
-            print(f"  {name:16s} float32 {rel:.2e} (float32 vs float64 on CPU: {intrinsic:.2e}); "
-                  f"float64 {e64:.2e}")
-        else:
-            assert rel < 1e-4, f"{name}: CUDA vs CPU relative error {rel:.2e}"
-            print(f"  {name:16s} relative error {rel:.2e}")
+        c64 = cls(dataset, mask, device="cpu", dtype="float64").process_image(0)
+        g64 = cls(dataset, mask, device="cuda", dtype="float64").process_image(0)
+        e64 = _rel(g64, c64)
+        intrinsic = _rel(cpu, c64)
+        factor = 2.0 if name in ("fista", "tv") else 3.0
+        assert e64 < 1e-8, f"{name}: float64 CUDA vs CPU {e64:.2e}"
+        assert rel < max(1e-4, factor * intrinsic), (
+            f"{name}: float32 CUDA vs CPU {rel:.2e} exceeds {factor:g}x float32's own {intrinsic:.2e}")
+        print(f"  {name:16s} float32 {rel:.2e} (float32 vs float64 on CPU: {intrinsic:.2e}); "
+              f"float64 {e64:.2e}")
+    if not_run:
+        print(f"  NOT RUN on CUDA: {', '.join(not_run)}. torch.linalg cannot run on CUDA in this torch build "
+              f"({linalg_why})")
 
 
 def test_fwht_path_equals_explicit_hadamard_path():

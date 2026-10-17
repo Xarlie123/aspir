@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pandas as pd
+from PySide6.QtWidgets import QApplication
 
 from simulation_engine._1_dataset_gen.dataset import DatasetABC
 from simulation_engine._2_mask_gen.mask_hadamard_cake_cutting import MaskHadamardCakeCutting
@@ -31,6 +32,10 @@ from simulation_engine._2_mask_gen.mask_sweep import MaskSweep
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer_noise import METRIC_CONVENTION, NoiseAnalyzer
 from simulation_engine.simulation import Simulation
+
+# The ui package sets matplotlib's Qt backend on import. Without a display (over
+# SSH, e.g. on a Jetson) matplotlib accepts it only once a Qt application exists.
+_APP = QApplication.instance() or QApplication([])
 
 LOG = logging.getLogger("test_metric_convention")
 SIZE = 32                      # LPIPS (AlexNet) needs at least 32 x 32

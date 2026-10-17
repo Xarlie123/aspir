@@ -169,6 +169,12 @@ def test_remeasure_loads_pre_refactor_unet():
 
     import torch
 
+    # The ui package sets matplotlib's Qt backend on import. Without a display (over
+    # SSH, e.g. on a Jetson) matplotlib accepts it only once a Qt application exists.
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    QApplication.instance() or QApplication([])
+
     from simulation_engine._4_postprocessor.models.unet import UNet
     from simulation_engine._4_postprocessor.models.unet_transpose import UNetTranspose
     from ui.custom_widgets.batch_reports.remeasure.remeasure_worker import _build_model_facade
