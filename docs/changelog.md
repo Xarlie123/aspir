@@ -185,6 +185,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`linear`), and `metric_convention` plus `normalization.linear_divisor`
     to `test_config.json`.
   - Single Test saves them in `test_results.npz`.
+- **Network-input normalisation is fitted on the training split.** The linear
+  output entering the network is min-max normalised with the training images'
+  minimum and maximum. It used to be the whole dataset's, test images
+  included.
+  - For the INT8 / INT4 formats the network input is quantised on the fixed
+    [0, 1] grid, so validation or test values outside the training range
+    clip, as a deployed integer input would. Before, the grid also spanned
+    the whole array.
+  - The train / val / test split is unchanged: it is now drawn first, from
+    the same seed.
+  - The exported `norm_lo` / `norm_span` are the training split's, and
+    `test_config.json` records `normalization.fitted_on: "train split"`.
+  - Reference images are quantised as before.
+  - `tests/test_train_normalisation.py` (6/6).
 - **Cake-Cutting order is stable.** Patterns with the same block count keep
   their Sylvester order, so the rows chosen at a cut-off no longer depend on
   the NumPy build. Masks saved by earlier versions may differ by a few tied

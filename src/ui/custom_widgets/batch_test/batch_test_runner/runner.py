@@ -544,6 +544,7 @@ class BatchTestRunner(QThread):
                 "calibration_indices": indices,
                 "norm_lo": getattr(postprocessor, "norm_lo", None),
                 "norm_span": getattr(postprocessor, "norm_span", None),
+                "norm_fitted_on": getattr(postprocessor, "norm_fitted_on", None),
             }
         except Exception as e:
             self.logger.warning("Failed to collect calibration data: %s", e)

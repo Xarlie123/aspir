@@ -60,7 +60,7 @@ $$
 - With any subset of $M$ rows it is the pseudoinverse ($H H^\top = N I$), so the
   output is on the image's scale at every sampling ratio. Versions before 1.3
   divided by $M$, which scaled the output by $N / M$; the network input was not
-  affected, because it is min-max normalised over the dataset.
+  affected, because it is min-max normalised.
 
 ### Fourier Inverse
 

@@ -20,9 +20,10 @@ image, after the dataset's data-format quantisation):
   reference's scale. Ghost Imaging and Sweep Linear are correlation estimators with no natural scale. Their
   output is scored after one gain and offset fitted by least squares on the **training** split, recorded as
   `linear_calibration`.
-- **Network input.** The network does not see the linear output directly: it is min-max normalised over
-  the dataset and quantised to the data format. Its PSNR and SSIM are kept apart as `psnr_network_input` and
-  `ssim_network_input`.
+- **Network input.** The network does not see the linear output directly: it is min-max normalised with
+  the minimum and maximum of the **training** images (since 1.3; before, of the whole dataset) and, for
+  the INT8 / INT4 formats, quantised on the fixed [0, 1] grid. Its PSNR and SSIM are kept apart as
+  `psnr_network_input` and `ssim_network_input`.
 - **The convention is recorded** as `metric_convention: 2` in the report metadata and in every result.
   Batch Reports warns when loaded reports mix conventions.
 

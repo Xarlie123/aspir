@@ -268,6 +268,10 @@ def export_datasets(
                     "lo": entry.get("norm_lo"),
                     "span": entry.get("norm_span"),
                 }
+                # Images the min / max were taken over ("train split" since v1.3; absent before:
+                # the whole dataset)
+                if entry.get("norm_fitted_on"):
+                    config_dict["normalization"]["fitted_on"] = entry["norm_fitted_on"]
                 # What the linear back-projection was divided by before (lo, span) were taken:
                 # Hadamard Linear divides by the pixel count since v1.3 (by M before).
                 divisor = _LINEAR_DIVISOR.get(type(entry.get("applicator")).__name__)

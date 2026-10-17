@@ -1,0 +1,297 @@
+{
+  "format_version": "2.2",
+  "name": "UC1 Sweep (paper R1)",
+  "description": "ASPIR paper (Intelligent Computing), revision R1: same recipe, data and settings as the original batch, with best-validation weights. Run with ASPIR >= 1.3 (metric convention 2, network-input normalisation fitted on the training split). See examples/paper/README.md.",
+  "created_at": "2026-10-17T11:33:41",
+  "parallel_execution": true,
+  "parallel_threads": 4,
+  "capture_baseline": true,
+  "baseline_duration_s": 60,
+  "tests": [
+    {
+      "name": "Beam prof - stride 2",
+      "mask_type": "sweep",
+      "mask_seed": 42,
+      "scatter_point_density": 10.0,
+      "scatter_num_patterns": 1024,
+      "hadamard_min_idx": 0,
+      "hadamard_max_idx": 1024,
+      "fourier_sampling_ratio": 0.25,
+      "fourier_phase_steps": 4,
+      "fourier_spectrum_ordering": "circular",
+      "fourier_binarization": "none",
+      "fourier_dmd_upsampling": 1,
+      "sweep_bar_widths": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "sweep_strides": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "sweep_angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "reconstruction_method": "conventional",
+      "reconstruction_device": "auto",
+      "fista_lambda": 0.001,
+      "fista_iterations": 500,
+      "tv_lambda": 0.1,
+      "tv_iterations": 100,
+      "model_name": "u-net",
+      "epochs": 50,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "dropout": 0.0,
+      "loss_function": "MSE",
+      "optimizer": "Adam",
+      "use_gpu": true,
+      "keep_best_val": true,
+      "architecture_config": {
+        "features": [
+          8,
+          16
+        ]
+      },
+      "train_split": 80,
+      "val_split": 10,
+      "test_split": 10,
+      "reports": [
+        "training_curves",
+        "quality",
+        "timing",
+        "energy"
+      ],
+      "include_datasets": true,
+      "timing_warmup_runs": 20,
+      "timing_measurement_runs": 800,
+      "timing_sampling_rate_khz": 10.752
+    },
+    {
+      "name": "Beam prof - stride 4",
+      "mask_type": "sweep",
+      "mask_seed": 42,
+      "scatter_point_density": 10.0,
+      "scatter_num_patterns": 1024,
+      "hadamard_min_idx": 0,
+      "hadamard_max_idx": 1024,
+      "fourier_sampling_ratio": 0.25,
+      "fourier_phase_steps": 4,
+      "fourier_spectrum_ordering": "circular",
+      "fourier_binarization": "none",
+      "fourier_dmd_upsampling": 1,
+      "sweep_bar_widths": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "sweep_strides": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "sweep_angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "reconstruction_method": "conventional",
+      "reconstruction_device": "auto",
+      "fista_lambda": 0.001,
+      "fista_iterations": 500,
+      "tv_lambda": 0.1,
+      "tv_iterations": 100,
+      "model_name": "u-net",
+      "epochs": 50,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "dropout": 0.0,
+      "loss_function": "MSE",
+      "optimizer": "Adam",
+      "use_gpu": true,
+      "keep_best_val": true,
+      "architecture_config": {
+        "features": [
+          8,
+          16
+        ]
+      },
+      "train_split": 80,
+      "val_split": 10,
+      "test_split": 10,
+      "reports": [
+        "training_curves",
+        "quality",
+        "timing",
+        "energy"
+      ],
+      "include_datasets": true,
+      "timing_warmup_runs": 20,
+      "timing_measurement_runs": 800,
+      "timing_sampling_rate_khz": 10.752
+    },
+    {
+      "name": "Beam prof - stride 6",
+      "mask_type": "sweep",
+      "mask_seed": 42,
+      "scatter_point_density": 10.0,
+      "scatter_num_patterns": 1024,
+      "hadamard_min_idx": 0,
+      "hadamard_max_idx": 1024,
+      "fourier_sampling_ratio": 0.25,
+      "fourier_phase_steps": 4,
+      "fourier_spectrum_ordering": "circular",
+      "fourier_binarization": "none",
+      "fourier_dmd_upsampling": 1,
+      "sweep_bar_widths": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "sweep_strides": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "sweep_angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "reconstruction_method": "conventional",
+      "reconstruction_device": "auto",
+      "fista_lambda": 0.001,
+      "fista_iterations": 500,
+      "tv_lambda": 0.1,
+      "tv_iterations": 100,
+      "model_name": "u-net",
+      "epochs": 50,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "dropout": 0.0,
+      "loss_function": "MSE",
+      "optimizer": "Adam",
+      "use_gpu": true,
+      "keep_best_val": true,
+      "architecture_config": {
+        "features": [
+          8,
+          16
+        ]
+      },
+      "train_split": 80,
+      "val_split": 10,
+      "test_split": 10,
+      "reports": [
+        "training_curves",
+        "quality",
+        "timing",
+        "energy"
+      ],
+      "include_datasets": true,
+      "timing_warmup_runs": 20,
+      "timing_measurement_runs": 800,
+      "timing_sampling_rate_khz": 10.752
+    },
+    {
+      "name": "Beam prof - stride 8",
+      "mask_type": "sweep",
+      "mask_seed": 42,
+      "scatter_point_density": 10.0,
+      "scatter_num_patterns": 1024,
+      "hadamard_min_idx": 0,
+      "hadamard_max_idx": 1024,
+      "fourier_sampling_ratio": 0.25,
+      "fourier_phase_steps": 4,
+      "fourier_spectrum_ordering": "circular",
+      "fourier_binarization": "none",
+      "fourier_dmd_upsampling": 1,
+      "sweep_bar_widths": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "sweep_strides": [
+        8,
+        8,
+        8,
+        8
+      ],
+      "sweep_angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "reconstruction_method": "conventional",
+      "reconstruction_device": "auto",
+      "fista_lambda": 0.001,
+      "fista_iterations": 500,
+      "tv_lambda": 0.1,
+      "tv_iterations": 100,
+      "model_name": "u-net",
+      "epochs": 50,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "dropout": 0.0,
+      "loss_function": "MSE",
+      "optimizer": "Adam",
+      "use_gpu": true,
+      "keep_best_val": true,
+      "architecture_config": {
+        "features": [
+          8,
+          16
+        ]
+      },
+      "train_split": 80,
+      "val_split": 10,
+      "test_split": 10,
+      "reports": [
+        "training_curves",
+        "quality",
+        "timing",
+        "energy"
+      ],
+      "include_datasets": true,
+      "timing_warmup_runs": 20,
+      "timing_measurement_runs": 800,
+      "timing_sampling_rate_khz": 10.752
+    }
+  ],
+  "dataset_info": {
+    "type": "DatasetFromIRBeam",
+    "name": "IRBeam",
+    "img_size": 32,
+    "num_images": 2000,
+    "source_path": "IRBeam.npz",
+    "seed": 10,
+    "data_format": "INT4",
+    "mode_distribution": {
+      "gaussian": 25.0,
+      "hermite_gauss": 25.0,
+      "laguerre_gauss": 25.0,
+      "doughnut": 25.0
+    },
+    "speckle_noise": 0.3,
+    "max_mode_order": 3
+  }
+}

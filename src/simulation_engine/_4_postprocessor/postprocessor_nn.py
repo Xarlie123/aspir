@@ -2,7 +2,7 @@ import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset, random_split
+from torch.utils.data import DataLoader, Subset, TensorDataset, random_split
 import numpy as np
 import inspect
 from typing import Dict, Any, Optional
@@ -353,15 +353,42 @@ class PostprocessorNN(Postprocessor):
         # normalisation below.
         raw_linear = noisy_np.copy()
 
-        # Example global min-max (or your percentile scaling):
-        min_val = float(noisy_np.min())
-        max_val = float(noisy_np.max())
+        # Train / val / test split. It depends only on the image count, the ratios and
+        # the dataset seed, so it is drawn first: the network-input normalisation below
+        # must use the training images only.
+        self.dataset_seed = getattr(dataset, 'seed', None) or DEFAULT_SEED
+        self.logger.info("Using dataset seed for train/val/test split: %d", self.dataset_seed)
+        total = len(clean_np)
+        ratio_sum = train_ratio + val_ratio + test_ratio
+        if ratio_sum != 1.0:  # normalise the ratios so they sum to 1
+            train_ratio, val_ratio, test_ratio = (r / ratio_sum for r in (train_ratio, val_ratio, test_ratio))
+        n_train = int(train_ratio * total)
+        n_val = int(val_ratio * total)
+        n_test = total - n_train - n_val  # Remainder goes to test to avoid rounding issues
+        split_generator = torch.Generator().manual_seed(self.dataset_seed)
+        train_split, val_split, test_split = random_split(
+            range(total), [n_train, n_val, n_test], generator=split_generator
+        )
+        # Frame indices behind each split. Exported with the calibration set as
+        # documentary proof that calibration and evaluation frames are disjoint.
+        self.train_indices = list(train_split.indices)
+        self.val_indices = list(val_split.indices)
+        self.test_indices = list(test_split.indices)
+
+        # Network-input normalisation: min-max of the linear output over the training
+        # images only (before v1.3: over the whole dataset, test images included).
+        fit = noisy_np[self.train_indices] if self.train_indices else noisy_np
+        if not self.train_indices:
+            self.logger.warning("Empty training split: normalising the network input over all images")
+        min_val = float(fit.min())
+        max_val = float(fit.max())
         noisy_np = (noisy_np - min_val) / (max_val - min_val + 1e-8)
 
         # Keep the normalization constants: reproducing a reconstruction outside
         # ASPIR (INT8 deployment) needs the exact lo/span applied here.
         self.norm_lo = min_val
         self.norm_span = (max_val - min_val) + 1e-8
+        self.norm_fitted_on = "train split" if self.train_indices else "all images"
 
         # Apply format-specific processing
         clean_np, noisy_np = self._apply_data_format_to_arrays(clean_np, noisy_np)
@@ -395,39 +422,15 @@ class PostprocessorNN(Postprocessor):
             clean_ts = torch.from_numpy(clean_np).view(-1, self.img_size * self.img_size)
             noisy_ts = torch.from_numpy(noisy_np).view(-1, self.img_size * self.img_size)
 
-        # 4) Split into train/val/test with seed from dataset for reproducibility
-        # Use dataset's seed if available, otherwise use default
-        self.dataset_seed = getattr(dataset, 'seed', None) or DEFAULT_SEED
-        self.logger.info("Using dataset seed for train/val/test split: %d", self.dataset_seed)
-
+        # 4) Datasets over the split drawn above
         # Set seeds for reproducibility
         torch.manual_seed(self.dataset_seed)
         np.random.seed(self.dataset_seed)
 
         full_ds = TensorDataset(noisy_ts, clean_ts)
-        total = len(full_ds)
-
-        # Normalize ratios to ensure they sum to 1.0
-        ratio_sum = train_ratio + val_ratio + test_ratio
-        if ratio_sum != 1.0:
-            train_ratio = train_ratio / ratio_sum
-            val_ratio = val_ratio / ratio_sum
-            test_ratio = test_ratio / ratio_sum
-
-        n_train = int(train_ratio * total)
-        n_val = int(val_ratio * total)
-        n_test = total - n_train - n_val  # Remainder goes to test to avoid rounding issues
-
-        split_generator = torch.Generator().manual_seed(self.dataset_seed)
-        train_ds, val_ds, test_ds = random_split(
-            full_ds,
-            [n_train, n_val, n_test],
-            generator=split_generator
-        )
-        # Frame indices behind each split. Exported with the calibration set as
-        # documentary proof that calibration and evaluation frames are disjoint.
-        self.train_indices = list(train_ds.indices)
-        self.test_indices = list(test_ds.indices)
+        train_ds = Subset(full_ds, self.train_indices)
+        val_ds = Subset(full_ds, self.val_indices)
+        test_ds = Subset(full_ds, self.test_indices)
         self._set_test_linear(raw_linear, clean_np, applicator)
 
         self.loaders = {
@@ -533,6 +536,13 @@ class PostprocessorNN(Postprocessor):
             - INT8: 8-bit integer quantization with 256 levels (for embedded systems)
             - INT4: 4-bit integer quantization with 16 levels (for FPGA)
 
+        The reference images are quantized on their own range, as stored data would
+        be. The network input is the linear output normalised with the training
+        split's min / max, so it lies in [0, 1] except where validation or test
+        images exceed the training range: it is quantized on the fixed [0, 1] grid
+        and clipped to it, as an integer input of a deployed network is (before
+        v1.3 the grid spanned the whole array, test images included).
+
         Args:
             clean_np: Clean images array
             noisy_np: Noisy images array
@@ -540,41 +550,26 @@ class PostprocessorNN(Postprocessor):
         Returns:
             Tuple of (clean_np, noisy_np) with format applied
         """
-        if self.data_format == DATA_FORMAT_FP32:
+        levels = {DATA_FORMAT_INT8: 256, DATA_FORMAT_INT4: 16}.get(self.data_format)
+        if levels is None:
+            if self.data_format != DATA_FORMAT_FP32:
+                self.logger.warning("Unknown data format '%s', using FP32", self.data_format)
             # Standard float32 - no changes needed
             return clean_np.astype(np.float32), noisy_np.astype(np.float32)
 
-        elif self.data_format == DATA_FORMAT_INT8:
-            # Quantize to 256 levels (8-bit)
-            def quantize_int8(arr):
-                num_levels = 256
-                min_v, max_v = arr.min(), arr.max()
-                if max_v - min_v > 0:
-                    normalized = (arr - min_v) / (max_v - min_v)
-                    quantized = np.round(normalized * (num_levels - 1)) / (num_levels - 1)
-                    return (quantized * (max_v - min_v) + min_v).astype(np.float32)
-                return arr.astype(np.float32)
+        def quantize_own_range(arr):
+            min_v, max_v = arr.min(), arr.max()
+            if max_v - min_v > 0:
+                normalized = (arr - min_v) / (max_v - min_v)
+                quantized = np.round(normalized * (levels - 1)) / (levels - 1)
+                return (quantized * (max_v - min_v) + min_v).astype(np.float32)
+            return arr.astype(np.float32)
 
-            self.logger.debug("Applied INT8 quantization simulation (256 levels)")
-            return quantize_int8(clean_np), quantize_int8(noisy_np)
+        def quantize_unit_grid(arr):
+            return (np.round(np.clip(arr, 0.0, 1.0) * (levels - 1)) / (levels - 1)).astype(np.float32)
 
-        elif self.data_format == DATA_FORMAT_INT4:
-            # Quantize to 16 levels (4-bit) - typical for FPGA deployment
-            def quantize_int4(arr):
-                num_levels = 16
-                min_v, max_v = arr.min(), arr.max()
-                if max_v - min_v > 0:
-                    normalized = (arr - min_v) / (max_v - min_v)
-                    quantized = np.round(normalized * (num_levels - 1)) / (num_levels - 1)
-                    return (quantized * (max_v - min_v) + min_v).astype(np.float32)
-                return arr.astype(np.float32)
-
-            self.logger.debug("Applied INT4 quantization simulation (16 levels)")
-            return quantize_int4(clean_np), quantize_int4(noisy_np)
-
-        else:
-            self.logger.warning("Unknown data format '%s', using FP32", self.data_format)
-            return clean_np.astype(np.float32), noisy_np.astype(np.float32)
+        self.logger.debug("Applied %s quantization simulation (%d levels)", self.data_format, levels)
+        return quantize_own_range(clean_np), quantize_unit_grid(noisy_np)
 
     def get_torch_dtype(self) -> torch.dtype:
         """Get the appropriate PyTorch dtype for the current data format."""
