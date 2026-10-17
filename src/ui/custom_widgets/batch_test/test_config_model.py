@@ -45,6 +45,16 @@ BATCH_CONFIG_FORMAT_VERSION = "2.2"
 _log = logging.getLogger("BatchTestConfig")
 
 
+def _thread_count(value) -> Optional[int]:
+    """A saved CPU thread count: a positive int, or None for the library default."""
+    if value in (None, "", 0):
+        return None
+    count = int(value)
+    if count < 1:
+        raise ValueError(f"CPU thread count must be >= 1 or unset, got {value!r}")
+    return count
+
+
 def _solver_params_never_applied(version) -> bool:
     """True for configs written before 2.2 (or unversioned legacy YAML)."""
     try:
@@ -148,6 +158,14 @@ class TestConfiguration:
     timing_measurement_runs: int = 800
     timing_sampling_rate_khz: float = 10.752
 
+    # CPU thread pools for the CPU passes (inference timing and energy, and
+    # reconstruction when it runs on the CPU). None keeps the library default.
+    # torch's intra-op pool and the BLAS library's own pool are separate on
+    # some builds (OpenBLAS with pthreads on Jetson): see
+    # simulation_engine/_5_analyzer/cpu_threads.py.
+    cpu_torch_threads: Optional[int] = None
+    cpu_blas_threads: Optional[int] = None
+
     # Runtime state (not saved to config)
     status: TestStatus = field(default=TestStatus.PENDING, compare=False)
     progress: int = field(default=0, compare=False)
@@ -205,6 +223,9 @@ class TestConfiguration:
             "timing_warmup_runs": self.timing_warmup_runs,
             "timing_measurement_runs": self.timing_measurement_runs,
             "timing_sampling_rate_khz": self.timing_sampling_rate_khz,
+            # CPU thread pools (None = library default)
+            "cpu_torch_threads": self.cpu_torch_threads,
+            "cpu_blas_threads": self.cpu_blas_threads,
         }
 
     @classmethod
@@ -265,6 +286,9 @@ class TestConfiguration:
             timing_warmup_runs=data.get("timing_warmup_runs", 20),
             timing_measurement_runs=data.get("timing_measurement_runs", 800),
             timing_sampling_rate_khz=data.get("timing_sampling_rate_khz", 10.752),
+            # CPU thread pools
+            cpu_torch_threads=_thread_count(data.get("cpu_torch_threads")),
+            cpu_blas_threads=_thread_count(data.get("cpu_blas_threads")),
         )
 
     def copy(self) -> "TestConfiguration":

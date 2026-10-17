@@ -62,3 +62,49 @@ Settings are unchanged; ASPIR 1.3 changes how some of them are computed:
 
 **Timing and energy:** desktop numbers validate the backends only. The paper's latency and energy come from
 re-measuring the exported models on the Jetson Orin NX.
+
+## Reproduce Table 4 on the Jetson (latency and energy)
+
+Use the networks trained on the desktop. Copy `paper_r1_uc2_cake_cutting` (and `paper_r1_uc2_fspi`) from
+`experiments/batch_tests/` to the same place on the board; nothing is retrained there.
+
+**Board state.** JetPack 6.2, power mode 40 W (`nvpmodel -q` shows `40W` / `4`).
+
+```bash
+sudo jetson_clocks --store
+sudo systemctl isolate multi-user.target   # stop the desktop session; work over SSH
+sudo jetson_clocks                         # pin CPU 1497.6 MHz, GPU 1173 MHz, EMC maximum
+# ... measure ...
+sudo jetson_clocks --restore
+sudo systemctl isolate graphical.target
+```
+
+Each report's `platform_state` shows the pinned clocks and the power mode at the start and the end of the run.
+
+**Start ASPIR on the board without its desktop session:**
+
+```bash
+ssh -X user@<board>
+cd aspir/src && ../.venv/bin/python main.py
+```
+
+The window shows on your computer and the board runs the measurement. Alternatively, keep the board's
+desktop session and run ASPIR there. The idle baseline is then noisier: SD of the 1 s means about 100 mW,
+against about 40 mW without the desktop session.
+
+**Re-measure** (Batch Reports → Re-measure), on the batch report of each folder:
+- timing and energy;
+- warm-up 20, measurement runs 800, inference batch size 1;
+- idle baseline 60 s.
+
+Run one pass per row:
+
+| Row | Use GPU | CPU threads: torch | CPU threads: BLAS |
+|---|---|---|---|
+| GPU | yes | Default | Default |
+| CPU, torch defaults (R0's protocol) | no | Default | Default |
+| CPU, fastest | no | 1 | Default |
+| CPU, one core | no | 1 | 1 |
+
+On the Jetson wheel the BLAS default is 8 OpenBLAS threads. The default CPU row is flagged as oversubscribed;
+see *User Guide / Analysis → CPU Threads*.

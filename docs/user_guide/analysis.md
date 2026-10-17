@@ -82,6 +82,49 @@ Measures inference performance on CPU and GPU.
 
 - **Warmup runs**: Iterations before measurement (NVIDIA CUDA initialization)
 - **Measurement runs**: Averaged for stable statistics
+- **CPU threads** (torch, BLAS): the thread pools of the CPU passes; see below
+
+### CPU Threads
+
+A CPU pass can run on two thread pools: torch's intra-op pool (`torch.set_num_threads`) and the BLAS
+library's own pool. x86 wheels link MKL, which follows torch's setting. The Jetson wheels call the system
+OpenBLAS built with pthreads, whose pool of one thread per core `torch.set_num_threads` does not reach.
+With both pools at their defaults the cores are oversubscribed. On a Jetson Orin NX (40 W, clocks pinned),
+a 64 × 64 U-Net at batch 1:
+
+| OpenBLAS × torch threads | Time per image | Dynamic energy per image |
+|---|---|---|
+| 8 × 8 (defaults) | 66 ms | 351 mJ |
+| 8 × 4 | 33 ms | 190 mJ |
+| 8 × 2 | 24 ms | 110 mJ |
+| 8 × 1 | 11 ms | 63 mJ |
+| 1 × 8 | 15 ms | 43 mJ |
+| 1 × 1 | 16.5 ms | 18 mJ |
+
+The **CPU threads** setting (Batch Test, per test; Re-measure; Single Test → Timing) holds two counts,
+*torch* and *BLAS*. *Default* (0) leaves the library's own choice, which is the behaviour of earlier
+versions. A count applies to every CPU pass of the test: inference timing, the energy blocks, and the
+reconstruction when it runs on the CPU. It is restored afterwards. The BLAS count is set at run time
+through threadpoolctl and applies to every BLAS library the process has loaded (numpy's copy as well).
+A BLAS count that cannot be applied stops the pass instead of being recorded.
+
+Each CPU pass records the pools it actually ran with, read back after setting them, under `cpu_threads`
+(and `timing_reconstruction_cpu_threads` / `energy_reconstruction_cpu_threads` for the reconstruction):
+- torch's intra-op and inter-op threads;
+- the BLAS torch was built with (`torch_blas`);
+- every BLAS and OpenMP pool with its library, version, threads and threading layer;
+- `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS`;
+- the usable cores.
+
+`platform_state` records the same at the start and the end of a run.
+
+**Oversubscription warning.** A pass is flagged (`cpu_oversubscribed: true`, and a warning in the log) in
+two cases:
+- torch's pool and a separate pthreads OpenBLAS pool that torch calls both run more than one thread;
+- either pool asks for more threads than the process may use.
+
+numpy's own OpenBLAS copy is recorded but not counted, since torch does not call it. In the table above
+this flags 8 × 8, 8 × 4 and 8 × 2, and none of the fast configurations.
 
 ### Proper GPU Timing
 

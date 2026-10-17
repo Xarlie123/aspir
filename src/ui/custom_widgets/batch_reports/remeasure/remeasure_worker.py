@@ -76,6 +76,10 @@ class RemeasureConfig:
     # primitives divide per-call results by B internally so the
     # ``_mean_ms`` / ``_mean_mj`` columns stay per-image regardless.
     inference_batch_size: int = 1
+    # CPU thread pools for the CPU passes (None = library default); see
+    # simulation_engine/_5_analyzer/cpu_threads.py.
+    cpu_torch_threads: Optional[int] = None
+    cpu_blas_threads: Optional[int] = None
 
 
 @dataclass
@@ -197,6 +201,8 @@ def _make_test_config(test_entry: dict, cfg: RemeasureConfig) -> TestConfigurati
         timing_measurement_runs=cfg.measurement_runs,
         timing_sampling_rate_khz=cfg.sampling_rate_khz,
         test_split=100,
+        cpu_torch_threads=cfg.cpu_torch_threads,
+        cpu_blas_threads=cfg.cpu_blas_threads,
     )
     # Solver parameters the test actually ran with (batch reports from R1.3a on).
     # Older reports lack them; the TestConfiguration defaults are then exactly
@@ -390,6 +396,10 @@ def _build_remeasure_pipeline(test_entry: dict, batch_dir: Path, img_size: int,
 
 def _strip_old_metrics(test_entry: dict, kill_timing: bool, kill_energy: bool) -> None:
     """Drop stale keys before writing fresh measurements."""
+    if kill_timing or kill_energy:
+        # Thread state of the source's CPU passes; the new passes record their own
+        test_entry.pop("cpu_threads", None)
+        test_entry.pop("cpu_oversubscribed", None)
     if kill_timing:
         for key in list(test_entry.keys()):
             if key.startswith("timing_") or key == "profiler_results":

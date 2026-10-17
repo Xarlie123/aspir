@@ -354,6 +354,33 @@ class TestConfigWidget(QWidget):
         self.timing_sampling_spin.valueChanged.connect(self._on_value_changed)
         timing_params_layout.addWidget(self.timing_sampling_spin, 1, 1)
 
+        # CPU thread pools for the CPU passes; 0 = the library's default.
+        # torch's pool and the BLAS library's own pool can be separate
+        # (OpenBLAS with pthreads on Jetson), so both are settable.
+        timing_params_layout.addWidget(QLabel("CPU threads:"), 1, 2)
+        cpu_threads_row = QHBoxLayout()
+        self.cpu_torch_threads_spin = QSpinBox()
+        self.cpu_blas_threads_spin = QSpinBox()
+        for spin, tip in (
+                (self.cpu_torch_threads_spin,
+                 "torch intra-op threads for the CPU passes (torch.set_num_threads).\n"
+                 "Default: torch's own choice, usually one per core."),
+                (self.cpu_blas_threads_spin,
+                 "Threads of the BLAS library's own pool for the CPU passes\n"
+                 "(set at run time through threadpoolctl). Default: the library's own\n"
+                 "choice. On a Jetson, OpenBLAS keeps a pool of its own on top of\n"
+                 "torch's: set one of the two to 1 to avoid oversubscribing.")):
+            spin.setRange(0, 256)
+            spin.setSpecialValueText("Default")
+            spin.setValue(0)
+            spin.setToolTip(tip)
+            spin.valueChanged.connect(self._on_value_changed)
+        cpu_threads_row.addWidget(QLabel("torch"))
+        cpu_threads_row.addWidget(self.cpu_torch_threads_spin)
+        cpu_threads_row.addWidget(QLabel("BLAS"))
+        cpu_threads_row.addWidget(self.cpu_blas_threads_spin)
+        timing_params_layout.addLayout(cpu_threads_row, 1, 3)
+
         timing_params_layout.setColumnStretch(1, 1)
         timing_params_layout.setColumnStretch(3, 1)
 
@@ -764,6 +791,8 @@ class TestConfigWidget(QWidget):
             self.timing_warmup_spin.setValue(config.timing_warmup_runs)
             self.timing_measurement_spin.setValue(config.timing_measurement_runs)
             self.timing_sampling_spin.setValue(config.timing_sampling_rate_khz)
+            self.cpu_torch_threads_spin.setValue(config.cpu_torch_threads or 0)
+            self.cpu_blas_threads_spin.setValue(config.cpu_blas_threads or 0)
 
             # Update stack widgets
             self._on_mask_type_changed(config.mask_type)
@@ -852,6 +881,8 @@ class TestConfigWidget(QWidget):
         self.timing_warmup_spin.setReadOnly(read_only)
         self.timing_measurement_spin.setReadOnly(read_only)
         self.timing_sampling_spin.setReadOnly(read_only)
+        self.cpu_torch_threads_spin.setReadOnly(read_only)
+        self.cpu_blas_threads_spin.setReadOnly(read_only)
 
     def _on_value_changed(self):
         """Handle value change in any field."""
@@ -955,5 +986,7 @@ class TestConfigWidget(QWidget):
         self._config.timing_warmup_runs = self.timing_warmup_spin.value()
         self._config.timing_measurement_runs = self.timing_measurement_spin.value()
         self._config.timing_sampling_rate_khz = self.timing_sampling_spin.value()
+        self._config.cpu_torch_threads = self.cpu_torch_threads_spin.value() or None
+        self._config.cpu_blas_threads = self.cpu_blas_threads_spin.value() or None
 
         self.config_changed.emit()

@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer_timing import time_reconstruction
+from simulation_engine._5_analyzer.cpu_threads import cpu_threads_for, threads_fields
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
 
 
@@ -63,6 +64,7 @@ def measure_timing(
     # warm-up, repeats, mean and std, and the device it actually ran on.
     t_reconstruction_ms = 0.0
     recon = None
+    recon_threads = None
     if applicator is not None:
         logger.debug("Measuring reconstruction timing...")
         try:
@@ -76,8 +78,10 @@ def measure_timing(
             if max_recon_samples is not None and max_recon_samples > 0:
                 n_recon_samples = min(n_recon_samples, int(max_recon_samples))
 
-            recon = time_reconstruction(applicator, range(n_recon_samples),
-                                        warmup_runs=2, repeats=recon_repeats)
+            on_cpu = str(getattr(applicator, "reconstruction_device", "cpu")).startswith("cpu")
+            with cpu_threads_for(config, on_cpu, logger) as recon_threads:
+                recon = time_reconstruction(applicator, range(n_recon_samples),
+                                            warmup_runs=2, repeats=recon_repeats)
             t_reconstruction_ms = recon["mean_ms"]
             logger.debug("Reconstruction time: %.2f +- %.2f ms on %s (%d samples, %d warmup)",
                          recon["mean_ms"], recon["std_ms"], recon["device"],
@@ -123,7 +127,8 @@ def measure_timing(
     # Always measure CPU timing
     logger.debug("Measuring CPU inference timing...")
     cpu_device = torch.device('cpu')
-    cpu_times = measure_on_device(cpu_device)
+    with cpu_threads_for(config, True, logger) as cpu_state:
+        cpu_times = measure_on_device(cpu_device)
     # Per-call → per-image (each call processed B images, so dividing
     # by B yields the mean latency per image at this batch size).
     cpu_times_np = np.array(cpu_times) / B
@@ -142,7 +147,11 @@ def measure_timing(
         "timing_batch_size": B,
         "use_gpu": config.use_gpu,
     }
+    # CPU thread pools in effect during the CPU inference timing
+    results.update(threads_fields(cpu_state))
     if recon is not None:
+        if recon_threads is not None:
+            results["timing_reconstruction_cpu_threads"] = recon_threads
         results.update({
             "timing_reconstruction_std_ms": recon["std_ms"],
             "timing_reconstruction_device": recon["device"],

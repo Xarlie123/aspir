@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CPU threads setting.** Batch Test (per test, saved in `.batch_config`), Re-measure and Single Test →
+  Timing gain *CPU threads: torch / BLAS*.
+  - *Default* keeps each library's own choice, as before.
+  - The counts apply to every CPU pass (inference timing, energy blocks, reconstruction on the CPU) and
+    are restored afterwards. The BLAS pool is set at run time through threadpoolctl, a new dependency.
+  - Every CPU pass records the pools it actually ran with (`cpu_threads`), and `platform_state` gains
+    `cpu_threading`.
+  - Passes that oversubscribe the cores are flagged (`cpu_oversubscribed`) and logged as a warning. An
+    example is torch's pool on top of the separate pthreads OpenBLAS pool of the Jetson torch wheels:
+    66 ms against 11 ms at batch 1 on an Orin NX.
+  - *User Guide / Analysis* has the numbers; `tests/test_cpu_threads.py` (7/7).
 - **Platform state in every report.** Batch Test and Re-measure record the
   machine's state at the start and at the end of a run under
   `platform_state` in the report metadata: frequency governor and limits of

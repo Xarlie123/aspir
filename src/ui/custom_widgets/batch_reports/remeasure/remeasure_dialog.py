@@ -80,6 +80,16 @@ def _suffix_for(source: Path, device_label: str) -> Path:
     return candidate
 
 
+
+def _thread_spin(tooltip: str) -> QSpinBox:
+    """A CPU thread count: 1-256, with 0 shown as "Default" (the library's choice)."""
+    spin = QSpinBox()
+    spin.setRange(0, 256)
+    spin.setSpecialValueText("Default")
+    spin.setValue(0)
+    spin.setToolTip(tooltip)
+    return spin
+
 class RemeasureDialog(QDialog):
     """Configure + run re-measurement for one or more loaded experiments.
 
@@ -214,6 +224,25 @@ class RemeasureDialog(QDialog):
         )
         knobs_form.addRow("Inference batch size:", self._spn_batch)
 
+        # CPU thread pools for the CPU passes. 0 = the library's default.
+        # torch's pool and the BLAS library's own pool can be separate
+        # (OpenBLAS with pthreads on Jetson), so both are settable.
+        self._spn_cpu_torch = _thread_spin(
+            "torch intra-op threads for the CPU passes (torch.set_num_threads).\n"
+            "Default: torch's own choice, usually one per core.")
+        self._spn_cpu_blas = _thread_spin(
+            "Threads of the BLAS library's own pool for the CPU passes\n"
+            "(set at run time through threadpoolctl). Default: the library's\n"
+            "own choice. On a Jetson, OpenBLAS keeps a pool of its own on top\n"
+            "of torch's: set one of the two to 1 to avoid oversubscribing.")
+        threads_row = QHBoxLayout()
+        threads_row.addWidget(QLabel("torch"))
+        threads_row.addWidget(self._spn_cpu_torch)
+        threads_row.addWidget(QLabel("BLAS"))
+        threads_row.addWidget(self._spn_cpu_blas)
+        threads_row.addStretch(1)
+        knobs_form.addRow("CPU threads:", threads_row)
+
         self._chk_gpu = QCheckBox("Use GPU when available")
         self._chk_gpu.setChecked(True)
         knobs_form.addRow(self._chk_gpu)
@@ -339,6 +368,8 @@ class RemeasureDialog(QDialog):
             capture_baseline=self._chk_baseline.isChecked(),
             baseline_duration_s=int(self._spn_baseline.value()),
             inference_batch_size=int(self._spn_batch.value()),
+            cpu_torch_threads=int(self._spn_cpu_torch.value()) or None,
+            cpu_blas_threads=int(self._spn_cpu_blas.value()) or None,
         )
         if self._chk_both_paths.isChecked():
             queue.append((

@@ -153,6 +153,29 @@ class TimingAnalysisPage(QWidget):
         self.measurement_spinbox.setValue(800)
         params_layout.addRow("Measurement runs:", self.measurement_spinbox)
 
+        # CPU thread pools for the CPU pass; 0 = the library's default.
+        # torch's pool and the BLAS library's own pool can be separate
+        # (OpenBLAS with pthreads on Jetson), so both are settable.
+        threads_row = QHBoxLayout()
+        self.cpu_torch_threads_spinbox = QSpinBox()
+        self.cpu_blas_threads_spinbox = QSpinBox()
+        for spin, label, tip in (
+                (self.cpu_torch_threads_spinbox, "torch",
+                 "torch intra-op threads for the CPU pass (torch.set_num_threads).\n"
+                 "Default: torch's own choice, usually one per core."),
+                (self.cpu_blas_threads_spinbox, "BLAS",
+                 "Threads of the BLAS library's own pool for the CPU pass (set at run\n"
+                 "time through threadpoolctl). Default: the library's own choice. On a\n"
+                 "Jetson, OpenBLAS keeps a pool of its own on top of torch's: set one\n"
+                 "of the two to 1 to avoid oversubscribing.")):
+            spin.setRange(0, 256)
+            spin.setSpecialValueText("Default")
+            spin.setValue(0)
+            spin.setToolTip(tip)
+            threads_row.addWidget(QLabel(label))
+            threads_row.addWidget(spin)
+        params_layout.addRow("CPU threads:", threads_row)
+
         layout.addWidget(params_group)
 
         # Formula explanation
@@ -465,6 +488,16 @@ class TimingAnalysisPage(QWidget):
     def measurement_runs(self) -> int:
         """Return the number of measurement runs."""
         return self.measurement_spinbox.value()
+
+    @property
+    def cpu_torch_threads(self):
+        """torch intra-op threads for the CPU pass, or None for torch's default."""
+        return self.cpu_torch_threads_spinbox.value() or None
+
+    @property
+    def cpu_blas_threads(self):
+        """BLAS pool threads for the CPU pass, or None for the library's default."""
+        return self.cpu_blas_threads_spinbox.value() or None
 
     # --- Data methods ---
 

@@ -92,6 +92,7 @@ dependencies = [
     "tqdm>=4.66",
     "pdf2image>=1.16",    # architecture preview: PDF → image (requires poppler at runtime)
     "psutil>=5.9",        # system info / CPU-energy backend
+    "threadpoolctl>=3.1", # sees and sets the BLAS / OpenMP thread pools of CPU passes
     "pynvml>=12",         # NVIDIA GPU energy (imported lazily, guarded)
 ]
 

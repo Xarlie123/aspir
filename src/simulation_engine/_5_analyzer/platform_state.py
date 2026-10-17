@@ -5,7 +5,9 @@ governors, whether the clocks are pinned (``jetson_clocks``), the Jetson power
 mode, the temperature reached. The batch runner and the re-measure worker
 record this state at the start and at the end of a run, under
 ``platform_state`` in the report metadata, so a run can be checked afterwards
-(clocks pinned throughout, temperatures, the same power mode).
+(clocks pinned throughout, temperatures, the same power mode). ``cpu_threading``
+holds the CPU thread pools at the time of the snapshot (see ``cpu_threads``);
+each CPU pass also records the pools it ran with.
 
 Everything is read without root, from sysfs, ``/proc``, ``nvpmodel -q`` and
 ``nvidia-smi``; whatever is missing is left out. The memory (EMC) clock needs
@@ -135,6 +137,8 @@ def platform_state() -> dict[str, Any]:
         state["torch_threads"] = torch.get_num_threads()
     except ImportError:
         pass
+    from simulation_engine._5_analyzer.cpu_threads import cpu_threading_state
+    state["cpu_threading"] = cpu_threading_state()
     state["cpu"] = cpu_state()
     jetson = jetson_state()
     if jetson is not None:

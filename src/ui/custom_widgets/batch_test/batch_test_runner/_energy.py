@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from simulation_engine._4_postprocessor.postprocessor_nn import PostprocessorNN
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer, sampling_rate
+from simulation_engine._5_analyzer.cpu_threads import cpu_threads_for, threads_fields
 from ui.custom_widgets.batch_test.test_config_model import TestConfiguration
 
 
@@ -101,12 +102,13 @@ def measure_energy(
         )
 
         # Run energy analysis on the sample tensor
-        result = analyzer.analyze_inference(
-            [sample] * n_blocks,
-            n_runs=runs_per_block,
-            warmup_runs=warmup_runs,
-            return_per_image=False,
-        )
+        with cpu_threads_for(config, str(device).startswith("cpu"), logger) as cpu_state:
+            result = analyzer.analyze_inference(
+                [sample] * n_blocks,
+                n_runs=runs_per_block,
+                warmup_runs=warmup_runs,
+                return_per_image=False,
+            )
 
         # Per-iteration values from the analyzer cover the full
         # batch (B images per forward pass). Divide the energy by B
@@ -142,6 +144,8 @@ def measure_energy(
                 "time_ms": [float(t) / B for t in result.time_per_image_ms],
             },
         }
+        # CPU thread pools in effect during a CPU energy pass
+        energy_data.update(threads_fields(cpu_state))
         if result.samples_per_block:
             # Power samples behind each block, and the rate achieved
             energy_data["energy_blocks"]["n_samples"] = list(result.samples_per_block)
@@ -237,11 +241,13 @@ def measure_reconstruction_energy(
 
     n_blocks = max(1, int(n_blocks))
     results = []
+    recon_threads = None
     try:
-        for b in range(n_blocks):
-            results.append(analyzer.measure_reconstruction_energy(
-                one_pass, n_iterations=passes, warmup_iterations=1 if b == 0 else 0,
-                cuda_sync=True))
+        with cpu_threads_for(config, str(device).startswith("cpu"), logger) as recon_threads:
+            for b in range(n_blocks):
+                results.append(analyzer.measure_reconstruction_energy(
+                    one_pass, n_iterations=passes, warmup_iterations=1 if b == 0 else 0,
+                    cuda_sync=True))
     finally:
         if owns_analyzer:
             analyzer.shutdown()
@@ -269,6 +275,8 @@ def measure_reconstruction_energy(
             "time_ms": [res.execution_time_ms / images_per_block for res in results],
         },
     }
+    if recon_threads is not None:
+        out["energy_reconstruction_cpu_threads"] = recon_threads
     counts = [sum(r.n_samples or 0 for r in res.readings) for res in results]
     if any(counts):
         out["energy_reconstruction_blocks"]["n_samples"] = counts

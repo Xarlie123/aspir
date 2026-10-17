@@ -16,6 +16,7 @@ from ui.custom_widgets.energy_analysis.energy_worker import EnergyMeasurementWor
 
 from simulation_engine._5_analyzer.analyzer import Analyzer
 from simulation_engine._5_analyzer.analyzer_noise import linear_or_recons
+from simulation_engine._5_analyzer.cpu_threads import cpu_threads
 
 
 class UIReportsHandler(QObject):
@@ -461,12 +462,19 @@ class UIReportsHandler(QObject):
         self.logger.info("Measuring CPU inference times...")
         cpu_device = torch.device('cpu')
         post.model = post.model.to(cpu_device)
-        recon_times_ms, denoise_times_cpu_ms = self._measure_per_image_times(
-            device=cpu_device,
-            test_images=recons,
-            warmup_runs=warmup_runs,
-            measurement_runs=measurement_runs
-        )
+        with cpu_threads(self.timing_page.cpu_torch_threads, self.timing_page.cpu_blas_threads,
+                         logger=self.logger) as cpu_threads_state:
+            recon_times_ms, denoise_times_cpu_ms = self._measure_per_image_times(
+                device=cpu_device,
+                test_images=recons,
+                warmup_runs=warmup_runs,
+                measurement_runs=measurement_runs
+            )
+        self.logger.info("CPU pass threads: torch %s, BLAS %s%s",
+                         cpu_threads_state["torch_intra_op_threads"],
+                         [p["threads"] for p in cpu_threads_state["blas_pools"] if p["user_api"] == "blas"],
+                         f" (oversubscribed: {cpu_threads_state['oversubscribed_reason']})"
+                         if cpu_threads_state["oversubscribed"] else "")
 
         if len(recon_times_ms) == 0 or len(denoise_times_cpu_ms) == 0:
             self.logger.warning("No CPU timing data collected (empty lists).")
@@ -509,6 +517,7 @@ class UIReportsHandler(QObject):
             'recon_times_ms': recon_times_ms,
             'denoise_times_cpu_ms': denoise_times_cpu_ms,
             'denoise_times_gpu_ms': denoise_times_gpu_ms if denoise_times_gpu_ms else [],
+            'cpu_threads': cpu_threads_state,
         }
 
         # Update the timing page with data
