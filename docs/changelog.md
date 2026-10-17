@@ -218,6 +218,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rows (UC2's saved masks: one row at 4 %, 8 % and 24 %; ≤ 0.05 dB linear PSNR).
 
 ### Fixed
+- **Re-measure times the FSPI reconstruction.**
+  - Batch exports saved the Fourier patterns without each pattern's
+    coefficient and phase, so re-measure could not build the Fourier
+    reconstruction. It timed only the inference and left
+    `timing_reconstruction_ms` at 0.
+  - Exports now save that metadata in `masks.npz`, with the phase steps and
+    the binarisation. For older exports, re-measure regenerates the metadata,
+    and uses it only if the regenerated patterns equal the saved ones.
+  - Re-measure also drops the source report's `dynamic_*` fields along with
+    its energy fields, so a stage that is not re-measured no longer keeps the
+    original machine's values.
+  - `tests/test_fourier_fspi.py` (11/11).
 - **Jetson energy is sampled at 200 Hz instead of read twice per block.**
   - The jtop backend multiplied the mean of two power readings, one at each
     end of a block, by the block's duration. jtop refreshes about once a

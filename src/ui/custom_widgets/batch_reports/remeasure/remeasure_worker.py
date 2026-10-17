@@ -33,13 +33,13 @@ from simulation_engine._4_postprocessor.postprocessor_nn import (
     resolve_model_name,
 )
 from simulation_engine._5_analyzer.analyzer_energy import EnergyAnalyzer
-from simulation_engine._5_analyzer.platform_state import platform_state
 from simulation_engine._5_analyzer.baseline_capture import (
     BaselineResult,
     add_dynamic_uncertainty,
     capture_idle_baseline,
     derive_dynamic_metrics,
 )
+from simulation_engine._5_analyzer.platform_state import platform_state
 from ui.custom_widgets.batch_test.batch_test_runner._energy import (
     measure_energy,
     measure_reconstruction_energy,
@@ -263,6 +263,44 @@ def _instantiate_mask_facade(mask_type: str, img_size: int, n_patterns: int,
     return cls(img_size=img_size, logger=logger)
 
 
+def _fourier_metadata(masks_arr, img_size: int, logger: logging.Logger):
+    """Coefficient and phase of each saved Fourier pattern, for exports that lack them.
+
+    FSPI patterns are deterministic given the phase steps, the spectrum
+    ordering and the binarisation, which the batch report does not keep.
+    Each candidate is generated with the saved pattern count and accepted
+    only if it reproduces the saved patterns; returns ``None`` if none does.
+    """
+    import itertools
+
+    import numpy as np
+
+    from simulation_engine._2_mask_gen.mask_fourier import (
+        BINARIZATION_MODES,
+        PHASE_SETS,
+        SPECTRUM_ORDERINGS,
+        MaskFourier,
+    )
+    n_patterns = int(masks_arr.shape[0])
+    for binarization, steps, ordering in itertools.product(
+            BINARIZATION_MODES, sorted(PHASE_SETS, reverse=True), SPECTRUM_ORDERINGS):
+        if n_patterns % steps:
+            continue
+        try:
+            cand = MaskFourier(img_size=img_size, sampling_ratio=n_patterns / float(img_size * img_size),
+                               phase_steps=steps, spectrum_ordering=ordering,
+                               binarization=binarization, logger=logger)
+            cand.generate_masks()
+        except Exception:
+            continue
+        if cand.masks.shape == masks_arr.shape and np.allclose(cand.masks, masks_arr, atol=1e-6):
+            logger.info("Fourier metadata rebuilt: %d-step, %s ordering, binarization %s",
+                        steps, ordering, binarization)
+            return {"freq_indices": cand.freq_indices, "phases": cand.phases, "coeff_ids": cand.coeff_ids,
+                    "binarization": binarization}
+    return None
+
+
 def _build_remeasure_pipeline(test_entry: dict, batch_dir: Path, img_size: int,
                               test_config: TestConfiguration,
                               logger: logging.Logger):
@@ -285,7 +323,10 @@ def _build_remeasure_pipeline(test_entry: dict, batch_dir: Path, img_size: int,
                      "timing (export level was not ALL_DATA?)", safe)
         return None, None
 
-    masks_arr = np.load(str(masks_path))["masks"]
+    with np.load(str(masks_path)) as saved:
+        masks_arr = saved["masks"]
+        fourier_meta = {k: saved[k] for k in ("freq_indices", "phases", "coeff_ids", "binarization")
+                        if k in saved.files}
     with np.load(str(images_path)) as data:
         if "originals" not in data.files:
             logger.warning("test_images.npz for '%s' has no 'originals' key", safe)
@@ -308,6 +349,26 @@ def _build_remeasure_pipeline(test_entry: dict, batch_dir: Path, img_size: int,
         logger.warning("Cannot instantiate mask facade for '%s' (%s): %s",
                        test_entry.get("name", ""), mask_type, exc)
         return dataset, None
+
+    if mask_type == "fourier":
+        # The Fourier reconstruction needs each pattern's coefficient and phase.
+        # Exports before v1.3 saved only the patterns: rebuild the metadata.
+        if {"freq_indices", "phases", "coeff_ids"} <= fourier_meta.keys():
+            meta = {k: fourier_meta[k] for k in ("freq_indices", "phases", "coeff_ids")}
+            meta["binarization"] = str(fourier_meta.get("binarization", "none"))
+        else:
+            meta = _fourier_metadata(masks_arr, int(img_size), logger)
+        if meta is None:
+            logger.warning("Cannot recover the Fourier metadata of '%s': no FSPI parameters "
+                           "reproduce its saved patterns; skipping reconstruction timing",
+                           test_entry.get("name", ""))
+            return dataset, None
+        # Binarisation picks the measurement operator (FFT only for grayscale
+        # patterns), and the demodulation follows the phase steps, which are
+        # the patterns per coefficient.
+        for key, value in meta.items():
+            setattr(mask, key, value)
+        mask.phase_steps = n_patterns // len(np.unique(meta["coeff_ids"]))
 
     # Replace whatever the constructor pre-computed with the saved patterns
     # and disable regeneration — ``create_applicator`` would otherwise call
@@ -335,8 +396,10 @@ def _strip_old_metrics(test_entry: dict, kill_timing: bool, kill_energy: bool) -
                 test_entry.pop(key, None)
         test_entry.pop("timing_metrics", None)
     if kill_energy:
+        # dynamic_* derive from the energy and the idle baseline: a stage that
+        # is not re-measured must not keep the source report's values.
         for key in list(test_entry.keys()):
-            if key.startswith("energy_") or key.startswith("efficiency_"):
+            if key.startswith(("energy_", "efficiency_", "dynamic_")):
                 test_entry.pop(key, None)
 
 

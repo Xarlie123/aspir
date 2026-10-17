@@ -240,9 +240,16 @@ def export_datasets(
             # Export mask patterns
             mask = entry["mask"]
             if hasattr(mask, "masks") and mask.masks is not None:
+                # Fourier patterns also need the coefficient and phase of each
+                # pattern to be reconstructed (re-measure reads them back).
+                extra = {k: getattr(mask, k) for k in ("freq_indices", "phases", "coeff_ids")
+                         if getattr(mask, k, None) is not None}
+                if extra:
+                    extra["phase_steps"] = np.array(mask.phase_steps)
+                    extra["binarization"] = np.array(mask.binarization)
                 np.savez_compressed(
                     os.path.join(test_dir, "masks.npz"),
-                    masks=mask.masks
+                    masks=mask.masks, **extra
                 )
                 logger.debug("Exported masks for %s", safe_name)
 

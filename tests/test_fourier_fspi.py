@@ -262,6 +262,73 @@ def test_npz_round_trip_preserves_patterns_and_metadata():
     print("  npz round trip preserved patterns, metadata and reconstruction")
 
 
+def test_remeasure_rebuilds_the_metadata_of_old_exports():
+    """Re-measure reconstructs FSPI tests whose masks.npz holds only the patterns.
+
+    Exports before v1.3 saved the patterns without each one's coefficient and
+    phase, so re-measure could not time the Fourier reconstruction. It now
+    regenerates the metadata and accepts it only if the saved patterns match.
+    """
+    import json
+    import logging
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])  # noqa: F841
+    from ui.custom_widgets.batch_reports.remeasure.remeasure_worker import (
+        RemeasureConfig,
+        _build_remeasure_pipeline,
+        _make_test_config,
+        _strip_old_metrics,
+    )
+
+    log = logging.getLogger("test")
+    images = [_random_image(IMG, seed=s) for s in range(3)]
+    entry = {"name": "FSPI 16%", "mask_type": "fourier", "reconstruction_method": "Fourier Inverse"}
+    for steps, ordering, binarization in ((4, "circular", "none"), (3, "square", "none"),
+                                          (4, "circular", "bayer")):
+        mask = MaskFourier(img_size=IMG, sampling_ratio=0.16, phase_steps=steps,
+                           spectrum_ordering=ordering, binarization=binarization)
+        mask.generate_masks()
+        direct = ApplicatorFourier(_Dataset(images), mask, device="cpu").process_image(1)
+        for with_meta in (False, True):
+            with tempfile.TemporaryDirectory() as tmp:
+                test_dir = os.path.join(tmp, "data", "FSPI_16%")
+                os.makedirs(test_dir)
+                extra = ({"freq_indices": mask.freq_indices, "phases": mask.phases,
+                          "coeff_ids": mask.coeff_ids, "phase_steps": np.array(mask.phase_steps),
+                          "binarization": np.array(mask.binarization)} if with_meta else {})
+                np.savez(os.path.join(test_dir, "masks.npz"), masks=mask.masks, **extra)
+                np.savez(os.path.join(test_dir, "test_images.npz"), originals=np.stack(images))
+                cfg = _make_test_config(entry, RemeasureConfig(use_gpu=False))
+                from pathlib import Path
+                _, applicator = _build_remeasure_pipeline(entry, Path(tmp), IMG, cfg, log)
+                assert isinstance(applicator, ApplicatorFourier), type(applicator)
+                got = np.asarray(applicator.process_image(1))
+                err = np.abs(got - direct).max()
+                assert err < 1e-5, (steps, ordering, binarization, with_meta, err)
+
+    # Patterns that no FSPI configuration produces are refused, not mis-reconstructed
+    with tempfile.TemporaryDirectory() as tmp:
+        test_dir = os.path.join(tmp, "data", "FSPI_16%")
+        os.makedirs(test_dir)
+        np.savez(os.path.join(test_dir, "masks.npz"),
+                 masks=np.random.default_rng(0).random((656, IMG, IMG)).astype(np.float32))
+        np.savez(os.path.join(test_dir, "test_images.npz"), originals=np.stack(images))
+        from pathlib import Path
+        _, applicator = _build_remeasure_pipeline(entry, Path(tmp), IMG,
+                                                  _make_test_config(entry, RemeasureConfig(use_gpu=False)), log)
+        assert applicator is None
+
+    # Re-measured energy drops the source report's dynamic_* fields
+    stale = {"energy_mean_mj": 1.0, "dynamic_reconstruction_energy_pt_mj": 34.0, "dynamic_power_W": 2.0,
+             "timing_mean_ms": 3.0, "psnr_denoised": 25.0}
+    _strip_old_metrics(stale, kill_timing=False, kill_energy=True)
+    assert stale == {"timing_mean_ms": 3.0, "psnr_denoised": 25.0}, json.dumps(stale)
+    print("  patterns-only and full exports both reconstruct (4-step, 3-step, Bayer); "
+          "foreign patterns refused; stale dynamic_* dropped")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failures = 0
