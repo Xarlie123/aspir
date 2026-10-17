@@ -5,7 +5,7 @@ All notable changes to ASPIR will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-17
 
 ### Added
 - **Projections per pattern in the modelled acquisition.** The acquisition time counts the frames a DMD
@@ -139,8 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     The mask step then shows the measured patterns read-only, Test Masks
     reconstructs from the measured values, and Post-processing and Reports,
     which need ground truth, are closed.
-  - `scripts/download_spihim.py` fetches the SPIHIM data. Finally,
-    `tests/test_experimental_data.py` covers the adapter, exact noiseless
+  - `tests/test_experimental_data.py` covers the adapter, exact noiseless
     reconstruction, Cake-Cutting row selection and measured-vs-simulated
     parity for all seven algorithms.
 - **Uncertainty of the dynamic energy.** Inference and reconstruction energy
@@ -181,11 +180,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Without the training-curves report, Batch Test adds one validation pass
     per epoch to find the best epoch. `tests/test_best_val_weights.py` checks
     the restore exactly, on both training paths.
-- **First automated tests in the repository.** `tests/test_fourier_fspi.py`
-  covers full-spectrum fidelity for both phase schemes, the conjugate-symmetry
-  fill, the sampling-ratio to pattern-count mapping, the mask-agnostic solvers
-  and an `.npz` save/load round trip. It runs standalone
-  (`.venv/bin/python tests/test_fourier_fspi.py`) with no new dependency.
+- **Automated tests.** Eleven self-contained scripts in `tests/`, one per
+  feature, each run directly (`.venv/bin/python tests/<script>.py`) with no test
+  framework:
+  - `test_acquisition_model.py`, `test_best_val_weights.py`, `test_cpu_threads.py`,
+    `test_energy_uncertainty.py`, `test_experimental_data.py` and
+    `test_fourier_fspi.py`;
+  - `test_gpu_reconstruction.py`, `test_jetson_energy.py`,
+    `test_metric_convention.py`, `test_solver_parameters.py` and
+    `test_train_normalisation.py`.
+
+  They pass on a desktop (CUDA) and on a Jetson Orin NX, also headless over
+  SSH. Where a torch build cannot run `torch.linalg` on CUDA (the Jetson AI Lab
+  wheel on JetPack 6.2), the CUDA check of the pseudoinverse and TV reports them
+  as not run.
 
 ### Changed
 - **The paper's analyses live with the paper.** `benchmarks/metric_convention/`,

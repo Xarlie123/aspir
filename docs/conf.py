@@ -5,7 +5,7 @@
 project = 'ASPIR'
 copyright = '2026, Universitat Jaume I, Carlos Chabert-Ull'
 author = 'Carlos Chabert-Ull'
-release = '1.2.1'
+release = '1.3.0'
 
 # -- General configuration ---------------------------------------------------
 extensions = [
