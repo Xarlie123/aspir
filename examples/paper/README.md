@@ -11,6 +11,7 @@ with best-validation weights. Run them with ASPIR ≥ 1.3.
 | `uc2_cake_cutting.batch_config` | UC2, CelebA 64 × 64 | Cake-Cutting Hadamard, 4 / 8 / 16 / 24 / 32 % | 163 / 327 / 655 / 983 / 1310 |
 | `uc2_fspi.batch_config` | UC2, CelebA 64 × 64 | Fourier SPI, four-step, circular order, grey-level, same ratios | 164 / 328 / 656 / 984 / 1312 |
 | `uc2_fspi_binary.batch_config` *(optional)* | UC2, CelebA 64 × 64 | binary FSPI at 16 %: Floyd–Steinberg (U = 1) and Bayer (U = 2) | 656 / 656 |
+| `uc2_fspi_binary_sweep.batch_config` | UC2, CelebA 64 × 64 | binary FSPI, Floyd–Steinberg (U = 1), same ratios as `uc2_fspi` | 164 / 328 / 656 / 984 / 1312 |
 
 **Shared settings** (every test):
 - reconstruction: the mask's native method;
