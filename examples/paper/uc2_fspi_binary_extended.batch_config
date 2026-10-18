@@ -1,0 +1,159 @@
+{
+  "format_version": "2.2",
+  "name": "UC2 FSPI binary extended, Floyd-Steinberg, 48 and 64 % (paper R1)",
+  "description": "ASPIR paper (Intelligent Computing), revision R1: same recipe, data and settings as the original batch, with best-validation weights. Run with ASPIR >= 1.3 (metric convention 2, network-input normalisation fitted on the training split). See examples/paper/README.md.",
+  "created_at": "2026-10-18T17:08:38",
+  "parallel_execution": true,
+  "parallel_threads": 4,
+  "capture_baseline": true,
+  "baseline_duration_s": 60,
+  "tests": [
+    {
+      "name": "Celeb - FSPI 48% Floyd-Steinberg U1",
+      "mask_type": "fourier",
+      "mask_seed": 42,
+      "scatter_point_density": 10.0,
+      "scatter_num_patterns": 1024,
+      "hadamard_min_idx": 0,
+      "hadamard_max_idx": 1966,
+      "fourier_sampling_ratio": 0.48,
+      "fourier_phase_steps": 4,
+      "fourier_spectrum_ordering": "circular",
+      "fourier_binarization": "floyd_steinberg",
+      "fourier_dmd_upsampling": 1,
+      "sweep_bar_widths": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "sweep_strides": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "sweep_angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "reconstruction_method": "conventional",
+      "reconstruction_device": "auto",
+      "fista_lambda": 0.001,
+      "fista_iterations": 500,
+      "tv_lambda": 0.1,
+      "tv_iterations": 100,
+      "model_name": "u-net",
+      "epochs": 50,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "dropout": 0.0,
+      "loss_function": "MSE",
+      "optimizer": "Adam",
+      "use_gpu": true,
+      "keep_best_val": true,
+      "architecture_config": {
+        "features": [
+          8,
+          16,
+          32,
+          64
+        ]
+      },
+      "train_split": 80,
+      "val_split": 10,
+      "test_split": 10,
+      "reports": [
+        "training_curves",
+        "quality",
+        "timing",
+        "energy"
+      ],
+      "include_datasets": true,
+      "timing_warmup_runs": 20,
+      "timing_measurement_runs": 800,
+      "timing_sampling_rate_khz": 10.752
+    },
+    {
+      "name": "Celeb - FSPI 64% Floyd-Steinberg U1",
+      "mask_type": "fourier",
+      "mask_seed": 42,
+      "scatter_point_density": 10.0,
+      "scatter_num_patterns": 1024,
+      "hadamard_min_idx": 0,
+      "hadamard_max_idx": 2621,
+      "fourier_sampling_ratio": 0.64,
+      "fourier_phase_steps": 4,
+      "fourier_spectrum_ordering": "circular",
+      "fourier_binarization": "floyd_steinberg",
+      "fourier_dmd_upsampling": 1,
+      "sweep_bar_widths": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "sweep_strides": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "sweep_angles": [
+        0.0,
+        45.0,
+        90.0,
+        135.0
+      ],
+      "reconstruction_method": "conventional",
+      "reconstruction_device": "auto",
+      "fista_lambda": 0.001,
+      "fista_iterations": 500,
+      "tv_lambda": 0.1,
+      "tv_iterations": 100,
+      "model_name": "u-net",
+      "epochs": 50,
+      "batch_size": 16,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "dropout": 0.0,
+      "loss_function": "MSE",
+      "optimizer": "Adam",
+      "use_gpu": true,
+      "keep_best_val": true,
+      "architecture_config": {
+        "features": [
+          8,
+          16,
+          32,
+          64
+        ]
+      },
+      "train_split": 80,
+      "val_split": 10,
+      "test_split": 10,
+      "reports": [
+        "training_curves",
+        "quality",
+        "timing",
+        "energy"
+      ],
+      "include_datasets": true,
+      "timing_warmup_runs": 20,
+      "timing_measurement_runs": 800,
+      "timing_sampling_rate_khz": 10.752
+    }
+  ],
+  "dataset_info": {
+    "type": "DatasetFromCelebrities",
+    "name": "Celebrities",
+    "img_size": 64,
+    "num_images": 3000,
+    "source_path": "Celebrities.npz",
+    "seed": 10,
+    "data_format": "INT8"
+  }
+}
