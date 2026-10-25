@@ -5,7 +5,7 @@ All notable changes to ASPIR will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2026-10-17
+## [1.3.0] - 2026-10-25
 
 ### Added
 - **Projections per pattern in the modelled acquisition.** The acquisition time counts the frames a DMD
@@ -180,6 +180,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Without the training-curves report, Batch Test adds one validation pass
     per epoch to find the best epoch. `tests/test_best_val_weights.py` checks
     the restore exactly, on both training paths.
+- **Batch configurations of the ASPIR paper.** `examples/paper/` holds the
+  `.batch_config` files behind the quality numbers of the paper's two use
+  cases, with a README on how to run them and on re-measuring latency and
+  energy on a Jetson:
+  - UC1, IR beams 32 × 32: Sweep and Cake-Cutting Hadamard;
+  - UC2, CelebA 64 × 64: Cake-Cutting Hadamard and grey-level FSPI at
+    4–32 %; binary FSPI (Floyd–Steinberg) at the same ratios, and Bayer at
+    16 %; grey-level and binary FSPI at 48 and 64 %, which project as many DMD
+    frames as Cake-Cutting at 24 and 32 %.
+
+  `check_data.py` checks that a run scored the paper's test images.
 - **Automated tests.** Eleven self-contained scripts in `tests/`, one per
   feature, each run directly (`.venv/bin/python tests/<script>.py`) with no test
   framework:
